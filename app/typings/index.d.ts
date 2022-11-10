@@ -6,7 +6,15 @@ declare module "sequelize-encrypted";
 
 declare module "styled-components-breakpoint";
 
+declare module "command-score";
+
 declare module "*.png" {
   const value: any;
   export = value;
+}
+
+declare namespace JSX {
+  interface IntrinsicElements {
+    "zapier-app-directory": any;
+  }
 }

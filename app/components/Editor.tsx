@@ -1,13 +1,15 @@
 import { formatDistanceToNow } from "date-fns";
-import { deburr, sortBy } from "lodash";
+import { deburr, difference, sortBy } from "lodash";
 import { observer } from "mobx-react";
 import { DOMParser as ProsemirrorDOMParser } from "prosemirror-model";
 import { TextSelection } from "prosemirror-state";
 import * as React from "react";
 import { mergeRefs } from "react-merge-refs";
+import { useHistory } from "react-router-dom";
 import { Optional } from "utility-types";
 import insertFiles from "@shared/editor/commands/insertFiles";
-import { Heading } from "@shared/editor/lib/getHeadings";
+import { AttachmentPreset } from "@shared/types";
+import { Heading } from "@shared/utils/ProsemirrorHelper";
 import { getDataTransferFiles } from "@shared/utils/files";
 import parseDocumentSlug from "@shared/utils/parseDocumentSlug";
 import { isInternalUrl } from "@shared/utils/urls";
@@ -23,18 +25,12 @@ import useStores from "~/hooks/useStores";
 import useToasts from "~/hooks/useToasts";
 import { NotFoundError } from "~/utils/errors";
 import { uploadFile } from "~/utils/files";
-import history from "~/utils/history";
 import { isModKey } from "~/utils/keyboard";
+import { sharedDocumentPath } from "~/utils/routeHelpers";
 import { isHash } from "~/utils/urls";
 import DocumentBreadcrumb from "./DocumentBreadcrumb";
 
-const LazyLoadedEditor = React.lazy(
-  () =>
-    import(
-      /* webpackChunkName: "shared-editor" */
-      "~/editor"
-    )
-);
+const LazyLoadedEditor = React.lazy(() => import("~/editor"));
 
 export type Props = Optional<
   EditorProps,
@@ -48,31 +44,42 @@ export type Props = Optional<
 > & {
   shareId?: string | undefined;
   embedsDisabled?: boolean;
-  grow?: boolean;
   onHeadingsChange?: (headings: Heading[]) => void;
   onSynced?: () => Promise<void>;
   onPublish?: (event: React.MouseEvent) => any;
+  editorStyle?: React.CSSProperties;
 };
 
 function Editor(props: Props, ref: React.RefObject<SharedEditor> | null) {
-  const { id, shareId, onChange, onHeadingsChange } = props;
-  const { documents } = useStores();
+  const {
+    id,
+    shareId,
+    onChange,
+    onHeadingsChange,
+    onCreateCommentMark,
+    onDeleteCommentMark,
+  } = props;
+  const { auth, comments, documents } = useStores();
   const { showToast } = useToasts();
   const dictionary = useDictionary();
   const embeds = useEmbeds(!shareId);
-  const [
-    activeLinkEvent,
-    setActiveLinkEvent,
-  ] = React.useState<MouseEvent | null>(null);
+  const history = useHistory();
+  const localRef = React.useRef<SharedEditor>();
+  const preferences = auth.user?.preferences;
   const previousHeadings = React.useRef<Heading[] | null>(null);
+  const [
+    activeLinkElement,
+    setActiveLink,
+  ] = React.useState<HTMLAnchorElement | null>(null);
+  const previousCommentIds = React.useRef<string[]>();
 
-  const handleLinkActive = React.useCallback((event: MouseEvent) => {
-    setActiveLinkEvent(event);
+  const handleLinkActive = React.useCallback((element: HTMLAnchorElement) => {
+    setActiveLink(element);
     return false;
   }, []);
 
   const handleLinkInactive = React.useCallback(() => {
-    setActiveLinkEvent(null);
+    setActiveLink(null);
   }, []);
 
   const handleSearchLink = React.useCallback(
@@ -109,13 +116,11 @@ function Editor(props: Props, ref: React.RefObject<SharedEditor> | null) {
       const results = await documents.searchTitles(term);
 
       return sortBy(
-        results.map((document: Document) => {
-          return {
-            title: document.title,
-            subtitle: <DocumentBreadcrumb document={document} onlyText />,
-            url: document.url,
-          };
-        }),
+        results.map((document: Document) => ({
+          title: document.title,
+          subtitle: <DocumentBreadcrumb document={document} onlyText />,
+          url: document.url,
+        })),
         (document) =>
           deburr(document.title)
             .toLowerCase()
@@ -127,17 +132,18 @@ function Editor(props: Props, ref: React.RefObject<SharedEditor> | null) {
     [documents]
   );
 
-  const onUploadFile = React.useCallback(
+  const handleUploadFile = React.useCallback(
     async (file: File) => {
       const result = await uploadFile(file, {
         documentId: id,
+        preset: AttachmentPreset.DocumentAttachment,
       });
       return result.url;
     },
     [id]
   );
 
-  const onClickLink = React.useCallback(
+  const handleClickLink = React.useCallback(
     (href: string, event: MouseEvent) => {
       // on page hash
       if (isHash(href)) {
@@ -159,8 +165,16 @@ function Editor(props: Props, ref: React.RefObject<SharedEditor> | null) {
           }
         }
 
-        if (shareId) {
-          navigateTo = `/share/${shareId}${navigateTo}`;
+        // Link to our own API should be opened in a new tab, not in the app
+        if (navigateTo.startsWith("/api/")) {
+          window.open(href, "_blank");
+          return;
+        }
+
+        // If we're navigating to an internal document link then prepend the
+        // share route to the URL so that the document is loaded in context
+        if (shareId && navigateTo.includes("/doc/")) {
+          navigateTo = sharedDocumentPath(shareId, navigateTo);
         }
 
         history.push(navigateTo);
@@ -168,12 +182,12 @@ function Editor(props: Props, ref: React.RefObject<SharedEditor> | null) {
         window.open(href, "_blank");
       }
     },
-    [shareId]
+    [history, shareId]
   );
 
   const focusAtEnd = React.useCallback(() => {
-    ref?.current?.focusAtEnd();
-  }, [ref]);
+    localRef?.current?.focusAtEnd();
+  }, [localRef]);
 
   const handleDrop = React.useCallback(
     (event: React.DragEvent<HTMLDivElement>) => {
@@ -181,7 +195,7 @@ function Editor(props: Props, ref: React.RefObject<SharedEditor> | null) {
       event.stopPropagation();
       const files = getDataTransferFiles(event);
 
-      const view = ref?.current?.view;
+      const view = localRef?.current?.view;
       if (!view) {
         return;
       }
@@ -216,7 +230,7 @@ function Editor(props: Props, ref: React.RefObject<SharedEditor> | null) {
       );
 
       insertFiles(view, event, pos, files, {
-        uploadFile: onUploadFile,
+        uploadFile: handleUploadFile,
         onFileUploadStart: props.onFileUploadStart,
         onFileUploadStop: props.onFileUploadStop,
         onShowToast: showToast,
@@ -225,11 +239,11 @@ function Editor(props: Props, ref: React.RefObject<SharedEditor> | null) {
       });
     },
     [
-      ref,
+      localRef,
       props.onFileUploadStart,
       props.onFileUploadStop,
       dictionary,
-      onUploadFile,
+      handleUploadFile,
       showToast,
     ]
   );
@@ -246,7 +260,7 @@ function Editor(props: Props, ref: React.RefObject<SharedEditor> | null) {
   // Calculate if headings have changed and trigger callback if so
   const updateHeadings = React.useCallback(() => {
     if (onHeadingsChange) {
-      const headings = ref?.current?.getHeadings();
+      const headings = localRef?.current?.getHeadings();
       if (
         headings &&
         headings.map((h) => h.level + h.title).join("") !==
@@ -256,54 +270,88 @@ function Editor(props: Props, ref: React.RefObject<SharedEditor> | null) {
         onHeadingsChange(headings);
       }
     }
-  }, [ref, onHeadingsChange]);
+  }, [localRef, onHeadingsChange]);
+
+  const updateComments = React.useCallback(() => {
+    if (onCreateCommentMark && onDeleteCommentMark) {
+      const commentMarks = localRef.current?.getComments();
+      const commentIds = comments.orderedData.map((c) => c.id);
+      const commentMarkIds = commentMarks?.map((c) => c.id);
+      const newCommentIds = difference(
+        commentMarkIds,
+        previousCommentIds.current ?? [],
+        commentIds
+      );
+
+      newCommentIds.forEach((commentId) => {
+        const mark = commentMarks?.find((c) => c.id === commentId);
+        if (mark) {
+          onCreateCommentMark(mark.id, mark.userId);
+        }
+      });
+
+      const removedCommentIds = difference(
+        previousCommentIds.current ?? [],
+        commentMarkIds ?? []
+      );
+
+      removedCommentIds.forEach((commentId) => {
+        onDeleteCommentMark(commentId);
+      });
+
+      previousCommentIds.current = commentMarkIds;
+    }
+  }, [onCreateCommentMark, onDeleteCommentMark, comments.orderedData]);
 
   const handleChange = React.useCallback(
     (event) => {
       onChange?.(event);
       updateHeadings();
+      updateComments();
     },
-    [onChange, updateHeadings]
+    [onChange, updateComments, updateHeadings]
   );
 
   const handleRefChanged = React.useCallback(
     (node: SharedEditor | null) => {
-      if (node && !previousHeadings.current) {
+      if (node) {
         updateHeadings();
+        updateComments();
       }
     },
-    [updateHeadings]
+    [updateComments, updateHeadings]
   );
 
   return (
-    <ErrorBoundary reloadOnChunkMissing>
+    <ErrorBoundary component="div" reloadOnChunkMissing>
       <>
         <LazyLoadedEditor
-          ref={mergeRefs([ref, handleRefChanged])}
-          uploadFile={onUploadFile}
+          ref={mergeRefs([ref, localRef, handleRefChanged])}
+          uploadFile={handleUploadFile}
           onShowToast={showToast}
           embeds={embeds}
+          userPreferences={preferences}
           dictionary={dictionary}
           {...props}
           onHoverLink={handleLinkActive}
-          onClickLink={onClickLink}
+          onClickLink={handleClickLink}
           onSearchLink={handleSearchLink}
           onChange={handleChange}
           placeholder={props.placeholder || ""}
           defaultValue={props.defaultValue || ""}
         />
-        {props.grow && !props.readOnly && (
+        {props.editorStyle?.paddingBottom && !props.readOnly && (
           <ClickablePadding
             onClick={focusAtEnd}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
-            grow
+            minHeight={props.editorStyle.paddingBottom}
           />
         )}
-        {activeLinkEvent && !shareId && (
+        {activeLinkElement && !shareId && (
           <HoverPreview
-            node={activeLinkEvent.target as HTMLAnchorElement}
-            event={activeLinkEvent}
+            id={props.id}
+            element={activeLinkElement}
             onClose={handleLinkInactive}
           />
         )}

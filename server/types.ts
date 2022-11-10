@@ -1,4 +1,15 @@
-import { Context } from "koa";
+import { ParameterizedContext, DefaultContext } from "koa";
+import { IRouterParamContext } from "koa-router";
+import { Transaction } from "sequelize";
+import { z } from "zod";
+import {
+  CollectionSort,
+  NavigationNode,
+  Client,
+  CollectionPermission,
+} from "@shared/types";
+import BaseSchema from "@server/routes/api/BaseSchema";
+import { AccountProvisionerResult } from "./commands/accountProvisioner";
 import { FileOperation, Team, User } from "./models";
 
 export enum AuthenticationType {
@@ -6,15 +17,43 @@ export enum AuthenticationType {
   APP = "app",
 }
 
-export type AuthenticatedState = {
-  user: User;
-  token: string;
-  authType: AuthenticationType;
+export type AuthenticationResult = AccountProvisionerResult & {
+  client: Client;
 };
 
-export type ContextWithState = Context & {
-  state: AuthenticatedState;
+export type Authentication = {
+  user: User;
+  token: string;
+  type: AuthenticationType;
 };
+
+export type Pagination = {
+  limit: number;
+  offset: number;
+  nextPath: string;
+};
+
+export type AppState = {
+  auth: Authentication | Record<string, never>;
+  transaction: Transaction;
+  pagination: Pagination;
+};
+
+export type AppContext = ParameterizedContext<AppState, DefaultContext>;
+
+export type BaseReq = z.infer<typeof BaseSchema>;
+
+export type BaseRes = unknown;
+
+export interface APIContext<ReqT = BaseReq, ResT = BaseRes>
+  extends ParameterizedContext<
+    AppState,
+    DefaultContext & IRouterParamContext<AppState>,
+    ResT
+  > {
+  /** Typed and validated version of request, consisting of validated body, query, etc */
+  input: ReqT;
+}
 
 type BaseEvent = {
   teamId: string;
@@ -37,7 +76,7 @@ export type AttachmentEvent = BaseEvent &
         modelId: string;
         data: {
           name: string;
-          source: string;
+          source?: "import";
         };
       }
     | {
@@ -176,10 +215,15 @@ export type CollectionEvent = BaseEvent &
     | CollectionUserEvent
     | CollectionGroupEvent
     | {
-        name:
-          | "collections.create"
-          | "collections.update"
-          | "collections.delete";
+        name: "collections.create";
+        collectionId: string;
+        data: {
+          name: string;
+          source?: "import";
+        };
+      }
+    | {
+        name: "collections.update" | "collections.delete";
         collectionId: string;
         data: {
           name: string;
@@ -240,6 +284,32 @@ export type PinEvent = BaseEvent & {
   collectionId?: string;
 };
 
+export type CommentUpdateEvent = BaseEvent & {
+  name: "comments.update";
+  modelId: string;
+  documentId: string;
+  actorId: string;
+  data: {
+    newMentionIds: string[];
+  };
+};
+
+export type CommentEvent =
+  | (BaseEvent & {
+      name: "comments.create";
+      modelId: string;
+      documentId: string;
+      actorId: string;
+    })
+  | CommentUpdateEvent
+  | (BaseEvent & {
+      name: "comments.delete";
+      modelId: string;
+      documentId: string;
+      actorId: string;
+      collectionId: string;
+    });
+
 export type StarEvent = BaseEvent & {
   name: "stars.create" | "stars.update" | "stars.delete";
   modelId: string;
@@ -276,9 +346,9 @@ export type ViewEvent = BaseEvent & {
 
 export type WebhookSubscriptionEvent = BaseEvent & {
   name:
-    | "webhook_subscriptions.create"
-    | "webhook_subscriptions.delete"
-    | "webhook_subscriptions.update";
+    | "webhookSubscriptions.create"
+    | "webhookSubscriptions.delete"
+    | "webhookSubscriptions.update";
   modelId: string;
   data: {
     name: string;
@@ -287,12 +357,21 @@ export type WebhookSubscriptionEvent = BaseEvent & {
   };
 };
 
+export type NotificationEvent = BaseEvent & {
+  name: "notifications.create";
+  modelId: string;
+  teamId: string;
+  userId: string;
+  documentId?: string;
+};
+
 export type Event =
   | ApiKeyEvent
   | AttachmentEvent
   | AuthenticationProviderEvent
   | DocumentEvent
   | PinEvent
+  | CommentEvent
   | StarEvent
   | CollectionEvent
   | FileOperationEvent
@@ -304,4 +383,66 @@ export type Event =
   | TeamEvent
   | UserEvent
   | ViewEvent
-  | WebhookSubscriptionEvent;
+  | WebhookSubscriptionEvent
+  | NotificationEvent;
+
+export type NotificationMetadata = {
+  notificationId?: string;
+};
+
+export type JSONExportMetadata = {
+  /* The version of the export, allows updated structure in the future. */
+  exportVersion: number;
+  /* The version of the application that created the export. */
+  version: string;
+  /* The date the export was created. */
+  createdAt: string;
+  /* The ID of the user that created the export. */
+  createdById: string;
+  /* The email of the user that created the export. */
+  createdByEmail: string | null;
+};
+
+export type DocumentJSONExport = {
+  id: string;
+  urlId: string;
+  title: string;
+  data: Record<string, any>;
+  createdById: string;
+  createdByEmail: string | null;
+  createdAt: string;
+  updatedAt: string;
+  publishedAt: string | null;
+  fullWidth: boolean;
+  template: boolean;
+  parentDocumentId: string | null;
+};
+
+export type AttachmentJSONExport = {
+  id: string;
+  documentId: string | null;
+  contentType: string;
+  name: string;
+  size: number;
+  key: string;
+};
+
+export type CollectionJSONExport = {
+  collection: {
+    id: string;
+    urlId: string;
+    name: string;
+    description: Record<string, any> | null;
+    permission?: CollectionPermission | null;
+    color: string;
+    icon?: string | null;
+    sort: CollectionSort;
+    documentStructure: NavigationNode[] | null;
+  };
+  documents: {
+    [id: string]: DocumentJSONExport;
+  };
+  attachments: {
+    [id: string]: AttachmentJSONExport;
+  };
+};

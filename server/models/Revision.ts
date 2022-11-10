@@ -1,4 +1,4 @@
-import { FindOptions } from "sequelize";
+import { FindOptions, Op } from "sequelize";
 import {
   DataType,
   BelongsTo,
@@ -9,15 +9,12 @@ import {
   IsNumeric,
   Length as SimpleLength,
 } from "sequelize-typescript";
-import MarkdownSerializer from "slate-md-serializer";
 import { DocumentValidation } from "@shared/validations";
 import Document from "./Document";
 import User from "./User";
 import IdModel from "./base/IdModel";
 import Fix from "./decorators/Fix";
 import Length from "./validators/Length";
-
-const serializer = new MarkdownSerializer();
 
 @DefaultScope(() => ({
   include: [
@@ -97,34 +94,19 @@ class Revision extends IdModel {
     );
   }
 
-  migrateVersion = function () {
-    let migrated = false;
+  // instance methods
 
-    // migrate from document version 0 -> 1
-    if (!this.version) {
-      // removing the title from the document text attribute
-      this.text = this.text.replace(/^#\s(.*)\n/, "");
-      this.version = 1;
-      migrated = true;
-    }
-
-    // migrate from document version 1 -> 2
-    if (this.version === 1) {
-      const nodes = serializer.deserialize(this.text);
-      this.text = serializer.serialize(nodes, {
-        version: 2,
-      });
-      this.version = 2;
-      migrated = true;
-    }
-
-    if (migrated) {
-      return this.save({
-        silent: true,
-        hooks: false,
-      });
-    }
-  };
+  previous(): Promise<Revision | null> {
+    return (this.constructor as typeof Revision).findOne({
+      where: {
+        documentId: this.documentId,
+        createdAt: {
+          [Op.lt]: this.createdAt,
+        },
+      },
+      order: [["createdAt", "DESC"]],
+    });
+  }
 }
 
 export default Revision;

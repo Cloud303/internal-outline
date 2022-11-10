@@ -2,6 +2,8 @@ import * as Sentry from "@sentry/react";
 import invariant from "invariant";
 import { observable, action, computed, autorun, runInAction } from "mobx";
 import { getCookie, setCookie, removeCookie } from "tiny-cookie";
+import { CustomTheme, TeamPreferences, UserPreferences } from "@shared/types";
+import Storage from "@shared/utils/Storage";
 import { getCookieDomain, parseDomain } from "@shared/utils/domains";
 import RootStore from "~/stores/RootStore";
 import Policy from "~/models/Policy";
@@ -9,7 +11,7 @@ import Team from "~/models/Team";
 import User from "~/models/User";
 import env from "~/env";
 import { client } from "~/utils/ApiClient";
-import Storage from "~/utils/Storage";
+import Desktop from "~/utils/Desktop";
 
 const AUTH_STORE = "AUTH_STORE";
 const NO_REDIRECT_PATHS = ["/", "/create", "/home"];
@@ -17,6 +19,13 @@ const NO_REDIRECT_PATHS = ["/", "/create", "/home"];
 type PersistedData = {
   user?: User;
   team?: Team;
+  availableTeams?: {
+    id: string;
+    name: string;
+    avatarUrl: string;
+    url: string;
+    isSignedIn: boolean;
+  }[];
   policies?: Policy[];
 };
 
@@ -28,25 +37,36 @@ type Provider = {
 
 export type Config = {
   name?: string;
+  logo?: string;
+  customTheme?: Partial<CustomTheme>;
   hostname?: string;
   providers: Provider[];
 };
 
 export default class AuthStore {
   @observable
-  user: User | null | undefined;
+  user?: User | null;
 
   @observable
-  team: Team | null | undefined;
+  team?: Team | null;
 
   @observable
-  token: string | null | undefined;
+  availableTeams?: {
+    id: string;
+    name: string;
+    avatarUrl: string;
+    url: string;
+    isSignedIn: boolean;
+  }[];
+
+  @observable
+  token?: string | null;
 
   @observable
   policies: Policy[] = [];
 
   @observable
-  lastSignedIn: string | null | undefined;
+  lastSignedIn?: string | null;
 
   @observable
   isSaving = false;
@@ -55,7 +75,7 @@ export default class AuthStore {
   isSuspended = false;
 
   @observable
-  suspendedContactEmail: string | null | undefined;
+  suspendedContactEmail?: string | null;
 
   @observable
   config: Config | null | undefined;
@@ -108,7 +128,7 @@ export default class AuthStore {
     this.addPolicies(data.policies);
 
     if (this.token) {
-      setImmediate(() => this.fetch());
+      setTimeout(() => this.fetch(), 0);
     }
   }
 
@@ -130,6 +150,7 @@ export default class AuthStore {
     return {
       user: this.user,
       team: this.team,
+      availableTeams: this.availableTeams,
       policies: this.policies,
     };
   }
@@ -144,13 +165,16 @@ export default class AuthStore {
   @action
   fetch = async () => {
     try {
-      const res = await client.post("/auth.info");
+      const res = await client.post("/auth.info", undefined, {
+        credentials: "same-origin",
+      });
       invariant(res?.data, "Auth not available");
       runInAction("AuthStore#fetch", () => {
         this.addPolicies(res.policies);
         const { user, team } = res.data;
         this.user = new User(user, this);
         this.team = new Team(team, this);
+        this.availableTeams = res.data.availableTeams;
 
         if (env.SENTRY_DSN) {
           Sentry.configureScope(function (scope) {
@@ -199,9 +223,7 @@ export default class AuthStore {
   };
 
   @action
-  requestDelete = () => {
-    return client.post(`/users.requestDelete`);
-  };
+  requestDelete = () => client.post(`/users.requestDelete`);
 
   @action
   deleteUser = async (data: { code: string }) => {
@@ -209,6 +231,9 @@ export default class AuthStore {
     runInAction("AuthStore#updateUser", () => {
       this.user = null;
       this.team = null;
+      this.availableTeams = this.availableTeams?.filter(
+        (team) => team.id !== this.team?.id
+      );
       this.policies = [];
       this.token = null;
     });
@@ -219,16 +244,20 @@ export default class AuthStore {
     name?: string;
     avatarUrl?: string | null;
     language?: string;
+    preferences?: UserPreferences;
   }) => {
     this.isSaving = true;
+    const previousData = this.user?.toAPI();
 
     try {
+      this.user?.updateFromJson(params);
       const res = await client.post(`/users.update`, params);
       invariant(res?.data, "User response not available");
-      runInAction("AuthStore#updateUser", () => {
-        this.addPolicies(res.policies);
-        this.user = new User(res.data, this);
-      });
+      this.user?.updateFromJson(res.data);
+      this.addPolicies(res.policies);
+    } catch (err) {
+      this.user?.updateFromJson(previousData);
+      throw err;
     } finally {
       this.isSaving = false;
     }
@@ -239,20 +268,37 @@ export default class AuthStore {
     name?: string;
     avatarUrl?: string | null | undefined;
     sharing?: boolean;
-    collaborativeEditing?: boolean;
     defaultCollectionId?: string | null;
     subdomain?: string | null | undefined;
     allowedDomains?: string[] | null | undefined;
+    preferences?: TeamPreferences;
   }) => {
+    this.isSaving = true;
+    const previousData = this.team?.toAPI();
+
+    try {
+      this.team?.updateFromJson(params);
+      const res = await client.post(`/team.update`, params);
+      invariant(res?.data, "Team response not available");
+      this.team?.updateFromJson(res.data);
+      this.addPolicies(res.policies);
+    } catch (err) {
+      this.team?.updateFromJson(previousData);
+      throw err;
+    } finally {
+      this.isSaving = false;
+    }
+  };
+
+  @action
+  createTeam = async (params: { name: string }) => {
     this.isSaving = true;
 
     try {
-      const res = await client.post(`/team.update`, params);
-      invariant(res?.data, "Team response not available");
-      runInAction("AuthStore#updateTeam", () => {
-        this.addPolicies(res.policies);
-        this.team = new Team(res.data, this);
-      });
+      const res = await client.post(`/teams.create`, params);
+      invariant(res?.success, "Unable to create team");
+
+      window.location.href = res.data.transferUrl;
     } finally {
       this.isSaving = false;
     }
@@ -303,5 +349,9 @@ export default class AuthStore {
     if (env.OIDC_LOGOUT_URL) {
       window.location.href = env.OIDC_LOGOUT_URL;
     }
+
+    // Tell the host application we logged out, if any – allows window cleanup.
+    Desktop.bridge?.onLogout?.();
+    this.rootStore.logout();
   };
 }

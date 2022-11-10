@@ -8,6 +8,7 @@ import {
   Route,
   useHistory,
   useRouteMatch,
+  useLocation,
 } from "react-router-dom";
 import styled from "styled-components";
 import breakpoint from "styled-components-breakpoint";
@@ -16,8 +17,9 @@ import Search from "~/scenes/Search";
 import Badge from "~/components/Badge";
 import CenteredContent from "~/components/CenteredContent";
 import CollectionDescription from "~/components/CollectionDescription";
-import CollectionIcon from "~/components/CollectionIcon";
 import Heading from "~/components/Heading";
+import CollectionIcon from "~/components/Icons/CollectionIcon";
+import InputSearchPage from "~/components/InputSearchPage";
 import PlaceholderList from "~/components/List/Placeholder";
 import PaginatedDocumentList from "~/components/PaginatedDocumentList";
 import PinnedDocuments from "~/components/PinnedDocuments";
@@ -29,21 +31,26 @@ import Tabs from "~/components/Tabs";
 import Tooltip from "~/components/Tooltip";
 import { editCollection } from "~/actions/definitions/collections";
 import useCommandBarActions from "~/hooks/useCommandBarActions";
+import useLastVisitedPath from "~/hooks/useLastVisitedPath";
 import usePolicy from "~/hooks/usePolicy";
 import useStores from "~/hooks/useStores";
-import { collectionUrl, updateCollectionUrl } from "~/utils/routeHelpers";
+import { collectionPath, updateCollectionPath } from "~/utils/routeHelpers";
 import Actions from "./Collection/Actions";
 import DropToImport from "./Collection/DropToImport";
 import Empty from "./Collection/Empty";
+import MembershipPreview from "./Collection/MembershipPreview";
 
 function CollectionScene() {
   const params = useParams<{ id?: string }>();
   const history = useHistory();
   const match = useRouteMatch();
+  const location = useLocation();
   const { t } = useTranslation();
   const { documents, pins, collections, ui } = useStores();
   const [isFetching, setFetching] = React.useState(false);
   const [error, setError] = React.useState<Error | undefined>();
+  const currentPath = location.pathname;
+  const [, setLastVisitedPath] = useLastVisitedPath();
 
   const id = params.id || "";
   const collection: Collection | null | undefined =
@@ -51,8 +58,12 @@ function CollectionScene() {
   const can = usePolicy(collection?.id || "");
 
   React.useEffect(() => {
+    setLastVisitedPath(currentPath);
+  }, [currentPath, setLastVisitedPath]);
+
+  React.useEffect(() => {
     if (collection?.name) {
-      const canonicalUrl = updateCollectionUrl(match.url, collection);
+      const canonicalUrl = updateCollectionPath(match.url, collection);
 
       if (match.url !== canonicalUrl) {
         history.replace(canonicalUrl, history.location.state);
@@ -112,17 +123,32 @@ function CollectionScene() {
       key={collection.id}
       centered={false}
       textTitle={collection.name}
+      left={
+        collection.isEmpty ? undefined : (
+          <InputSearchPage
+            source="collection"
+            placeholder={`${t("Search in collection")}…`}
+            label={t("Search in collection")}
+            collectionId={collection.id}
+          />
+        )
+      }
       title={
         <>
           <CollectionIcon collection={collection} expanded />
           &nbsp;{collection.name}
         </>
       }
-      actions={<Actions collection={collection} />}
+      actions={
+        <>
+          <MembershipPreview collection={collection} />
+          <Actions collection={collection} />
+        </>
+      }
     >
       <DropToImport
         accept={documents.importFileTypes.join(", ")}
-        disabled={!can.update}
+        disabled={!can.createDocument}
         collectionId={collection.id}
       >
         <CenteredContent withStickyHeader>
@@ -133,7 +159,7 @@ function CollectionScene() {
               <HeadingWithIcon $isStarred={collection.isStarred}>
                 <HeadingIcon collection={collection} size={40} expanded />
                 {collection.name}
-                {!collection.permission && (
+                {collection.isPrivate && (
                   <Tooltip
                     tooltip={t(
                       "This collection is only visible to those given access"
@@ -153,24 +179,24 @@ function CollectionScene() {
               />
 
               <Tabs>
-                <Tab to={collectionUrl(collection.url)} exact>
+                <Tab to={collectionPath(collection.url)} exact>
                   {t("Documents")}
                 </Tab>
-                <Tab to={collectionUrl(collection.url, "updated")} exact>
+                <Tab to={collectionPath(collection.url, "updated")} exact>
                   {t("Recently updated")}
                 </Tab>
-                <Tab to={collectionUrl(collection.url, "published")} exact>
+                <Tab to={collectionPath(collection.url, "published")} exact>
                   {t("Recently published")}
                 </Tab>
-                <Tab to={collectionUrl(collection.url, "old")} exact>
+                <Tab to={collectionPath(collection.url, "old")} exact>
                   {t("Least recently updated")}
                 </Tab>
-                <Tab to={collectionUrl(collection.url, "alphabetical")} exact>
+                <Tab to={collectionPath(collection.url, "alphabetical")} exact>
                   {t("A–Z")}
                 </Tab>
               </Tabs>
               <Switch>
-                <Route path={collectionUrl(collection.url, "alphabetical")}>
+                <Route path={collectionPath(collection.url, "alphabetical")}>
                   <PaginatedDocumentList
                     key="alphabetical"
                     documents={documents.alphabeticalInCollection(
@@ -182,7 +208,7 @@ function CollectionScene() {
                     }}
                   />
                 </Route>
-                <Route path={collectionUrl(collection.url, "old")}>
+                <Route path={collectionPath(collection.url, "old")}>
                   <PaginatedDocumentList
                     key="old"
                     documents={documents.leastRecentlyUpdatedInCollection(
@@ -194,10 +220,10 @@ function CollectionScene() {
                     }}
                   />
                 </Route>
-                <Route path={collectionUrl(collection.url, "recent")}>
-                  <Redirect to={collectionUrl(collection.url, "published")} />
+                <Route path={collectionPath(collection.url, "recent")}>
+                  <Redirect to={collectionPath(collection.url, "published")} />
                 </Route>
-                <Route path={collectionUrl(collection.url, "published")}>
+                <Route path={collectionPath(collection.url, "published")}>
                   <PaginatedDocumentList
                     key="published"
                     documents={documents.recentlyPublishedInCollection(
@@ -210,7 +236,7 @@ function CollectionScene() {
                     showPublished
                   />
                 </Route>
-                <Route path={collectionUrl(collection.url, "updated")}>
+                <Route path={collectionPath(collection.url, "updated")}>
                   <PaginatedDocumentList
                     key="updated"
                     documents={documents.recentlyUpdatedInCollection(
@@ -222,7 +248,7 @@ function CollectionScene() {
                     }}
                   />
                 </Route>
-                <Route path={collectionUrl(collection.url)} exact>
+                <Route path={collectionPath(collection.url)} exact>
                   <PaginatedDocumentList
                     documents={documents.rootInCollection(collection.id)}
                     fetch={documents.fetchPage}

@@ -1,51 +1,45 @@
 import { NodeSelection } from "prosemirror-state";
 import { CellSelection } from "prosemirror-tables";
-import { EditorView } from "prosemirror-view";
 import * as React from "react";
-import { Portal } from "react-portal";
 import styled from "styled-components";
-import { depths } from "@shared/styles";
+import { depths, s } from "@shared/styles";
+import { Portal } from "~/components/Portal";
 import useComponentSize from "~/hooks/useComponentSize";
 import useEventListener from "~/hooks/useEventListener";
 import useMediaQuery from "~/hooks/useMediaQuery";
 import useViewportHeight from "~/hooks/useViewportHeight";
+import Logger from "~/utils/Logger";
+import { useEditor } from "./EditorContext";
 
 type Props = {
   active?: boolean;
-  view: EditorView;
   children: React.ReactNode;
+  width?: number;
   forwardedRef?: React.RefObject<HTMLDivElement> | null;
 };
 
 const defaultPosition = {
-  left: -1000,
+  left: -10000,
   top: 0,
   offset: 0,
+  maxWidth: 1000,
   visible: false,
 };
 
 function usePosition({
   menuRef,
-  isSelectingText,
-  props,
+  active,
 }: {
   menuRef: React.RefObject<HTMLDivElement>;
-  isSelectingText: boolean;
-  props: Props;
+  active?: boolean;
 }) {
-  const { view, active } = props;
+  const { view } = useEditor();
   const { selection } = view.state;
   const { width: menuWidth, height: menuHeight } = useComponentSize(menuRef);
   const viewportHeight = useViewportHeight();
   const isTouchDevice = useMediaQuery("(hover: none) and (pointer: coarse)");
 
-  if (
-    !active ||
-    !menuWidth ||
-    !menuHeight ||
-    !menuRef.current ||
-    isSelectingText
-  ) {
+  if (!active || !menuWidth || !menuHeight || !menuRef.current) {
     return defaultPosition;
   }
 
@@ -57,6 +51,7 @@ function usePosition({
       right: 0,
       top: viewportHeight - menuHeight,
       offset: 0,
+      maxWidth: 1000,
       visible: true,
     };
   }
@@ -69,7 +64,7 @@ function usePosition({
     fromPos = view.coordsAtPos(selection.from);
     toPos = view.coordsAtPos(selection.to, -1);
   } catch (err) {
-    console.warn(err);
+    Logger.warn("Unable to calculate selection position", err);
     return defaultPosition;
   }
 
@@ -80,6 +75,15 @@ function usePosition({
     left: Math.min(fromPos.left, toPos.left),
     right: Math.max(fromPos.right, toPos.right),
   };
+
+  const offsetParent = menuRef.current.offsetParent
+    ? menuRef.current.offsetParent.getBoundingClientRect()
+    : ({
+        width: window.innerWidth,
+        height: window.innerHeight,
+        top: 0,
+        left: 0,
+      } as DOMRect);
 
   // tables are an oddity, and need their own positioning logic
   const isColSelection =
@@ -117,8 +121,8 @@ function usePosition({
     const { left, top, width } = imageElement.getBoundingClientRect();
 
     return {
-      left: Math.round(left + width / 2 + window.scrollX - menuWidth / 2),
-      top: Math.round(top + window.scrollY - menuHeight),
+      left: Math.round(left + width / 2 - menuWidth / 2 - offsetParent.left),
+      top: Math.round(top - menuHeight - offsetParent.top),
       offset: 0,
       visible: true,
     };
@@ -133,8 +137,14 @@ function usePosition({
     // instances leave a margin
     const margin = 12;
     const left = Math.min(
-      window.innerWidth - menuWidth - margin,
-      Math.max(margin, centerOfSelection - menuWidth / 2)
+      Math.min(
+        offsetParent.x + offsetParent.width - menuWidth - margin,
+        window.innerWidth - margin
+      ),
+      Math.max(
+        Math.max(offsetParent.x, margin),
+        centerOfSelection - menuWidth / 2
+      )
     );
     const top = Math.min(
       window.innerHeight - menuHeight - margin,
@@ -146,24 +156,28 @@ function usePosition({
     // of the selection still
     const offset = left - (centerOfSelection - menuWidth / 2);
     return {
-      left: Math.round(left + window.scrollX),
-      top: Math.round(top + window.scrollY),
+      left: Math.round(left - offsetParent.left),
+      top: Math.round(top - offsetParent.top),
       offset: Math.round(offset),
+      maxWidth: offsetParent.width,
       visible: true,
     };
   }
 }
 
 const FloatingToolbar = React.forwardRef(
-  (props: Props, forwardedRef: React.RefObject<HTMLDivElement>) => {
-    const menuRef = forwardedRef || React.createRef<HTMLDivElement>();
+  (props: Props, ref: React.RefObject<HTMLDivElement>) => {
+    const menuRef = ref || React.createRef<HTMLDivElement>();
     const [isSelectingText, setSelectingText] = React.useState(false);
 
-    const position = usePosition({
+    let position = usePosition({
       menuRef,
-      isSelectingText,
-      props,
+      active: props.active,
     });
+
+    if (isSelectingText) {
+      position = defaultPosition;
+    }
 
     useEventListener("mouseup", () => {
       setSelectingText(false);
@@ -180,8 +194,10 @@ const FloatingToolbar = React.forwardRef(
         <Wrapper
           active={props.active && position.visible}
           ref={menuRef}
-          offset={position.offset}
+          $offset={position.offset}
           style={{
+            width: props.width,
+            maxWidth: `${position.maxWidth}px`,
             top: `${position.top}px`,
             left: `${position.left}px`,
           }}
@@ -195,14 +211,14 @@ const FloatingToolbar = React.forwardRef(
 
 const Wrapper = styled.div<{
   active?: boolean;
-  offset: number;
+  $offset: number;
 }>`
   will-change: opacity, transform;
   padding: 8px 16px;
   position: absolute;
   z-index: ${depths.editorToolbar};
   opacity: 0;
-  background-color: ${(props) => props.theme.toolbarBackground};
+  background-color: ${s("toolbarBackground")};
   border-radius: 4px;
   transform: scale(0.95);
   transition: opacity 150ms cubic-bezier(0.175, 0.885, 0.32, 1.275),
@@ -220,12 +236,12 @@ const Wrapper = styled.div<{
     width: 24px;
     height: 24px;
     transform: translateX(-50%) rotate(45deg);
-    background: ${(props) => props.theme.toolbarBackground};
+    background: ${s("toolbarBackground")};
     border-radius: 3px;
     z-index: -1;
     position: absolute;
     bottom: -2px;
-    left: calc(50% - ${(props) => props.offset || 0}px);
+    left: calc(50% - ${(props) => props.$offset || 0}px);
     pointer-events: none;
   }
 

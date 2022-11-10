@@ -34,9 +34,7 @@ function Collections() {
         fractionalIndex(null, orderedCollections[0].index)
       );
     },
-    canDrop: (item) => {
-      return item.id !== orderedCollections[0].id;
-    },
+    canDrop: (item) => item.id !== orderedCollections[0].id,
     collect: (monitor) => ({
       isCollectionDropping: monitor.isOver(),
       isDraggingAnyCollection: monitor.getItemType() === "collection",
@@ -48,10 +46,10 @@ function Collections() {
       <Header id="collections" title={t("Collections")}>
         <Relative>
           <PaginatedList
+            fetch={collections.fetchPage}
+            options={{ limit: 25 }}
             aria-label={t("Collections")}
             items={collections.orderedData}
-            fetch={collections.fetchPage}
-            options={{ limit: 100 }}
             loading={<PlaceholderCollections />}
             heading={
               isDraggingAnyCollection ? (

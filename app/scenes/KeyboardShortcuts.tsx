@@ -1,6 +1,7 @@
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import styled from "styled-components";
+import { s } from "@shared/styles";
 import Flex from "~/components/Flex";
 import InputSearch from "~/components/InputSearch";
 import Key from "~/components/Key";
@@ -14,6 +15,14 @@ function KeyboardShortcuts() {
       {
         title: t("Navigation"),
         items: [
+          {
+            shortcut: (
+              <>
+                <Key symbol>{metaDisplay}</Key> + <Key>k</Key>
+              </>
+            ),
+            label: t("Open command menu"),
+          },
           {
             shortcut: <Key>n</Key>,
             label: t("New document"),
@@ -76,7 +85,7 @@ function KeyboardShortcuts() {
                 <Key symbol>{metaDisplay}</Key> + <Key>Enter</Key>
               </>
             ),
-            label: t("Save document and exit"),
+            label: t("Go to link"),
           },
           {
             shortcut: (
@@ -332,6 +341,14 @@ function KeyboardShortcuts() {
             label: t("Code block"),
           },
           {
+            shortcut: (
+              <>
+                <Key>$$$</Key> <Key>Space</Key>
+              </>
+            ),
+            label: t("LaTeX block"),
+          },
+          {
             shortcut: <Key>{":::"}</Key>,
             label: t("Info notice"),
           },
@@ -350,6 +367,10 @@ function KeyboardShortcuts() {
           {
             shortcut: "`code`",
             label: t("Inline code"),
+          },
+          {
+            shortcut: "$$latex$$",
+            label: t("Inline LaTeX"),
           },
           {
             shortcut: "==highlight==",
@@ -430,7 +451,7 @@ const Keys = styled.dt`
   clear: left;
   text-align: right;
   font-size: 12px;
-  color: ${(props) => props.theme.textSecondary};
+  color: ${s("textSecondary")};
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -442,7 +463,7 @@ const Label = styled.dd`
   margin: 0 0 10px;
   display: flex;
   align-items: center;
-  color: ${(props) => props.theme.textSecondary};
+  color: ${s("textSecondary")};
 `;
 
 export default React.memo(KeyboardShortcuts);

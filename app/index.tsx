@@ -1,11 +1,13 @@
+// eslint-disable-next-line import/no-unresolved
+import "vite/modulepreload-polyfill";
 import "focus-visible";
 import { LazyMotion } from "framer-motion";
 import { KBarProvider } from "kbar";
 import { Provider } from "mobx-react";
 import * as React from "react";
 import { render } from "react-dom";
+import { HelmetProvider } from "react-helmet-async";
 import { Router } from "react-router-dom";
-import { initI18n } from "@shared/i18n";
 import stores from "~/stores";
 import Analytics from "~/components/Analytics";
 import ChatwootWidget from "~/components/ChatwootWidget";
@@ -16,6 +18,8 @@ import ScrollToTop from "~/components/ScrollToTop";
 import Theme from "~/components/Theme";
 import Toasts from "~/components/Toasts";
 import env from "~/env";
+import { initI18n } from "~/utils/i18n";
+import Desktop from "./components/DesktopEventHandler";
 import LazyPolyfill from "./components/LazyPolyfills";
 import Routes from "./routes";
 import Logger from "./utils/Logger";
@@ -25,35 +29,14 @@ import { initSentry } from "./utils/sentry";
 initI18n();
 const element = window.document.getElementById("root");
 
+history.listen(() => {
+  requestAnimationFrame(() =>
+    window.dispatchEvent(new Event("location-changed"))
+  );
+});
+
 if (env.SENTRY_DSN) {
   initSentry(history);
-}
-
-if ("serviceWorker" in window.navigator) {
-  window.addEventListener("load", () => {
-    // see: https://bugs.chromium.org/p/chromium/issues/detail?id=1097616
-    // In some rare (<0.1% of cases) this call can return `undefined`
-    const maybePromise = window.navigator.serviceWorker.register(
-      "/static/service-worker.js",
-      {
-        scope: "/",
-      }
-    );
-
-    if (maybePromise?.then) {
-      maybePromise
-        .then((registration) => {
-          Logger.debug("lifecycle", "SW registered: ", registration);
-        })
-        .catch((registrationError) => {
-          Logger.debug(
-            "lifecycle",
-            "SW registration failed: ",
-            registrationError
-          );
-        });
-    }
-  });
 }
 
 // Make sure to return the specific export containing the feature bundle.
@@ -64,20 +47,17 @@ const commandBarOptions = {
     enterMs: 250,
     exitMs: 200,
   },
-  callbacks: {
-    onClose: () => stores.ui.commandBarClosed(),
-  },
 };
 
 if (element) {
-  const App = () => {
-    return (
-      <React.StrictMode>
+  const App = () => (
+    <React.StrictMode>
+      <HelmetProvider>
         <Provider {...stores}>
           {env.CHATWOOT_MODE && <ChatwootWidget />}
           <Analytics>
             <Theme>
-              <ErrorBoundary>
+              <ErrorBoundary showTitle>
                 <KBarProvider actions={[]} options={commandBarOptions}>
                   <LazyPolyfill>
                     <LazyMotion features={loadFeatures}>
@@ -89,6 +69,7 @@ if (element) {
                           </ScrollToTop>
                           <Toasts />
                           <Dialogs />
+                          <Desktop />
                         </>
                       </Router>
                     </LazyMotion>
@@ -98,9 +79,9 @@ if (element) {
             </Theme>
           </Analytics>
         </Provider>
-      </React.StrictMode>
-    );
-  };
+      </HelmetProvider>
+    </React.StrictMode>
+  );
 
   render(<App />, element);
 }
@@ -112,13 +93,38 @@ window.addEventListener("load", async () => {
     return;
   }
   // https://github.com/googleanalytics/autotrack/issues/137#issuecomment-305890099
-  await import(
-    /* webpackChunkName: "autotrack" */
-    "autotrack/autotrack.js"
-  );
+  await import("autotrack/autotrack.js");
   window.ga("require", "outboundLinkTracker");
   window.ga("require", "urlChangeTracker");
   window.ga("require", "eventTracker", {
     attributePrefix: "data-",
   });
 });
+
+if ("serviceWorker" in navigator && env.ENVIRONMENT !== "development") {
+  window.addEventListener("load", () => {
+    // see: https://bugs.chromium.org/p/chromium/issues/detail?id=1097616
+    // In some rare (<0.1% of cases) this call can return `undefined`
+    const maybePromise = navigator.serviceWorker.register("/static/sw.js", {
+      scope: "/",
+    });
+
+    if (maybePromise?.then) {
+      maybePromise
+        .then((registration) => {
+          Logger.debug(
+            "lifecycle",
+            "[ServiceWorker] Registered.",
+            registration
+          );
+        })
+        .catch((registrationError) => {
+          Logger.debug(
+            "lifecycle",
+            "[ServiceWorker] Registration failed.",
+            registrationError
+          );
+        });
+    }
+  });
+}

@@ -6,6 +6,8 @@ import { Trans, useTranslation } from "react-i18next";
 import { useLocation, Link, Redirect } from "react-router-dom";
 import styled from "styled-components";
 import { getCookie, setCookie } from "tiny-cookie";
+import { s } from "@shared/styles";
+import { UserPreference } from "@shared/types";
 import { parseDomain } from "@shared/utils/domains";
 import { Config } from "~/stores/AuthStore";
 import ButtonLarge from "~/components/ButtonLarge";
@@ -13,15 +15,17 @@ import Fade from "~/components/Fade";
 import Flex from "~/components/Flex";
 import FullscreenLoading from "~/components/FullscreenLoading";
 import Heading from "~/components/Heading";
+import OutlineIcon from "~/components/Icons/OutlineIcon";
 import LoadingIndicator from "~/components/LoadingIndicator";
-import NoticeAlert from "~/components/NoticeAlert";
-import OutlineLogo from "~/components/OutlineLogo";
 import PageTitle from "~/components/PageTitle";
 import TeamLogo from "~/components/TeamLogo";
 import Text from "~/components/Text";
 import env from "~/env";
+import useLastVisitedPath from "~/hooks/useLastVisitedPath";
 import useQuery from "~/hooks/useQuery";
 import useStores from "~/hooks/useStores";
+import { draggableOnDesktop } from "~/styles";
+import Desktop from "~/utils/Desktop";
 import isCloudHosted from "~/utils/isCloudHosted";
 import { changeLanguage, detectLanguage } from "~/utils/language";
 import AuthenticationProvider from "./AuthenticationProvider";
@@ -31,21 +35,17 @@ function Header({ config }: { config?: Config | undefined }) {
   const { t } = useTranslation();
   const isSubdomain = !!config?.hostname;
 
-  if (!isCloudHosted || parseDomain(window.location.origin).custom) {
+  if (
+    !isCloudHosted ||
+    parseDomain(window.location.origin).custom ||
+    Desktop.isElectron()
+  ) {
     return null;
   }
 
-  if (isSubdomain) {
-    return (
-      <Back href={env.URL}>
-        <BackIcon color="currentColor" /> {t("Back to home")}
-      </Back>
-    );
-  }
-
   return (
-    <Back href="https://www.getoutline.com">
-      <BackIcon color="currentColor" /> {t("Back to website")}
+    <Back href={isSubdomain ? env.URL : "https://www.getoutline.com"}>
+      <BackIcon /> {t("Back to home")}
     </Back>
   );
 }
@@ -63,6 +63,11 @@ function Login({ children }: Props) {
   const [error, setError] = React.useState(null);
   const [emailLinkSentTo, setEmailLinkSentTo] = React.useState("");
   const isCreate = location.pathname === "/create";
+  const rememberLastPath = !!auth.user?.getPreference(
+    UserPreference.RememberLastPath
+  );
+  const [lastVisitedPath] = useLastVisitedPath();
+
   const handleReset = React.useCallback(() => {
     setEmailLinkSentTo("");
   }, []);
@@ -70,15 +75,15 @@ function Login({ children }: Props) {
     setEmailLinkSentTo(email);
   }, []);
 
-  const isCustomAuth: any = config?.providers?.filter((provider) => {
-    return provider?.id === "oidc";
-  });
+  const isCustomAuth: any = config?.providers?.filter(
+    (provider) => provider?.id === "oidc"
+  );
 
   const { custom, teamSubdomain, host } = parseDomain(window.location.origin);
   const needsRedirect = custom || teamSubdomain;
 
   React.useEffect(() => {
-    console.log(isCustomAuth);
+    // console.log(isCustomAuth);
     if (isCustomAuth && isCustomAuth[0]?.id) {
       const href = needsRedirect
         ? `${env.URL}${isCustomAuth[0]?.authUrl}?host=${encodeURI(host)}`
@@ -109,6 +114,14 @@ function Login({ children }: Props) {
     }
   }, [query]);
 
+  if (
+    auth.authenticated &&
+    rememberLastPath &&
+    lastVisitedPath !== location.pathname
+  ) {
+    return <Redirect to={lastVisitedPath} />;
+  }
+
   if (auth.authenticated && auth.team?.defaultCollectionId) {
     return <Redirect to={`/collection/${auth.team?.defaultCollectionId}`} />;
   }
@@ -123,7 +136,8 @@ function Login({ children }: Props) {
         <Header />
         <Centered align="center" justify="center" column auto>
           <PageTitle title={t("Login")} />
-          <NoticeAlert>
+          <Heading centered>{t("Error")}</Heading>
+          <Note>
             {t("Failed to load configuration.")}
             {!isCloudHosted && (
               <p>
@@ -132,7 +146,7 @@ function Login({ children }: Props) {
                 )}
               </p>
             )}
-          </NoticeAlert>
+          </Note>
         </Centered>
       </Background>
     );
@@ -142,6 +156,26 @@ function Login({ children }: Props) {
   // indicator here that's delayed by 250ms
   if (!config) {
     return <LoadingIndicator />;
+  }
+
+  const isCustomDomain = parseDomain(window.location.origin).custom;
+
+  // Unmapped custom domain
+  if (isCloudHosted && isCustomDomain && !config.name) {
+    return (
+      <Background>
+        <Header config={config} />
+        <Centered align="center" justify="center" column auto>
+          <PageTitle title={t("Custom domain setup")} />
+          <Heading centered>{t("Almost there")}…</Heading>
+          <Note>
+            {t(
+              "Your custom domain is successfully pointing at Outline. To complete the setup process please contact support."
+            )}
+          </Note>
+        </Centered>
+      </Background>
+    );
   }
 
   const hasMultipleProviders = config.providers.length > 1;
@@ -156,7 +190,7 @@ function Login({ children }: Props) {
         <Header config={config} />
         <Centered align="center" justify="center" column auto>
           <PageTitle title={t("Check your email")} />
-          <CheckEmailIcon size={38} color="currentColor" />
+          <CheckEmailIcon size={38} />
           <Heading centered>{t("Check your email")}</Heading>
           <Note>
             <Trans
@@ -182,28 +216,34 @@ function Login({ children }: Props) {
           <FullscreenLoading />
         ) : (
           <>
-            <PageTitle title={t("Login")} />
+            <PageTitle
+              title={
+                config.name ? `${config.name} – ${t("Login")}` : t("Login")
+              }
+            />
             <Logo>
-              {env.TEAM_LOGO && !isCloudHosted ? (
-                <TeamLogo src={env.TEAM_LOGO} />
+              {config.logo && !isCreate ? (
+                <TeamLogo size={48} src={config.logo} />
               ) : (
-                <OutlineLogo size={38} fill="currentColor" />
+                <OutlineIcon size={48} />
               )}
             </Logo>
             {isCreate ? (
               <>
-                <StyledHeading centered>{t("Create an account")}</StyledHeading>
-                <GetStarted>
+                <StyledHeading as="h2" centered>
+                  {t("Create a workspace")}
+                </StyledHeading>
+                <Content>
                   {t(
-                    "Get started by choosing a sign-in method for your new team below…"
+                    "Get started by choosing a sign-in method for your new workspace below…"
                   )}
-                </GetStarted>
+                </Content>
               </>
             ) : (
               <>
-                <StyledHeading centered>
+                <StyledHeading as="h2" centered>
                   {t("Login to {{ authProviderName }}", {
-                    authProviderName: config.name || "Outline",
+                    authProviderName: config.name || env.APP_NAME,
                   })}
                 </StyledHeading>
                 {children?.(config)}
@@ -236,7 +276,6 @@ function Login({ children }: Props) {
               if (defaultProvider && provider.id === defaultProvider.id) {
                 return null;
               }
-              console.log(provider, defaultProvider);
 
               return (
                 <AuthenticationProvider
@@ -272,22 +311,26 @@ const CheckEmailIcon = styled(EmailIcon)`
 const Background = styled(Fade)`
   width: 100vw;
   height: 100%;
-  background: ${(props) => props.theme.background};
+  background: ${s("background")};
   display: flex;
+  ${draggableOnDesktop()}
 `;
 
 const Logo = styled.div`
-  height: 38px;
+  margin-bottom: -4px;
 `;
 
-const GetStarted = styled(Text)`
+const Content = styled(Text)`
+  color: ${s("textSecondary")};
   text-align: center;
-  margin-top: -12px;
+  margin-top: -8px;
 `;
 
 const Note = styled(Text)`
+  color: ${s("textTertiary")};
   text-align: center;
   font-size: 14px;
+  margin-top: 8px;
 
   em {
     font-style: normal;
@@ -327,8 +370,8 @@ const Or = styled.hr`
     transform: translate3d(-50%, -50%, 0);
     text-transform: uppercase;
     font-size: 11px;
-    color: ${(props) => props.theme.textSecondary};
-    background: ${(props) => props.theme.background};
+    color: ${s("textSecondary")};
+    background: ${s("background")};
     border-radius: 2px;
     padding: 0 4px;
   }

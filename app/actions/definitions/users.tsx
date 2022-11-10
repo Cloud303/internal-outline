@@ -7,8 +7,9 @@ import { UserSection } from "~/actions/sections";
 
 export const inviteUser = createAction({
   name: ({ t }) => `${t("Invite people")}…`,
+  analyticsName: "Invite people",
   icon: <PlusIcon />,
-  keywords: "team member user",
+  keywords: "team member workspace user",
   section: UserSection,
   visible: ({ stores }) =>
     stores.policies.abilities(stores.auth.team?.id || "").inviteUser,

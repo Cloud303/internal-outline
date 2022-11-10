@@ -18,8 +18,6 @@ type Props = {
   name: string;
   /** The email address of the user */
   email: string;
-  /** The username of the user */
-  username?: string;
   /** Provision the new user as an administrator */
   isAdmin?: boolean;
   /** The public url of an image representing the user */
@@ -29,14 +27,13 @@ type Props = {
    * subdomain that the request came from, if any.
    */
   teamId: string;
-  /** Only match against existing user accounts using email, do not create a new account */
-  emailMatchOnly?: boolean;
   /** The IP address of the incoming request */
   ip: string;
-  authentication: {
+  /** Bundle of props related to the current external provider authentication */
+  authentication?: {
     authenticationProviderId: string;
     /** External identifier of the user in the authentication provider  */
-    providerId: string;
+    providerId: string | number;
     /** The scopes granted by the access token */
     scopes: string[];
     /** The token provided by the authentication provider */
@@ -51,33 +48,32 @@ type Props = {
 export default async function userProvisioner({
   name,
   email,
-  username,
   isAdmin,
-  emailMatchOnly,
   avatarUrl,
   teamId,
   authentication,
   ip,
 }: Props): Promise<UserProvisionerResult> {
-  const { providerId, authenticationProviderId, ...rest } = authentication;
-
-  const auth = await UserAuthentication.findOne({
-    where: {
-      providerId,
-    },
-    include: [
-      {
-        model: User,
-        as: "user",
-        where: { teamId },
-        required: true,
-      },
-    ],
-  });
+  const auth = authentication
+    ? await UserAuthentication.findOne({
+        where: {
+          providerId: "" + authentication.providerId,
+        },
+        include: [
+          {
+            model: User,
+            as: "user",
+            where: { teamId },
+            required: true,
+          },
+        ],
+      })
+    : undefined;
 
   // Someone has signed in with this authentication before, we just
   // want to update the details instead of creating a new record
-  if (auth) {
+  if (auth && authentication) {
+    const { providerId, authenticationProviderId, ...rest } = authentication;
     const { user } = auth;
 
     // We found an authentication record that matches the user id, but it's
@@ -93,7 +89,6 @@ export default async function userProvisioner({
     if (user) {
       await user.update({
         email,
-        username,
       });
       await auth.update(rest);
       return {
@@ -121,6 +116,10 @@ export default async function userProvisioner({
       email: email.toLowerCase(),
       teamId,
     },
+  });
+
+  const team = await Team.scope("withDomains").findByPk(teamId, {
+    attributes: ["defaultUserRole", "inviteRequired", "id"],
   });
 
   // We have an existing user, so we need to update it with our
@@ -165,9 +164,8 @@ export default async function userProvisioner({
         }
       );
 
-      // We don't want to associate a user auth with the auth provider
-      // if we're doing a simple email match, so early return here
-      if (emailMatchOnly) {
+      // Only need to associate the authentication with the user if there is one.
+      if (!authentication) {
         return null;
       }
 
@@ -183,12 +181,12 @@ export default async function userProvisioner({
     // if (isInvite) {
     //   const inviter = await existingUser.$get("invitedBy");
     //   if (inviter) {
-    //     await InviteAcceptedEmail.schedule({
+    //     await new InviteAcceptedEmail({
     //       to: inviter.email,
     //       inviterId: inviter.id,
     //       invitedName: existingUser.name,
     //       teamUrl: existingUser.team.url,
-    //     });
+    //     }).schedule();
     //   }
     // }
 
@@ -197,9 +195,9 @@ export default async function userProvisioner({
       authentication: auth,
       isNewUser: isInvite,
     };
-  } else if (emailMatchOnly) {
+  } else if (!authentication && !team?.allowedDomains.length) {
     // There's no existing invite or user that matches the external auth email
-    // This is simply unauthorized
+    // and there is no possibility of matching an allowed domain.
     throw InvalidAuthenticationError();
   }
 
@@ -210,11 +208,6 @@ export default async function userProvisioner({
   const transaction = await User.sequelize!.transaction();
 
   try {
-    const team = await Team.findByPk(teamId, {
-      attributes: ["defaultUserRole", "inviteRequired", "id"],
-      transaction,
-    });
-
     // If the team settings are set to require invites, and there's no existing user record,
     // throw an error and fail user creation.
     if (team?.inviteRequired) {
@@ -234,13 +227,12 @@ export default async function userProvisioner({
       {
         name,
         email,
-        username,
         isAdmin: typeof isAdmin === "boolean" && isAdmin,
         isViewer: isAdmin === true ? false : defaultUserRole === "viewer",
         teamId,
         avatarUrl,
         service: null,
-        authentications: [authentication],
+        authentications: authentication ? [authentication] : [],
       },
       {
         include: "authentications",

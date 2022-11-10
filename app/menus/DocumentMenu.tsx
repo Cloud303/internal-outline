@@ -1,12 +1,5 @@
 import { observer } from "mobx-react";
-import {
-  EditIcon,
-  HistoryIcon,
-  UnpublishIcon,
-  PrintIcon,
-  NewDocumentIcon,
-  RestoreIcon,
-} from "outline-icons";
+import { EditIcon, NewDocumentIcon, RestoreIcon } from "outline-icons";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { useHistory } from "react-router-dom";
@@ -14,14 +7,15 @@ import { useMenuState, MenuButton, MenuButtonHTMLProps } from "reakit/Menu";
 import { VisuallyHidden } from "reakit/VisuallyHidden";
 import styled from "styled-components";
 import breakpoint from "styled-components-breakpoint";
+import { s, ellipsis } from "@shared/styles";
 import { getEventFiles } from "@shared/utils/files";
 import Document from "~/models/Document";
-import CollectionIcon from "~/components/CollectionIcon";
 import ContextMenu from "~/components/ContextMenu";
 import OverflowMenuButton from "~/components/ContextMenu/OverflowMenuButton";
 import Separator from "~/components/ContextMenu/Separator";
 import Template from "~/components/ContextMenu/Template";
 import Flex from "~/components/Flex";
+import CollectionIcon from "~/components/Icons/CollectionIcon";
 import Switch from "~/components/Switch";
 import { actionToMenuItem } from "~/actions";
 import {
@@ -38,20 +32,22 @@ import {
   unstarDocument,
   duplicateDocument,
   archiveDocument,
+  openDocumentHistory,
+  openDocumentInsights,
+  publishDocument,
+  unpublishDocument,
+  printDocument,
+  openDocumentComments,
 } from "~/actions/definitions/documents";
 import useActionContext from "~/hooks/useActionContext";
 import useCurrentTeam from "~/hooks/useCurrentTeam";
 import useMobile from "~/hooks/useMobile";
 import usePolicy from "~/hooks/usePolicy";
+import useRequest from "~/hooks/useRequest";
 import useStores from "~/hooks/useStores";
 import useToasts from "~/hooks/useToasts";
 import { MenuItem } from "~/types";
-import {
-  documentHistoryUrl,
-  documentUrl,
-  editDocumentUrl,
-  newDocumentPath,
-} from "~/utils/routeHelpers";
+import { documentEditPath, newDocumentPath } from "~/utils/routeHelpers";
 
 type Props = {
   document: Document;
@@ -69,7 +65,6 @@ type Props = {
 
 function DocumentMenu({
   document,
-  isRevision,
   className,
   modal = true,
   showToggleEmbeds,
@@ -79,7 +74,7 @@ function DocumentMenu({
   onClose,
 }: Props) {
   const team = useCurrentTeam();
-  const { policies, collections, documents } = useStores();
+  const { policies, collections, documents, subscriptions } = useStores();
   const { showToast } = useToasts();
   const menu = useMenuState({
     modal,
@@ -96,6 +91,22 @@ function DocumentMenu({
   const { t } = useTranslation();
   const isMobile = useMobile();
   const file = React.useRef<HTMLInputElement>(null);
+  const { data, loading, request } = useRequest(() =>
+    subscriptions.fetchPage({
+      documentId: document.id,
+      event: "documents.update",
+    })
+  );
+
+  const handleOpen = React.useCallback(async () => {
+    if (!data && !loading) {
+      request();
+    }
+
+    if (onOpen) {
+      onOpen();
+    }
+  }, [data, loading, onOpen, request]);
 
   const handleRestore = React.useCallback(
     async (
@@ -112,27 +123,16 @@ function DocumentMenu({
     [showToast, t, document]
   );
 
-  const handleUnpublish = React.useCallback(async () => {
-    await document.unpublish();
-    showToast(t("Document unpublished"), {
-      type: "success",
-    });
-  }, [showToast, t, document]);
-
-  const handlePrint = React.useCallback(() => {
-    menu.hide();
-    window.print();
-  }, [menu]);
-
-  const collection = collections.get(document.collectionId);
+  const collection = document.collectionId
+    ? collections.get(document.collectionId)
+    : undefined;
   const can = usePolicy(document);
-  const canViewHistory = can.read && !can.restore;
   const restoreItems = React.useMemo(
     () => [
       ...collections.orderedData.reduce<MenuItem[]>((filtered, collection) => {
         const can = policies.abilities(collection.id);
 
-        if (can.update) {
+        if (can.createDocument) {
           filtered.push({
             type: "button",
             onClick: (ev) =>
@@ -219,7 +219,7 @@ function DocumentMenu({
       <ContextMenu
         {...menu}
         aria-label={t("Document options")}
-        onOpen={onOpen}
+        onOpen={handleOpen}
         onClose={onClose}
       >
         <Template
@@ -262,8 +262,8 @@ function DocumentMenu({
             {
               type: "route",
               title: t("Edit"),
-              to: editDocumentUrl(document),
-              visible: !!can.update && !team.collaborativeEditing,
+              to: documentEditPath(document),
+              visible: !!can.update && !team.seamlessEditing,
               icon: <EditIcon />,
             },
             {
@@ -278,41 +278,24 @@ function DocumentMenu({
             actionToMenuItem(importDocument, context),
             actionToMenuItem(createTemplate, context),
             actionToMenuItem(duplicateDocument, context),
-            {
-              type: "button",
-              title: t("Unpublish"),
-              onClick: handleUnpublish,
-              visible: !!can.unpublish,
-              icon: <UnpublishIcon />,
-            },
+            actionToMenuItem(publishDocument, context),
+            actionToMenuItem(unpublishDocument, context),
             actionToMenuItem(archiveDocument, context),
             actionToMenuItem(moveDocument, context),
             actionToMenuItem(pinDocument, context),
             {
               type: "separator",
             },
-            actionToMenuItem(deleteDocument, context),
-            actionToMenuItem(permanentlyDeleteDocument, context),
+            actionToMenuItem(openDocumentComments, context),
+            actionToMenuItem(openDocumentHistory, context),
+            actionToMenuItem(openDocumentInsights, context),
+            actionToMenuItem(downloadDocument, context),
+            actionToMenuItem(printDocument, context),
             {
               type: "separator",
             },
-            {
-              type: "route",
-              title: t("History"),
-              to: isRevision
-                ? documentUrl(document)
-                : documentHistoryUrl(document),
-              visible: canViewHistory,
-              icon: <HistoryIcon />,
-            },
-            actionToMenuItem(downloadDocument, context),
-            {
-              type: "button",
-              title: t("Print"),
-              onClick: handlePrint,
-              visible: !!showDisplayOptions,
-              icon: <PrintIcon />,
-            },
+            actionToMenuItem(deleteDocument, context),
+            actionToMenuItem(permanentlyDeleteDocument, context),
           ]}
         />
         {(showDisplayOptions || showToggleEmbeds) && (
@@ -357,7 +340,7 @@ function DocumentMenu({
 const ToggleMenuItem = styled(Switch)`
   * {
     font-weight: normal;
-    color: ${(props) => props.theme.textSecondary};
+    color: ${s("textSecondary")};
   }
 `;
 
@@ -371,9 +354,7 @@ const Style = styled.div`
 `;
 
 const CollectionName = styled.div`
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  ${ellipsis()}
 `;
 
 export default observer(DocumentMenu);

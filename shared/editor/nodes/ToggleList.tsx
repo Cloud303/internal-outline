@@ -54,11 +54,11 @@ export default class ToggleList extends Node {
   toMarkdown(state: MarkdownSerializerState, node: ProsemirrorModel) {
     state.write(
       `
-      <details>
-      <summary>${node.attrs.heading}</summary>
-      ${node.attrs.desc}
-      </details>
-      `
+        <details>
+        <summary>${node.attrs.heading}</summary>
+        ${node.attrs.desc}
+        </details>
+        `
     );
   }
 

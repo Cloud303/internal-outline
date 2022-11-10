@@ -60,7 +60,6 @@ export default class ColorToolbar extends React.Component<Props> {
     from: number;
     to: number;
   }): void => {
-    console.log("changing color", color, from, to);
     const { view } = this.props;
     const { state, dispatch } = view;
 

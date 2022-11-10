@@ -6,6 +6,13 @@ import User from "~/models/User";
 import ContextMenu from "~/components/ContextMenu";
 import OverflowMenuButton from "~/components/ContextMenu/OverflowMenuButton";
 import Template from "~/components/ContextMenu/Template";
+import {
+  UserChangeToAdminDialog,
+  UserChangeToMemberDialog,
+  UserChangeToViewerDialog,
+  UserSuspendDialog,
+  UserChangeNameDialog,
+} from "~/components/UserRoleDialogs";
 import usePolicy from "~/hooks/usePolicy";
 import useStores from "~/hooks/useStores";
 import useToasts from "~/hooks/useToasts";
@@ -15,7 +22,7 @@ type Props = {
 };
 
 function UserMenu({ user }: Props) {
-  const { users } = useStores();
+  const { users, dialogs } = useStores();
   const { t } = useTranslation();
   const menu = useMenuState({
     modal: true,
@@ -26,83 +33,80 @@ function UserMenu({ user }: Props) {
   const handlePromote = React.useCallback(
     (ev: React.SyntheticEvent) => {
       ev.preventDefault();
-
-      if (
-        !window.confirm(
-          t(
-            "Are you sure you want to make {{ userName }} an admin? Admins can modify team and billing information.",
-            {
-              userName: user.name,
-            }
-          )
-        )
-      ) {
-        return;
-      }
-
-      users.promote(user);
+      dialogs.openModal({
+        title: t("Change role to admin"),
+        isCentered: true,
+        content: (
+          <UserChangeToAdminDialog
+            user={user}
+            onSubmit={dialogs.closeAllModals}
+          />
+        ),
+      });
     },
-    [users, user, t]
+    [dialogs, t, user]
   );
 
   const handleMember = React.useCallback(
     (ev: React.SyntheticEvent) => {
       ev.preventDefault();
-
-      if (
-        !window.confirm(
-          t("Are you sure you want to make {{ userName }} a member?", {
-            userName: user.name,
-          })
-        )
-      ) {
-        return;
-      }
-
-      users.demote(user, "member");
+      dialogs.openModal({
+        title: t("Change role to member"),
+        isCentered: true,
+        content: (
+          <UserChangeToMemberDialog
+            user={user}
+            onSubmit={dialogs.closeAllModals}
+          />
+        ),
+      });
     },
-    [users, user, t]
+    [dialogs, t, user]
   );
 
   const handleViewer = React.useCallback(
     (ev: React.SyntheticEvent) => {
       ev.preventDefault();
-
-      if (
-        !window.confirm(
-          t(
-            "Are you sure you want to make {{ userName }} a read-only viewer? They will not be able to edit any content",
-            {
-              userName: user.name,
-            }
-          )
-        )
-      ) {
-        return;
-      }
-
-      users.demote(user, "viewer");
+      dialogs.openModal({
+        title: t("Change role to viewer"),
+        isCentered: true,
+        content: (
+          <UserChangeToViewerDialog
+            user={user}
+            onSubmit={dialogs.closeAllModals}
+          />
+        ),
+      });
     },
-    [users, user, t]
+    [dialogs, t, user]
+  );
+
+  const handleChangeName = React.useCallback(
+    (ev: React.SyntheticEvent) => {
+      ev.preventDefault();
+      dialogs.openModal({
+        title: t("Change name"),
+        isCentered: true,
+        content: (
+          <UserChangeNameDialog user={user} onSubmit={dialogs.closeAllModals} />
+        ),
+      });
+    },
+    [dialogs, t, user]
   );
 
   const handleSuspend = React.useCallback(
     (ev: React.SyntheticEvent) => {
       ev.preventDefault();
-
-      if (
-        !window.confirm(
-          t(
-            "Are you sure you want to suspend this account? Suspended users will be prevented from logging in."
-          )
-        )
-      ) {
-        return;
-      }
-
-      users.suspend(user);
+      dialogs.openModal({
+        title: t("Suspend account"),
+        isCentered: true,
+        content: (
+          <UserSuspendDialog user={user} onSubmit={dialogs.closeAllModals} />
+        ),
+      });
     },
-    [users, user, t]
+    [dialogs, t, user]
   );
 
   const handleRevoke = React.useCallback(
@@ -149,27 +153,27 @@ function UserMenu({ user }: Props) {
           items={[
             {
               type: "button",
-              title: t("Make {{ userName }} a member", {
-                userName: user.name,
-              }),
+              title: `${t("Change role to member")}…`,
               onClick: handleMember,
               visible: can.demote && user.role !== "member",
             },
             {
               type: "button",
-              title: t("Make {{ userName }} a viewer", {
-                userName: user.name,
-              }),
+              title: `${t("Change role to viewer")}…`,
               onClick: handleViewer,
               visible: can.demote && user.role !== "viewer",
             },
             {
               type: "button",
-              title: t("Make {{ userName }} an admin…", {
-                userName: user.name,
-              }),
+              title: `${t("Change role to admin")}…`,
               onClick: handlePromote,
               visible: can.promote && user.role !== "admin",
+            },
+            {
+              type: "button",
+              title: `${t("Change name")}…`,
+              onClick: handleChangeName,
+              visible: can.update && user.role !== "admin",
             },
             {
               type: "button",

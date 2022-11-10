@@ -7,7 +7,7 @@ import Drafts from "~/scenes/Drafts";
 import Error404 from "~/scenes/Error404";
 import Templates from "~/scenes/Templates";
 import Trash from "~/scenes/Trash";
-import Layout from "~/components/AuthenticatedLayout";
+import AuthenticatedLayout from "~/components/AuthenticatedLayout";
 import CenteredContent from "~/components/CenteredContent";
 import PlaceholderDocument from "~/components/PlaceholderDocument";
 import Route from "~/components/ProfiledRoute";
@@ -16,41 +16,11 @@ import useCurrentTeam from "~/hooks/useCurrentTeam";
 import usePolicy from "~/hooks/usePolicy";
 import { matchDocumentSlug as slug } from "~/utils/routeHelpers";
 
-const SettingsRoutes = React.lazy(
-  () =>
-    import(
-      /* webpackChunkName: "settings" */
-      "./settings"
-    )
-);
-const Document = React.lazy(
-  () =>
-    import(
-      /* webpackChunkName: "document" */
-      "~/scenes/Document"
-    )
-);
-const Collection = React.lazy(
-  () =>
-    import(
-      /* webpackChunkName: "collection" */
-      "~/scenes/Collection"
-    )
-);
-const Home = React.lazy(
-  () =>
-    import(
-      /* webpackChunkName: "home" */
-      "~/scenes/Home"
-    )
-);
-const Search = React.lazy(
-  () =>
-    import(
-      /* webpackChunkName: "search" */
-      "~/scenes/Search"
-    )
-);
+const SettingsRoutes = React.lazy(() => import("./settings"));
+const Document = React.lazy(() => import("~/scenes/Document"));
+const Collection = React.lazy(() => import("~/scenes/Collection"));
+const Home = React.lazy(() => import("~/scenes/Home"));
+const Search = React.lazy(() => import("~/scenes/Search"));
 
 const RedirectDocument = ({
   match,
@@ -68,7 +38,7 @@ function AuthenticatedRoutes() {
 
   return (
     <WebsocketProvider>
-      <Layout>
+      <AuthenticatedLayout>
         <React.Suspense
           fallback={
             <CenteredContent>
@@ -100,12 +70,14 @@ function AuthenticatedRoutes() {
             <Route exact path="/collection/:id/new" component={DocumentNew} />
             <Route exact path="/collection/:id/:tab" component={Collection} />
             <Route exact path="/collection/:id" component={Collection} />
+            <Route exact path="/doc/new" component={DocumentNew} />
             <Route exact path={`/d/${slug}`} component={RedirectDocument} />
             <Route
               exact
               path={`/doc/${slug}/history/:revisionId?`}
               component={Document}
             />
+            <Route exact path={`/doc/${slug}/insights`} component={Document} />
             <Route exact path={`/doc/${slug}/edit`} component={Document} />
             <Route path={`/doc/${slug}`} component={Document} />
             <Route exact path="/search" component={Search} />
@@ -115,7 +87,7 @@ function AuthenticatedRoutes() {
             <Route component={Error404} />
           </Switch>
         </React.Suspense>
-      </Layout>
+      </AuthenticatedLayout>
     </WebsocketProvider>
   );
 }

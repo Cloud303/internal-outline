@@ -4,6 +4,7 @@ import * as React from "react";
 import { useTranslation, Trans } from "react-i18next";
 import { Link } from "react-router-dom";
 import styled from "styled-components";
+import { s } from "@shared/styles";
 import { Role } from "@shared/types";
 import { UserValidation } from "@shared/validations";
 import Button from "~/components/Button";
@@ -150,7 +151,7 @@ function Invite({ onSubmit }: Props) {
       {team.guestSignin ? (
         <Text type="secondary">
           <Trans
-            defaults="Invite team members or guests to join your knowledge base. Team members can sign in with {{signinMethods}} or use their email address."
+            defaults="Invite members or guests to join your workspace. They can sign in with {{signinMethods}} or use their email address."
             values={{
               signinMethods: team.signinMethods,
             }}
@@ -159,7 +160,7 @@ function Invite({ onSubmit }: Props) {
       ) : (
         <Text type="secondary">
           <Trans
-            defaults="Invite team members to join your knowledge base. They will need to sign in with {{signinMethods}}."
+            defaults="Invite members to join your workspace. They will need to sign in with {{signinMethods}}."
             values={{
               signinMethods: team.signinMethods,
             }}
@@ -220,6 +221,7 @@ function Invite({ onSubmit }: Props) {
             onChange={(ev) => handleChange(ev, index)}
             value={invite.name}
             required={!!invite.email}
+            flex
           />
           <InputSelectRole
             onChange={(role: Role) => handleRoleChange(role, index)}
@@ -234,6 +236,11 @@ function Invite({ onSubmit }: Props) {
                   <CloseIcon />
                 </NudeButton>
               </Tooltip>
+            </Remove>
+          )}
+          {index === 0 && invites.length > 1 && (
+            <Remove>
+              <Spacer />
             </Remove>
           )}
         </Flex>
@@ -266,15 +273,18 @@ function Invite({ onSubmit }: Props) {
 const CopyBlock = styled("div")`
   margin: 2em 0;
   font-size: 14px;
-  background: ${(props) => props.theme.secondaryBackground};
+  background: ${s("secondaryBackground")};
   border-radius: 8px;
   padding: 16px 16px 8px;
 `;
 
 const Remove = styled("div")`
-  margin-top: 6px;
-  position: absolute;
-  right: -32px;
+  margin-top: 4px;
+`;
+
+const Spacer = styled.div`
+  width: 24px;
+  height: 24px;
 `;
 
 export default observer(Invite);

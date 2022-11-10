@@ -1,6 +1,7 @@
 import { observer } from "mobx-react";
 import * as React from "react";
 import styled from "styled-components";
+import { s } from "@shared/styles";
 import User from "~/models/User";
 import Avatar from "~/components/Avatar";
 import Flex from "~/components/Flex";
@@ -9,7 +10,7 @@ type Props = {
   users: User[];
   size?: number;
   overflow?: number;
-  onClick?: React.MouseEventHandler<HTMLDivElement>;
+  limit?: number;
   renderAvatar?: (user: User) => React.ReactNode;
 };
 
@@ -17,6 +18,7 @@ function Facepile({
   users,
   overflow = 0,
   size = 32,
+  limit = 8,
   renderAvatar = DefaultAvatar,
   ...rest
 }: Props) {
@@ -24,10 +26,13 @@ function Facepile({
     <Avatars {...rest}>
       {overflow > 0 && (
         <More size={size}>
-          <span>+{overflow}</span>
+          <span>
+            {users.length ? "+" : ""}
+            {overflow}
+          </span>
         </More>
       )}
-      {users.map((user) => (
+      {users.slice(0, limit).map((user) => (
         <AvatarWrapper key={user.id}>{renderAvatar(user)}</AvatarWrapper>
       ))}
     </Avatars>
@@ -35,7 +40,7 @@ function Facepile({
 }
 
 function DefaultAvatar(user: User) {
-  return <Avatar user={user} src={user.avatarUrl} size={32} />;
+  return <Avatar model={user} size={32} />;
 }
 
 const AvatarWrapper = styled.div`
@@ -55,8 +60,8 @@ const More = styled.div<{ size: number }>`
   height: ${(props) => props.size}px;
   border-radius: 100%;
   background: ${(props) => props.theme.slate};
-  color: ${(props) => props.theme.text};
-  border: 2px solid ${(props) => props.theme.background};
+  color: ${s("text")};
+  border: 2px solid ${s("background")};
   text-align: center;
   font-size: 11px;
   font-weight: 600;
@@ -65,7 +70,7 @@ const More = styled.div<{ size: number }>`
 const Avatars = styled(Flex)`
   align-items: center;
   flex-direction: row-reverse;
-  cursor: pointer;
+  cursor: var(--pointer);
 `;
 
 export default observer(Facepile);

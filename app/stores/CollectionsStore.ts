@@ -1,10 +1,13 @@
 import invariant from "invariant";
 import { concat, find, last } from "lodash";
 import { computed, action } from "mobx";
-import { CollectionPermission } from "@shared/types";
+import {
+  CollectionPermission,
+  FileOperationFormat,
+  NavigationNode,
+} from "@shared/types";
 import { CollectionValidation } from "@shared/validations";
 import Collection from "~/models/Collection";
-import { NavigationNode } from "~/types";
 import { client } from "~/utils/ApiClient";
 import { AuthorizationError, NotFoundError } from "~/utils/errors";
 import BaseStore from "./BaseStore";
@@ -32,8 +35,14 @@ export default class CollectionsStore extends BaseStore<Collection> {
     super(rootStore, Collection);
   }
 
+  /**
+   * Returns the currently active collection, or undefined if not in the context
+   * of a collection.
+   *
+   * @returns The active Collection or undefined
+   */
   @computed
-  get active(): Collection | null | undefined {
+  get active(): Collection | undefined {
     return this.rootStore.ui.activeCollectionId
       ? this.data.get(this.rootStore.ui.activeCollectionId)
       : undefined;
@@ -90,7 +99,10 @@ export default class CollectionsStore extends BaseStore<Collection> {
           url,
         };
         results.push([node]);
-        travelDocuments(collection.documents, id, [node]);
+
+        if (collection.documents) {
+          travelDocuments(collection.documents, id, [node]);
+        }
       });
     }
 
@@ -130,13 +142,9 @@ export default class CollectionsStore extends BaseStore<Collection> {
     // remove all locally cached policies for documents in the collection as they
     // are now invalid
     if (params.sharing !== undefined) {
-      const collection = this.get(params.id);
-
-      if (collection) {
-        collection.documentIds.forEach((id) => {
-          this.rootStore.policies.remove(id);
-        });
-      }
+      this.rootStore.documents.inCollection(params.id).forEach((document) => {
+        this.rootStore.policies.remove(document.id);
+      });
     }
 
     return result;
@@ -180,6 +188,34 @@ export default class CollectionsStore extends BaseStore<Collection> {
     );
   }
 
+  @action
+  duplicate = async (collection: Collection): Promise<Collection> => {
+    const append = " (duplicate)";
+    // console.log("collection", collection)
+    // const arr = document.title.split("-");
+    // const lIndex= arr.length - 1;
+    // console.log("lIndex", lIndex);
+    // const title = arr.slice(0, lIndex).join("-");
+    // console.log("title", title);
+    const res = await client.post("/collections.duplicate", {
+      collectionId: collection.id,
+      description: collection.description,
+      permission: collection.permission,
+      sharing: collection.sharing,
+      name: `${collection.name.slice(
+        0,
+        CollectionValidation.maxNameLength - append.length
+      )}${append}`,
+    });
+    invariant(res?.data, "Data should be available");
+    // const collection = this.getCollectionForDocument(document);
+    if (collection) {
+      collection.refresh();
+    }
+    this.addPolicies(res.policies);
+    return this.add(res.data);
+  };
+
   star = async (collection: Collection) => {
     await this.rootStore.stars.create({
       collectionId: collection.id,
@@ -197,8 +233,10 @@ export default class CollectionsStore extends BaseStore<Collection> {
     return this.pathsToDocuments.find((path) => path.id === documentId);
   }
 
-  titleForDocument(documentUrl: string): string | undefined {
-    const path = this.pathsToDocuments.find((path) => path.url === documentUrl);
+  titleForDocument(documentPath: string): string | undefined {
+    const path = this.pathsToDocuments.find(
+      (path) => path.url === documentPath
+    );
     if (path) {
       return path.title;
     }
@@ -216,29 +254,8 @@ export default class CollectionsStore extends BaseStore<Collection> {
     this.rootStore.documents.fetchRecentlyViewed();
   };
 
-  @action
-  duplicate = async (collection: Collection): Promise<Collection> => {
-    const append = " (duplicate)";
-    const res = await client.post("/collections.duplicate", {
-      collectionId: collection.id,
-      description: collection.description,
-      permission: collection.permission,
-      sharing: collection.sharing,
-      name: `${document.title.slice(
-        0,
-        CollectionValidation.maxNameLength - append.length
-      )}${append}`,
+  export = (format: FileOperationFormat) =>
+    client.post("/collections.export_all", {
+      format,
     });
-    invariant(res?.data, "Data should be available");
-    // const collection = this.getCollectionForDocument(document);
-    if (collection) {
-      collection.refresh();
-    }
-    this.addPolicies(res.policies);
-    return this.add(res.data);
-  };
-
-  export = () => {
-    return client.post("/collections.export_all");
-  };
 }

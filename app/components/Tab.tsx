@@ -1,6 +1,7 @@
 import { m } from "framer-motion";
 import * as React from "react";
 import styled, { useTheme } from "styled-components";
+import { s } from "@shared/styles";
 import NavLink from "~/components/NavLink";
 
 type Props = Omit<React.ComponentProps<typeof NavLink>, "children"> & {
@@ -14,12 +15,14 @@ const TabLink = styled(NavLink)`
   align-items: center;
   font-weight: 500;
   font-size: 14px;
-  color: ${(props) => props.theme.textTertiary};
+  cursor: var(--pointer);
+  color: ${s("textTertiary")};
+  user-select: none;
   margin-right: 24px;
   padding: 6px 0;
 
   &:hover {
-    color: ${(props) => props.theme.textSecondary};
+    color: ${s("textSecondary")};
   }
 `;
 
@@ -30,9 +33,8 @@ const Active = styled(m.div)`
   right: 0;
   height: 3px;
   width: 100%;
-  border-top-left-radius: 2px;
-  border-top-right-radius: 2px;
-  background: ${(props) => props.theme.textSecondary};
+  border-radius: 3px;
+  background: ${s("textSecondary")};
 `;
 
 const transition = {

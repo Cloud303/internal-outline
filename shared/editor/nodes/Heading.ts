@@ -8,12 +8,14 @@ import {
 } from "prosemirror-model";
 import { Plugin, Selection } from "prosemirror-state";
 import { Decoration, DecorationSet } from "prosemirror-view";
+import Storage from "../../utils/Storage";
 import backspaceToParagraph from "../commands/backspaceToParagraph";
 import splitHeading from "../commands/splitHeading";
 import toggleBlockType from "../commands/toggleBlockType";
 import { Command } from "../lib/Extension";
 import headingToSlug, { headingToPersistenceKey } from "../lib/headingToSlug";
 import { MarkdownSerializerState } from "../lib/markdown/serializer";
+import { FoldingHeadersPlugin } from "../plugins/FoldingHeaders";
 import Node from "./Node";
 
 export default class Heading extends Node {
@@ -50,23 +52,26 @@ export default class Heading extends Node {
         contentElement: ".heading-content",
       })),
       toDOM: (node) => {
-        const anchor = document.createElement("button");
-        anchor.innerText = "#";
-        anchor.type = "button";
-        anchor.className = "heading-anchor";
-        anchor.addEventListener("click", (event) => this.handleCopyLink(event));
+        let anchor, fold;
+        if (typeof document !== "undefined") {
+          anchor = document.createElement("button");
+          anchor.innerText = "#";
+          anchor.type = "button";
+          anchor.className = "heading-anchor";
+          anchor.addEventListener("click", this.handleCopyLink);
 
-        const fold = document.createElement("button");
-        fold.innerText = "";
-        fold.innerHTML =
-          '<svg fill="currentColor" width="12" height="24" viewBox="6 0 12 24" xmlns="http://www.w3.org/2000/svg"><path d="M8.23823905,10.6097108 L11.207376,14.4695888 L11.207376,14.4695888 C11.54411,14.907343 12.1719566,14.989236 12.6097108,14.652502 C12.6783439,14.5997073 12.7398293,14.538222 12.792624,14.4695888 L15.761761,10.6097108 L15.761761,10.6097108 C16.0984949,10.1719566 16.0166019,9.54410997 15.5788477,9.20737601 C15.4040391,9.07290785 15.1896811,9 14.969137,9 L9.03086304,9 L9.03086304,9 C8.47857829,9 8.03086304,9.44771525 8.03086304,10 C8.03086304,10.2205442 8.10377089,10.4349022 8.23823905,10.6097108 Z" /></svg>';
-        fold.type = "button";
-        fold.className = `heading-fold ${
-          node.attrs.collapsed ? "collapsed" : ""
-        }`;
-        fold.addEventListener("mousedown", (event) =>
-          this.handleFoldContent(event)
-        );
+          fold = document.createElement("button");
+          fold.innerText = "";
+          fold.innerHTML =
+            '<svg fill="currentColor" width="12" height="24" viewBox="6 0 12 24" xmlns="http://www.w3.org/2000/svg"><path d="M8.23823905,10.6097108 L11.207376,14.4695888 L11.207376,14.4695888 C11.54411,14.907343 12.1719566,14.989236 12.6097108,14.652502 C12.6783439,14.5997073 12.7398293,14.538222 12.792624,14.4695888 L15.761761,10.6097108 L15.761761,10.6097108 C16.0984949,10.1719566 16.0166019,9.54410997 15.5788477,9.20737601 C15.4040391,9.07290785 15.1896811,9 14.969137,9 L9.03086304,9 L9.03086304,9 C8.47857829,9 8.03086304,9.44771525 8.03086304,10 C8.03086304,10.2205442 8.10377089,10.4349022 8.23823905,10.6097108 Z" /></svg>';
+          fold.type = "button";
+          fold.className = `heading-fold ${
+            node.attrs.collapsed ? "collapsed" : ""
+          }`;
+          fold.addEventListener("mousedown", (event) =>
+            this.handleFoldContent(event)
+          );
+        }
 
         return [
           `h${node.attrs.level + (this.options.offset || 0)}`,
@@ -78,8 +83,7 @@ export default class Heading extends Node {
                 node.attrs.collapsed ? "collapsed" : ""
               }`,
             },
-            anchor,
-            fold,
+            ...(anchor ? [anchor, fold] : []),
           ],
           [
             "span",
@@ -109,9 +113,8 @@ export default class Heading extends Node {
   }
 
   commands({ type, schema }: { type: NodeType; schema: Schema }) {
-    return (attrs: Record<string, any>) => {
-      return toggleBlockType(type, schema.nodes.paragraph, attrs);
-    };
+    return (attrs: Record<string, any>) =>
+      toggleBlockType(type, schema.nodes.paragraph, attrs);
   }
 
   handleFoldContent = (event: MouseEvent) => {
@@ -147,9 +150,9 @@ export default class Heading extends Node {
         const persistKey = headingToPersistenceKey(node, this.editor.props.id);
 
         if (collapsed) {
-          localStorage?.setItem(persistKey, "collapsed");
+          Storage.set(persistKey, "collapsed");
         } else {
-          localStorage?.removeItem(persistKey);
+          Storage.remove(persistKey);
         }
 
         view.dispatch(transaction);
@@ -176,8 +179,10 @@ export default class Heading extends Node {
 
     // the existing url might contain a hash already, lets make sure to remove
     // that rather than appending another one.
-    const urlWithoutHash = window.location.href.split("#")[0];
-    copy(urlWithoutHash + hash);
+    const normalizedUrl = window.location.href
+      .split("#")[0]
+      .replace("/edit", "");
+    copy(normalizedUrl + hash);
 
     this.options.onShowToast(this.options.dictionary.linkCopied);
   };
@@ -251,19 +256,16 @@ export default class Heading extends Node {
 
     const plugin: Plugin = new Plugin({
       state: {
-        init: (config, state) => {
-          return getAnchors(state.doc);
-        },
-        apply: (tr, oldState) => {
-          return tr.docChanged ? getAnchors(tr.doc) : oldState;
-        },
+        init: (config, state) => getAnchors(state.doc),
+        apply: (tr, oldState) =>
+          tr.docChanged ? getAnchors(tr.doc) : oldState,
       },
       props: {
         decorations: (state) => plugin.getState(state),
       },
     });
 
-    return [plugin];
+    return [new FoldingHeadersPlugin(this.editor.props.id), plugin];
   }
 
   inputRules({ type }: { type: NodeType }) {

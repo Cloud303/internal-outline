@@ -2,12 +2,6 @@ import { User, Team } from "@server/models";
 import { AdminRequiredError } from "../errors";
 import { allow } from "./cancan";
 
-// allow(User, "read", User, (actor, user) => {
-//   if (user && user.teamId === actor.teamId && !user.isViewer) {
-//     return true;
-//   }
-//   return false;
-// });
 allow(
   User,
   "read",
@@ -31,6 +25,10 @@ allow(User, "update", User, (actor, user) => {
     return false;
   }
   if (user.id === actor.id) {
+    return true;
+  }
+
+  if (actor.isAdmin) {
     return true;
   }
 

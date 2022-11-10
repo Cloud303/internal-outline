@@ -1,10 +1,10 @@
 import { Mark } from "prosemirror-model";
 import { EditorView } from "prosemirror-view";
-import * as React from "react";
+import React, { useEffect, useState } from "react";
 import styled from "styled-components";
 import Flex from "~/components/Flex";
 import { Dictionary } from "~/hooks/useDictionary";
-import Colors from "../utils/colors.json";
+import Colors from "../../utils/colors.json";
 import ColorItem from "./ColorItem";
 
 export type SearchResult = {
@@ -32,73 +32,134 @@ type State = {
   selectedIndex: number;
 };
 
-class ColorEditor extends React.Component<Props, State> {
-  discardInputValue = false;
-  initialValue = this.color;
-  initialSelectionLength = this.props.to - this.props.from;
+// class ColorEditor extends React.Component<Props, State> {
+//   discardInputValue = false;
+//   initialValue = this.color;
+//   initialSelectionLength = this.props.to - this.props.from;
 
-  state: State = {
+//   state: State = {
+//     selectedIndex: -1,
+//     value: this.color,
+//     previousValue: "",
+//     results: {},
+//   };
+
+//   get color(): string {
+//     return this.props.mark?.attrs.color;
+//   }
+
+//   componentWillUnmount = () => {
+//     if (this.discardInputValue) {
+//       return;
+//     }
+
+//     if (this.state.value === this.initialValue) {
+//       return;
+//     }
+
+//     const color = (this.state.value || "").trim();
+//     this.save(color);
+//   };
+
+//   save = (color: string): void => {
+//     const { from, to } = this.props;
+//     this.props.onSelectColor({ color, from, to });
+//   };
+
+//   handleSelectColor = (
+//     event: React.MouseEvent,
+//     color: string,
+//     index: number
+//   ) => {
+//     event.preventDefault();
+//     const { from, to } = this.props;
+//     this.props.onSelectColor({ color, from, to });
+//     this.setState({ selectedIndex: index });
+//   };
+
+//   render() {
+//     return (
+//       <Wrapper>
+//         <Items>
+//           {Colors?.colors?.map((color, index: number) => (
+//             <ColorItem
+//               color={color.color}
+//               colorCode={color.code.hex}
+//               selected={color.code.hex === this.state.value}
+//               onClick={(e: React.MouseEvent) => {
+//                 this.handleSelectColor(e, color.code.hex, index);
+//                 this.props.onClose();
+//               }}
+//             />
+//           ))}
+//         </Items>
+//       </Wrapper>
+//     );
+//   }
+// }
+
+const ColorEditor = (props: Props) => {
+  const [colorState, setColorState] = useState<State>({
     selectedIndex: -1,
-    value: this.color,
+    value: props.mark?.attrs.color,
     previousValue: "",
     results: {},
-  };
+  });
+  const discardInputValue = false;
+  const initialValue = props.mark?.attrs.color;
+  const initialSelectionLength = props.to - props.from;
 
-  get color(): string {
-    return this.props.mark?.attrs.color;
-  }
-
-  componentWillUnmount = () => {
-    if (this.discardInputValue) {
+  useEffect(() => {
+    if (discardInputValue) {
       return;
     }
 
-    if (this.state.value === this.initialValue) {
+    if (colorState.value === initialValue) {
       return;
     }
 
-    const color = (this.state.value || "").trim();
-    this.save(color);
+    const color = (colorState.value || "").trim();
+
+    save(color);
+  }, []);
+
+  const save = (color: string): void => {
+    const { from, to } = props;
+    props.onSelectColor({ color, from, to });
   };
 
-  save = (color: string): void => {
-    const { from, to } = this.props;
-    this.props.onSelectColor({ color, from, to });
-  };
-
-  handleSelectColor = (
+  const handleSelectColor = (
     event: React.MouseEvent,
     color: string,
     index: number
   ) => {
     event.preventDefault();
-    const { from, to } = this.props;
-    this.props.onSelectColor({ color, from, to });
-    this.setState({ selectedIndex: index });
+    const { from, to } = props;
+    props.onSelectColor({ color, from, to });
+    setColorState({
+      ...colorState,
+      selectedIndex: index,
+    });
   };
 
-  render() {
-    return (
-      <Wrapper>
-        <Items>
-          {Colors?.colors?.map((color, index: number) => {
-            return (
-              <ColorItem
-                color={color.color}
-                colorCode={color.code.hex}
-                selected={color.code.hex === this.state.value}
-                onClick={(e: React.MouseEvent) => {
-                  this.handleSelectColor(e, color.code.hex, index);
-                  this.props.onClose();
-                }}
-              />
-            );
-          })}
-        </Items>
-      </Wrapper>
-    );
-  }
-}
+  return (
+    <Wrapper>
+      <Items>
+        {Colors?.colors?.map((color, index: number) => (
+          <ColorItem
+            color={color.color}
+            colorCode={color.code.hex}
+            selected={color.code.hex === colorState.value}
+            onClick={(e: React.MouseEvent) => {
+              handleSelectColor(e, color.code.hex, index);
+              props.onClose();
+            }}
+          />
+        ))}
+      </Items>
+    </Wrapper>
+  );
+};
 
 const Wrapper = styled(Flex)`
   margin-left: -8px;

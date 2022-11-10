@@ -1,35 +1,26 @@
 import * as React from "react";
 import styled from "styled-components";
-import BlockMenuItem, { Props as BlockMenuItemProps } from "./BlockMenuItem";
+import SuggestionsMenuItem, {
+  Props as SuggestionsMenuItemProps,
+} from "./SuggestionsMenuItem";
 
 const Emoji = styled.span`
   font-size: 16px;
+  line-height: 1.6em;
 `;
 
-type Props = {
-  emoji: React.ReactNode;
-  title: React.ReactNode;
-};
-
-const EmojiTitle = ({ emoji, title }: Props) => {
-  return (
-    <p>
-      <Emoji className="emoji">{emoji}</Emoji>
-      &nbsp;&nbsp;
-      {title}
-    </p>
-  );
-};
-
-type EmojiMenuItemProps = Omit<BlockMenuItemProps, "shortcut" | "theme"> & {
+type EmojiMenuItemProps = Omit<
+  SuggestionsMenuItemProps,
+  "shortcut" | "theme"
+> & {
   emoji: string;
 };
 
-export default function EmojiMenuItem(props: EmojiMenuItemProps) {
+export default function EmojiMenuItem({ emoji, ...rest }: EmojiMenuItemProps) {
   return (
-    <BlockMenuItem
-      {...props}
-      title={<EmojiTitle emoji={props.emoji} title={props.title} />}
+    <SuggestionsMenuItem
+      {...rest}
+      icon={<Emoji className="emoji">{emoji}</Emoji>}
     />
   );
 }

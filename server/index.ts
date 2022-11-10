@@ -1,30 +1,30 @@
 /* eslint-disable import/order */
 import env from "./env";
 
-import "./logging/tracing"; // must come before importing any instrumented module
+import "./logging/tracer"; // must come before importing any instrumented module
 
 import http from "http";
 import https from "https";
 import Koa from "koa";
 import helmet from "koa-helmet";
 import logger from "koa-logger";
-import onerror from "koa-onerror";
 import Router from "koa-router";
 import { uniq } from "lodash";
 import { AddressInfo } from "net";
 import stoppable from "stoppable";
 import throng from "throng";
 import Logger from "./logging/Logger";
-import { requestErrorHandler } from "./logging/sentry";
 import services from "./services";
 import { getArg } from "./utils/args";
 import { getSSLOptions } from "./utils/ssl";
-import {
-  checkEnv,
-  checkMigrations,
-  checkPendingMigrations,
-} from "./utils/startup";
+import { defaultRateLimiter } from "@server/middlewares/rateLimiter";
+import { checkEnv, checkPendingMigrations } from "./utils/startup";
 import { checkUpdates } from "./utils/updates";
+import onerror from "./onerror";
+import ShutdownHelper, { ShutdownOrder } from "./utils/ShutdownHelper";
+import { sequelize } from "./database/sequelize";
+import RedisAdapter from "./redis";
+import Metrics from "./logging/Metrics";
 
 // The default is to run all services to make development and OSS installations
 // easier to deal with. Separate services are only needed at scale.
@@ -50,8 +50,7 @@ if (serviceNames.includes("collaboration")) {
 // This function will only be called once in the original process
 async function master() {
   await checkEnv();
-  checkPendingMigrations();
-  await checkMigrations();
+  await checkPendingMigrations();
 
   if (env.TELEMETRY && env.ENVIRONMENT === "production") {
     checkUpdates();
@@ -71,7 +70,8 @@ async function start(id: number, disconnect: () => void) {
   const server = stoppable(
     useHTTPS
       ? https.createServer(ssl, app.callback())
-      : http.createServer(app.callback())
+      : http.createServer(app.callback()),
+    ShutdownHelper.connectionGraceTimeout
   );
   const router = new Router();
 
@@ -84,10 +84,27 @@ async function start(id: number, disconnect: () => void) {
 
   // catch errors in one place, automatically set status and response headers
   onerror(app);
-  app.on("error", requestErrorHandler);
 
-  // install health check endpoint for all services
-  router.get("/_health", (ctx) => (ctx.body = "OK"));
+  // Apply default rate limit to all routes
+  app.use(defaultRateLimiter());
+
+  // Add a health check endpoint to all services
+  router.get("/_health", async (ctx) => {
+    try {
+      await sequelize.query("SELECT 1");
+    } catch (err) {
+      throw new Error("Database connection failed");
+    }
+
+    try {
+      await RedisAdapter.defaultClient.ping();
+    } catch (err) {
+      throw new Error("Redis ping failed");
+    }
+
+    ctx.body = "OK";
+  });
+
   app.use(router.routes());
 
   // loop through requested services at startup
@@ -118,14 +135,31 @@ async function start(id: number, disconnect: () => void) {
   server.listen(normalizedPortFlag || env.PORT || "3000");
   server.setTimeout(env.REQUEST_TIMEOUT);
 
-  process.once("SIGTERM", shutdown);
-  process.once("SIGINT", shutdown);
+  ShutdownHelper.add(
+    "server",
+    ShutdownOrder.last,
+    () =>
+      new Promise((resolve, reject) => {
+        // Calling stop prevents new connections from being accepted and waits for
+        // existing connections to close for the grace period before forcefully
+        // closing them.
+        server.stop((err, gracefully) => {
+          disconnect();
 
-  function shutdown() {
-    Logger.info("lifecycle", "Stopping server");
-    server.emit("shutdown");
-    server.stop(disconnect);
-  }
+          if (err) {
+            reject(err);
+          } else {
+            resolve(gracefully);
+          }
+        });
+      })
+  );
+
+  ShutdownHelper.add("metrics", ShutdownOrder.last, () => Metrics.flush());
+
+  // Handle shutdown signals
+  process.once("SIGTERM", () => ShutdownHelper.execute());
+  process.once("SIGINT", () => ShutdownHelper.execute());
 }
 
 throng({

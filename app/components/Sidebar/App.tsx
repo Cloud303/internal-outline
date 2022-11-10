@@ -14,6 +14,7 @@ import useCurrentUser from "~/hooks/useCurrentUser";
 import usePolicy from "~/hooks/usePolicy";
 import useStores from "~/hooks/useStores";
 import OrganizationMenu from "~/menus/OrganizationMenu";
+import Desktop from "~/utils/Desktop";
 import {
   homePath,
   draftsPath,
@@ -24,9 +25,11 @@ import TeamLogo from "../TeamLogo";
 import Sidebar from "./Sidebar";
 import ArchiveLink from "./components/ArchiveLink";
 import Collections from "./components/Collections";
+import DragPlaceholder from "./components/DragPlaceholder";
+import HeaderButton, { HeaderButtonProps } from "./components/HeaderButton";
+import HistoryNavigation from "./components/HistoryNavigation";
 import Section from "./components/Section";
 import SidebarAction from "./components/SidebarAction";
-import SidebarButton, { SidebarButtonProps } from "./components/SidebarButton";
 import SidebarLink from "./components/SidebarLink";
 import Starred from "./components/Starred";
 import TrashLink from "./components/TrashLink";
@@ -56,20 +59,26 @@ function AppSidebar() {
 
   return (
     <Sidebar ref={handleSidebarRef}>
+      <HistoryNavigation />
       {dndArea && (
         <DndProvider backend={HTML5Backend} options={html5Options}>
+          <DragPlaceholder />
+
           <OrganizationMenu>
-            {(props: SidebarButtonProps) => (
-              <SidebarButton
+            {(props: HeaderButtonProps) => (
+              <HeaderButton
                 {...props}
                 title={team.name}
                 image={
-                  <StyledTeamLogo
-                    src={team.avatarUrl}
-                    width={32}
-                    height={32}
+                  <TeamLogo
+                    model={team}
+                    size={Desktop.hasInsetTitlebar() ? 24 : 32}
                     alt={t("Logo")}
                   />
+                }
+                style={
+                  // Move the logo over to align with smaller size
+                  Desktop.hasInsetTitlebar() ? { paddingLeft: 8 } : undefined
                 }
                 showDisclosure
               />
@@ -79,20 +88,20 @@ function AppSidebar() {
             <Section>
               <SidebarLink
                 to={homePath()}
-                icon={<HomeIcon color="currentColor" />}
+                icon={<HomeIcon />}
                 exact={false}
                 label={t("Home")}
               />
               <SidebarLink
                 to={searchPath()}
-                icon={<SearchIcon color="currentColor" />}
+                icon={<SearchIcon />}
                 label={t("Search")}
                 exact={false}
               />
               {can.createDocument && (
                 <SidebarLink
                   to={draftsPath()}
-                  icon={<EditIcon color="currentColor" />}
+                  icon={<EditIcon />}
                   label={
                     <Flex align="center" justify="space-between">
                       {t("Drafts")}
@@ -115,7 +124,7 @@ function AppSidebar() {
                 <>
                   <SidebarLink
                     to={templatesPath()}
-                    icon={<ShapesIcon color="currentColor" />}
+                    icon={<ShapesIcon />}
                     exact={false}
                     label={t("Templates")}
                     active={
@@ -138,11 +147,6 @@ function AppSidebar() {
     </Sidebar>
   );
 }
-
-const StyledTeamLogo = styled(TeamLogo)`
-  margin-right: 4px;
-  background: white;
-`;
 
 const Drafts = styled(Text)`
   margin: 0 4px;

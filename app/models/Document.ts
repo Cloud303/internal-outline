@@ -1,12 +1,14 @@
 import { addDays, differenceInDays } from "date-fns";
 import { floor } from "lodash";
 import { action, autorun, computed, observable, set } from "mobx";
+import { ExportContentType } from "@shared/types";
+import type { NavigationNode } from "@shared/types";
+import Storage from "@shared/utils/Storage";
 import parseTitle from "@shared/utils/parseTitle";
-import unescape from "@shared/utils/unescape";
+import { isRTL } from "@shared/utils/rtl";
 import DocumentsStore from "~/stores/DocumentsStore";
 import User from "~/models/User";
-import type { NavigationNode } from "~/types";
-import Storage from "~/utils/Storage";
+import { client } from "~/utils/ApiClient";
 import ParanoidModel from "./ParanoidModel";
 import View from "./View";
 import Field from "./decorators/Field";
@@ -15,16 +17,11 @@ type SaveOptions = {
   publish?: boolean;
   done?: boolean;
   autosave?: boolean;
-  lastRevision?: number;
 };
 
 export default class Document extends ParanoidModel {
   constructor(fields: Record<string, any>, store: DocumentsStore) {
     super(fields, store);
-
-    if (this.isPersistedOnce && this.isFromTemplate) {
-      this.title = "";
-    }
 
     this.embedsDisabled = Storage.get(`embedsDisabled-${this.id}`) ?? false;
 
@@ -49,13 +46,12 @@ export default class Document extends ParanoidModel {
 
   @Field
   @observable
-  collectionId: string;
+  collectionId?: string | null;
 
   @Field
   @observable
   id: string;
 
-  @Field
   @observable
   text: string;
 
@@ -110,23 +106,19 @@ export default class Document extends ParanoidModel {
   }
 
   /**
-   * Best-guess the text direction of the document based on the language the
-   * title is written in. Note: wrapping as a computed getter means that it will
-   * only be called directly when the title changes.
+   * Returns the direction of the document text, either "rtl" or "ltr"
    */
   @computed
   get dir(): "rtl" | "ltr" {
-    const element = document.createElement("p");
-    element.innerText = this.title;
-    element.style.visibility = "hidden";
-    element.dir = "auto";
+    return this.rtl ? "rtl" : "ltr";
+  }
 
-    // element must appear in body for direction to be computed
-    document.body?.appendChild(element);
-    const direction = window.getComputedStyle(element).direction;
-    document.body?.removeChild(element);
-
-    return direction === "rtl" ? "rtl" : "ltr";
+  /**
+   * Returns true if the document text is right-to-left
+   */
+  @computed
+  get rtl() {
+    return isRTL(this.title);
   }
 
   @computed
@@ -157,6 +149,13 @@ export default class Document extends ParanoidModel {
     return !!this.store.rootStore.stars.orderedData.find(
       (star) => star.documentId === this.id
     );
+  }
+
+  @computed
+  get collaborators(): User[] {
+    return this.collaboratorIds
+      .map((id) => this.store.rootStore.users.get(id))
+      .filter(Boolean) as User[];
   }
 
   /**
@@ -243,23 +242,17 @@ export default class Document extends ParanoidModel {
   }
 
   @action
-  share = async () => {
-    return this.store.rootStore.shares.create({
+  share = async () =>
+    this.store.rootStore.shares.create({
       documentId: this.id,
     });
-  };
 
-  archive = () => {
-    return this.store.archive(this);
-  };
+  archive = () => this.store.archive(this);
 
-  restore = (options?: { revisionId?: string; collectionId?: string }) => {
-    return this.store.restore(this, options);
-  };
+  restore = (options?: { revisionId?: string; collectionId?: string }) =>
+    this.store.restore(this, options);
 
-  unpublish = () => {
-    return this.store.unpublish(this);
-  };
+  unpublish = () => this.store.unpublish(this);
 
   @action
   enableEmbeds = () => {
@@ -272,12 +265,11 @@ export default class Document extends ParanoidModel {
   };
 
   @action
-  pin = (collectionId?: string) => {
-    return this.store.rootStore.pins.create({
+  pin = (collectionId?: string | null) =>
+    this.store.rootStore.pins.create({
       documentId: this.id,
       ...(collectionId ? { collectionId } : {}),
     });
-  };
 
   @action
   unpin = (collectionId?: string) => {
@@ -292,14 +284,10 @@ export default class Document extends ParanoidModel {
   };
 
   @action
-  star = () => {
-    return this.store.star(this);
-  };
+  star = () => this.store.star(this);
 
   @action
-  unstar = () => {
-    return this.store.unstar(this);
-  };
+  unstar = () => this.store.unstar(this);
 
   /**
    * Subscribes the current user to this document.
@@ -307,9 +295,7 @@ export default class Document extends ParanoidModel {
    * @returns A promise that resolves when the subscription is created.
    */
   @action
-  subscribe = () => {
-    return this.store.subscribe(this);
-  };
+  subscribe = () => this.store.subscribe(this);
 
   /**
    * Unsubscribes the current user to this document.
@@ -317,9 +303,7 @@ export default class Document extends ParanoidModel {
    * @returns A promise that resolves when the subscription is destroyed.
    */
   @action
-  unsubscribe = (userId: string) => {
-    return this.store.unsubscribe(userId, this);
-  };
+  unsubscribe = (userId: string) => this.store.unsubscribe(userId, this);
 
   @action
   view = () => {
@@ -341,30 +325,15 @@ export default class Document extends ParanoidModel {
   };
 
   @action
-  templatize = () => {
-    return this.store.templatize(this.id);
-  };
+  templatize = () => this.store.templatize(this.id);
 
   @action
   save = async (options?: SaveOptions | undefined) => {
     const params = this.toAPI();
-    const collaborativeEditing = this.store.rootStore.auth.team
-      ?.collaborativeEditing;
-
-    if (collaborativeEditing) {
-      delete params.text;
-    }
-
     this.isSaving = true;
 
     try {
-      const model = await this.store.save(
-        { ...params, id: this.id },
-        {
-          lastRevision: options?.lastRevision || this.revision,
-          ...options,
-        }
-      );
+      const model = await this.store.save({ ...params, id: this.id }, options);
 
       // if saving is successful set the new values on the model itself
       set(this, { ...params, ...model });
@@ -377,13 +346,10 @@ export default class Document extends ParanoidModel {
     }
   };
 
-  move = (collectionId: string, parentDocumentId?: string | undefined) => {
-    return this.store.move(this.id, collectionId, parentDocumentId);
-  };
+  move = (collectionId: string, parentDocumentId?: string | undefined) =>
+    this.store.move(this.id, collectionId, parentDocumentId);
 
-  duplicate = () => {
-    return this.store.duplicate(this);
-  };
+  duplicate = () => this.store.duplicate(this);
 
   getSummary = (paragraphs = 4) => {
     const result = this.text.trim().split("\n").slice(0, paragraphs).join("\n");
@@ -423,21 +389,17 @@ export default class Document extends ParanoidModel {
     };
   }
 
-  download = async () => {
-    // Ensure the document is upto date with latest server contents
-    await this.fetch();
-    const body = unescape(this.text);
-    const blob = new Blob([`# ${this.title}\n\n${body}`], {
-      type: "text/markdown",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    // Firefox support requires the anchor tag be in the DOM to trigger the dl
-    if (document.body) {
-      document.body.appendChild(a);
-    }
-    a.href = url;
-    a.download = `${this.titleWithDefault}.md`;
-    a.click();
-  };
+  download = (contentType: ExportContentType) =>
+    client.post(
+      `/documents.export`,
+      {
+        id: this.id,
+      },
+      {
+        download: true,
+        headers: {
+          accept: contentType,
+        },
+      }
+    );
 }

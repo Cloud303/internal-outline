@@ -2,7 +2,7 @@ import { transparentize } from "polished";
 import * as React from "react";
 import { Portal } from "react-portal";
 import styled from "styled-components";
-import { depths } from "@shared/styles";
+import { depths, s } from "@shared/styles";
 import parseDocumentSlug from "@shared/utils/parseDocumentSlug";
 import { isExternalUrl } from "@shared/utils/urls";
 import HoverPreviewDocument from "~/components/HoverPreviewDocument";
@@ -14,14 +14,17 @@ const DELAY_OPEN = 300;
 const DELAY_CLOSE = 300;
 
 type Props = {
-  node: HTMLAnchorElement;
-  event: MouseEvent;
+  /* The document associated with the editor, if any */
+  id?: string;
+  /* The HTML element that is being hovered over */
+  element: HTMLAnchorElement;
+  /* A callback on close of the hover preview */
   onClose: () => void;
 };
 
-function HoverPreviewInternal({ node, onClose }: Props) {
+function HoverPreviewInternal({ element, id, onClose }: Props) {
   const { documents } = useStores();
-  const slug = parseDocumentSlug(node.href);
+  const slug = parseDocumentSlug(element.href);
   const [isVisible, setVisible] = React.useState(false);
   const timerClose = React.useRef<ReturnType<typeof setTimeout>>();
   const timerOpen = React.useRef<ReturnType<typeof setTimeout>>();
@@ -68,13 +71,13 @@ function HoverPreviewInternal({ node, onClose }: Props) {
       cardRef.current.addEventListener("mouseleave", startCloseTimer);
     }
 
-    node.addEventListener("mouseout", startCloseTimer);
-    node.addEventListener("mouseover", stopCloseTimer);
-    node.addEventListener("mouseover", startOpenTimer);
+    element.addEventListener("mouseout", startCloseTimer);
+    element.addEventListener("mouseover", stopCloseTimer);
+    element.addEventListener("mouseover", startOpenTimer);
     return () => {
-      node.removeEventListener("mouseout", startCloseTimer);
-      node.removeEventListener("mouseover", stopCloseTimer);
-      node.removeEventListener("mouseover", startOpenTimer);
+      element.removeEventListener("mouseout", startCloseTimer);
+      element.removeEventListener("mouseover", stopCloseTimer);
+      element.removeEventListener("mouseover", startOpenTimer);
 
       if (cardRef.current) {
         cardRef.current.removeEventListener("mouseenter", stopCloseTimer);
@@ -88,9 +91,9 @@ function HoverPreviewInternal({ node, onClose }: Props) {
         clearTimeout(timerClose.current);
       }
     };
-  }, [node, slug]);
+  }, [element, slug]);
 
-  const anchorBounds = node.getBoundingClientRect();
+  const anchorBounds = element.getBoundingClientRect();
   const cardBounds = cardRef.current?.getBoundingClientRect();
   const left = cardBounds
     ? Math.min(anchorBounds.left, window.innerWidth - 16 - 350)
@@ -105,7 +108,7 @@ function HoverPreviewInternal({ node, onClose }: Props) {
         aria-hidden
       >
         <div ref={cardRef}>
-          <HoverPreviewDocument url={node.href}>
+          <HoverPreviewDocument url={element.href} id={id}>
             {(content: React.ReactNode) =>
               isVisible ? (
                 <Animate>
@@ -124,18 +127,18 @@ function HoverPreviewInternal({ node, onClose }: Props) {
   );
 }
 
-function HoverPreview({ node, ...rest }: Props) {
+function HoverPreview({ element, ...rest }: Props) {
   const isMobile = useMobile();
   if (isMobile) {
     return null;
   }
 
   // previews only work for internal doc links for now
-  if (isExternalUrl(node.href)) {
+  if (isExternalUrl(element.href)) {
     return null;
   }
 
-  return <HoverPreviewInternal {...rest} node={node} />;
+  return <HoverPreviewInternal {...rest} element={element} />;
 }
 
 const Animate = styled.div`
@@ -164,7 +167,7 @@ const CardContent = styled.div`
 // &:after — gradient mask for overflow text
 const Card = styled.div`
   backdrop-filter: blur(10px);
-  background: ${(props) => props.theme.background};
+  background: ${s("background")};
   border-radius: 4px;
   box-shadow: 0 30px 90px -20px rgba(0, 0, 0, 0.3),
     0 0 1px 1px rgba(0, 0, 0, 0.05);
@@ -187,13 +190,13 @@ const Card = styled.div`
       90deg,
       ${(props) => transparentize(1, props.theme.background)} 0%,
       ${(props) => transparentize(1, props.theme.background)} 75%,
-      ${(props) => props.theme.background} 90%
+      ${s("background")} 90%
     );
     bottom: 0;
     left: 0;
     right: 0;
     height: 1.7em;
-    border-bottom: 16px solid ${(props) => props.theme.background};
+    border-bottom: 16px solid ${s("background")};
     border-bottom-left-radius: 4px;
     border-bottom-right-radius: 4px;
   }
@@ -237,7 +240,7 @@ const Pointer = styled.div<{ offset: number }>`
 
   &:after {
     border: 7px solid transparent;
-    border-bottom-color: ${(props) => props.theme.background};
+    border-bottom-color: ${s("background")};
   }
 `;
 

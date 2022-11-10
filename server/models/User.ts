@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { addMinutes, subMinutes } from "date-fns";
 import JWT from "jsonwebtoken";
+import { Context } from "koa";
 import { Transaction, QueryTypes, SaveOptions, Op } from "sequelize";
 import {
   Table,
@@ -11,7 +12,6 @@ import {
   IsIn,
   BeforeDestroy,
   BeforeCreate,
-  AfterCreate,
   BelongsTo,
   ForeignKey,
   DataType,
@@ -20,16 +20,28 @@ import {
   IsDate,
   IsUrl,
   AllowNull,
+  AfterUpdate,
 } from "sequelize-typescript";
+import { UserPreferenceDefaults } from "@shared/constants";
 import { languages } from "@shared/i18n";
-import { CollectionPermission } from "@shared/types";
+import type { NotificationSettings } from "@shared/types";
+import {
+  CollectionPermission,
+  UserPreference,
+  UserPreferences,
+  NotificationEventType,
+  NotificationEventDefaults,
+} from "@shared/types";
 import { stringToColor } from "@shared/utils/color";
 import env from "@server/env";
+import DeleteAttachmentTask from "@server/queues/tasks/DeleteAttachmentTask";
+import parseAttachmentIds from "@server/utils/parseAttachmentIds";
 import { ValidationError } from "../errors";
 import ApiKey from "./ApiKey";
+import Attachment from "./Attachment";
+import AuthenticationProvider from "./AuthenticationProvider";
 import Collection from "./Collection";
 import CollectionUser from "./CollectionUser";
-import NotificationSetting from "./NotificationSetting";
 import Star from "./Star";
 import Team from "./Team";
 import UserAuthentication from "./UserAuthentication";
@@ -48,6 +60,9 @@ import NotContainsUrl from "./validators/NotContainsUrl";
 export enum UserFlag {
   InviteSent = "inviteSent",
   InviteReminderSent = "inviteReminderSent",
+  Desktop = "desktop",
+  DesktopWeb = "desktopWeb",
+  MobileWeb = "mobileWeb",
 }
 
 export enum UserRole {
@@ -59,8 +74,18 @@ export enum UserRole {
   withAuthentications: {
     include: [
       {
+        separate: true,
         model: UserAuthentication,
         as: "authentications",
+        include: [
+          {
+            model: AuthenticationProvider,
+            as: "authenticationProvider",
+            where: {
+              enabled: true,
+            },
+          },
+        ],
       },
     ],
   },
@@ -97,11 +122,6 @@ class User extends ParanoidModel {
   @Length({ max: 255, msg: "User email must be 255 characters or less" })
   @Column
   email: string | null;
-
-  @NotContainsUrl
-  @Length({ max: 255, msg: "User username must be 255 characters or less" })
-  @Column
-  username: string | null;
 
   @NotContainsUrl
   @Length({ max: 255, msg: "User name must be 255 characters or less" })
@@ -153,6 +173,13 @@ class User extends ParanoidModel {
   @Column(DataType.JSONB)
   flags: { [key in UserFlag]?: number } | null;
 
+  @AllowNull
+  @Column(DataType.JSONB)
+  preferences: UserPreferences | null;
+
+  @Column(DataType.JSONB)
+  notificationSettings: NotificationSettings;
+
   @Default(env.DEFAULT_LANGUAGE)
   @IsIn([languages])
   @Column
@@ -160,22 +187,16 @@ class User extends ParanoidModel {
 
   @AllowNull
   @IsUrl
-  @Length({ max: 1000, msg: "avatarUrl must be less than 1000 characters" })
+  @Length({ max: 4096, msg: "avatarUrl must be less than 4096 characters" })
   @Column(DataType.STRING)
   get avatarUrl() {
     const original = this.getDataValue("avatarUrl");
 
-    if (original) {
+    if (original && !original.startsWith("https://tiley.herokuapp.com")) {
       return original;
     }
 
-    const color = this.color.replace(/^#/, "");
-    const initial = this.name ? this.name[0] : "?";
-    const hash = crypto
-      .createHash("md5")
-      .update(this.email || "")
-      .digest("hex");
-    return `${env.DEFAULT_AVATAR_HOST}/avatar/${hash}/${initial}.png?c=${color}`;
+    return null;
   }
 
   set avatarUrl(value: string | null) {
@@ -246,6 +267,30 @@ class User extends ParanoidModel {
   // instance methods
 
   /**
+   * Sets a preference for the users notification settings.
+   *
+   * @param type The type of notification event
+   * @param value Set the preference to true/false
+   */
+  public setNotificationEventType = (
+    type: NotificationEventType,
+    value = true
+  ) => {
+    this.notificationSettings[type] = value;
+    this.changed("notificationSettings", true);
+  };
+
+  /**
+   * Returns the current preference for the given notification event type taking
+   * into account the default system value.
+   *
+   * @param type The type of notification event
+   * @returns The current preference
+   */
+  public subscribedToEventType = (type: NotificationEventType) =>
+    this.notificationSettings[type] ?? NotificationEventDefaults[type] ?? false;
+
+  /**
    * User flags are for storing information on a user record that is not visible
    * to the user itself.
    *
@@ -257,8 +302,11 @@ class User extends ParanoidModel {
     if (!this.flags) {
       this.flags = {};
     }
-    this.flags[flag] = value ? 1 : 0;
-    this.changed("flags", true);
+    const binary = value ? 1 : 0;
+    if (this.flags[flag] !== binary) {
+      this.flags[flag] = binary;
+      this.changed("flags", true);
+    }
 
     return this.flags;
   };
@@ -269,9 +317,7 @@ class User extends ParanoidModel {
    * @param flag The flag to retrieve
    * @returns The flag value
    */
-  public getFlag = (flag: UserFlag) => {
-    return this.flags?.[flag] ?? 0;
-  };
+  public getFlag = (flag: UserFlag) => this.flags?.[flag] ?? 0;
 
   /**
    * User flags are for storing information on a user record that is not visible
@@ -291,6 +337,34 @@ class User extends ParanoidModel {
     return this.flags;
   };
 
+  /**
+   * Preferences set by the user that decide application behavior and ui.
+   *
+   * @param preference The user preference to set
+   * @param value Sets the preference value
+   * @returns The current user preferences
+   */
+  public setPreference = (preference: UserPreference, value: boolean) => {
+    if (!this.preferences) {
+      this.preferences = {};
+    }
+    this.preferences[preference] = value;
+    this.changed("preferences", true);
+
+    return this.preferences;
+  };
+
+  /**
+   * Returns the value of the givem preference
+   *
+   * @param preference The user preference to retrieve
+   * @returns The preference value if set, else the default value.
+   */
+  public getPreference = (preference: UserPreference) =>
+    this.preferences?.[preference] ??
+    UserPreferenceDefaults[preference] ??
+    false;
+
   collectionIds = async (options = {}) => {
     const collectionStubs = await Collection.scope({
       method: ["withMembership", this.id],
@@ -306,15 +380,17 @@ class User extends ParanoidModel {
     return collectionStubs
       .filter(
         (c) =>
-          c.permission === CollectionPermission.Read ||
-          c.permission === CollectionPermission.ReadWrite ||
+          Object.values(CollectionPermission).includes(
+            c.permission as CollectionPermission
+          ) ||
           c.memberships.length > 0 ||
           c.collectionGroupMemberships.length > 0
       )
       .map((c) => c.id);
   };
 
-  updateActiveAt = async (ip: string, force = false) => {
+  updateActiveAt = async (ctx: Context, force = false) => {
+    const { ip } = ctx.request;
     const fiveMinutesAgo = subMinutes(new Date(), 5);
 
     // ensure this is updated only every few minutes otherwise
@@ -322,13 +398,21 @@ class User extends ParanoidModel {
     if (!this.lastActiveAt || this.lastActiveAt < fiveMinutesAgo || force) {
       this.lastActiveAt = new Date();
       this.lastActiveIp = ip;
-
-      return this.save({
-        hooks: false,
-      });
     }
 
-    return this;
+    // Track the clients each user is using
+    if (ctx.userAgent?.source.includes("Outline/")) {
+      this.setFlag(UserFlag.Desktop);
+    } else if (ctx.userAgent?.isDesktop) {
+      this.setFlag(UserFlag.DesktopWeb);
+    } else if (ctx.userAgent?.isMobile) {
+      this.setFlag(UserFlag.MobileWeb);
+    }
+
+    // Save only writes to the database if there are changes
+    return this.save({
+      hooks: false,
+    });
   };
 
   updateSignedIn = (ip: string) => {
@@ -359,8 +443,8 @@ class User extends ParanoidModel {
    * @param expiresAt The time the token will expire at
    * @returns The session token
    */
-  getJwtToken = (expiresAt?: Date) => {
-    return JWT.sign(
+  getJwtToken = (expiresAt?: Date) =>
+    JWT.sign(
       {
         id: this.id,
         expiresAt: expiresAt ? expiresAt.toISOString() : undefined,
@@ -368,7 +452,6 @@ class User extends ParanoidModel {
       },
       this.jwtSecret
     );
-  };
 
   /**
    * Returns a temporary token that is only used for transferring a session
@@ -377,8 +460,8 @@ class User extends ParanoidModel {
    *
    * @returns The transfer token
    */
-  getTransferToken = () => {
-    return JWT.sign(
+  getTransferToken = () =>
+    JWT.sign(
       {
         id: this.id,
         createdAt: new Date().toISOString(),
@@ -387,7 +470,6 @@ class User extends ParanoidModel {
       },
       this.jwtSecret
     );
-  };
 
   /**
    * Returns a temporary token that is only used for logging in from an email
@@ -395,8 +477,8 @@ class User extends ParanoidModel {
    *
    * @returns The email signin token
    */
-  getEmailSigninToken = () => {
-    return JWT.sign(
+  getEmailSigninToken = () =>
+    JWT.sign(
       {
         id: this.id,
         createdAt: new Date().toISOString(),
@@ -404,7 +486,22 @@ class User extends ParanoidModel {
       },
       this.jwtSecret
     );
-  };
+
+  /**
+   * Returns a list of teams that have a user matching this user's email.
+   *
+   * @returns A promise resolving to a list of teams
+   */
+  availableTeams = async () =>
+    Team.findAll({
+      include: [
+        {
+          model: this.constructor as typeof User,
+          required: true,
+          where: { email: this.email },
+        },
+      ],
+    });
 
   demote = async (to: UserRole, options?: SaveOptions<User>) => {
     const res = await (this.constructor as typeof User).findAndCountAll({
@@ -454,12 +551,11 @@ class User extends ParanoidModel {
     }
   };
 
-  promote = () => {
-    return this.update({
+  promote = () =>
+    this.update({
       isAdmin: true,
       isViewer: false,
     });
-  };
 
   // hooks
 
@@ -468,12 +564,6 @@ class User extends ParanoidModel {
     model: User,
     options: { transaction: Transaction }
   ) => {
-    await NotificationSetting.destroy({
-      where: {
-        userId: model.id,
-      },
-      transaction: options.transaction,
-    });
     await ApiKey.destroy({
       where: {
         userId: model.id,
@@ -495,7 +585,6 @@ class User extends ParanoidModel {
     model.email = null;
     model.name = "Unknown";
     model.avatarUrl = null;
-    model.username = null;
     model.lastActiveIp = null;
     model.lastSignedInIp = null;
 
@@ -512,65 +601,40 @@ class User extends ParanoidModel {
     model.jwtSecret = crypto.randomBytes(64).toString("hex");
   };
 
-  // By default when a user signs up we subscribe them to email notifications
-  // when documents they created are edited by other team members and onboarding.
-  // If the user is an admin, they will also be subscribed to export_completed
-  // notifications.
-  @AfterCreate
-  static subscribeToNotifications = async (
-    model: User,
-    options: { transaction: Transaction }
-  ) => {
-    await Promise.all([
-      NotificationSetting.findOrCreate({
-        where: {
-          userId: model.id,
-          teamId: model.teamId,
-          event: "documents.update",
-        },
-        transaction: options.transaction,
-      }),
-      NotificationSetting.findOrCreate({
-        where: {
-          userId: model.id,
-          teamId: model.teamId,
-          event: "emails.onboarding",
-        },
-        transaction: options.transaction,
-      }),
-      NotificationSetting.findOrCreate({
-        where: {
-          userId: model.id,
-          teamId: model.teamId,
-          event: "emails.features",
-        },
-        transaction: options.transaction,
-      }),
-      NotificationSetting.findOrCreate({
-        where: {
-          userId: model.id,
-          teamId: model.teamId,
-          event: "emails.invite_accepted",
-        },
-        transaction: options.transaction,
-      }),
-    ]);
+  @AfterUpdate
+  static deletePreviousAvatar = async (model: User) => {
+    if (
+      model.previous("avatarUrl") &&
+      model.previous("avatarUrl") !== model.avatarUrl
+    ) {
+      const attachmentIds = parseAttachmentIds(
+        model.previous("avatarUrl"),
+        true
+      );
+      if (!attachmentIds.length) {
+        return;
+      }
 
-    if (model.isAdmin) {
-      await NotificationSetting.findOrCreate({
+      const attachment = await Attachment.findOne({
         where: {
-          userId: model.id,
+          id: attachmentIds[0],
           teamId: model.teamId,
-          event: "emails.export_completed",
+          userId: model.id,
         },
-        transaction: options.transaction,
       });
+
+      if (attachment) {
+        await DeleteAttachmentTask.schedule({
+          attachmentId: attachment.id,
+          teamId: model.id,
+        });
+      }
     }
   };
 
   static getCounts = async function (teamId: string) {
     const countSql = `
-      SELECT 
+      SELECT
         COUNT(CASE WHEN "suspendedAt" IS NOT NULL THEN 1 END) as "suspendedCount",
         COUNT(CASE WHEN "isAdmin" = true THEN 1 END) as "adminCount",
         COUNT(CASE WHEN "isViewer" = true THEN 1 END) as "viewerCount",

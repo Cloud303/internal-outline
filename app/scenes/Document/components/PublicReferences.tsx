@@ -1,8 +1,8 @@
 import { observer } from "mobx-react";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
+import { NavigationNode } from "@shared/types";
 import Subheading from "~/components/Subheading";
-import { NavigationNode } from "~/types";
 import ReferenceListItem from "./ReferenceListItem";
 
 type Props = {
@@ -50,7 +50,7 @@ function PublicReferences(props: Props) {
 
   return (
     <>
-      <Subheading>{t("Nested documents")}</Subheading>
+      <Subheading>{t("Documents")}</Subheading>
       {children.map((node) => (
         <ReferenceListItem key={node.id} document={node} shareId={shareId} />
       ))}

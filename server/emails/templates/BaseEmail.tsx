@@ -1,24 +1,28 @@
+import Bull from "bull";
 import mailer from "@server/emails/mailer";
 import Logger from "@server/logging/Logger";
-import Metrics from "@server/logging/metrics";
+import Metrics from "@server/logging/Metrics";
+import Notification from "@server/models/Notification";
 import { taskQueue } from "@server/queues";
 import { TaskPriority } from "@server/queues/tasks/BaseTask";
+import { NotificationMetadata } from "@server/types";
 
-interface EmailProps {
-  to: string;
+export interface EmailProps {
+  to: string | null;
 }
 
-export default abstract class BaseEmail<T extends EmailProps, S = any> {
+export default abstract class BaseEmail<T extends EmailProps, S = unknown> {
   private props: T;
+  private metadata?: NotificationMetadata;
 
   /**
    * Schedule this email type to be sent asyncronously by a worker.
    *
-   * @param props Properties to be used in the email template
+   * @param options Options to pass to the Bull queue
    * @returns A promise that resolves once the email is placed on the task queue
    */
-  public static schedule<T>(props: T) {
-    const templateName = this.name;
+  public schedule(options?: Bull.JobOptions) {
+    const templateName = this.constructor.name;
 
     Metrics.increment("email.scheduled", {
       templateName,
@@ -31,7 +35,8 @@ export default abstract class BaseEmail<T extends EmailProps, S = any> {
         name: "EmailTask",
         props: {
           templateName,
-          props,
+          ...this.metadata,
+          props: this.props,
         },
       },
       {
@@ -41,12 +46,14 @@ export default abstract class BaseEmail<T extends EmailProps, S = any> {
           type: "exponential",
           delay: 60 * 1000,
         },
+        ...options,
       }
     );
   }
 
-  constructor(props: T) {
+  constructor(props: T, metadata?: NotificationMetadata) {
     this.props = props;
+    this.metadata = metadata;
   }
 
   /**
@@ -67,15 +74,26 @@ export default abstract class BaseEmail<T extends EmailProps, S = any> {
       return;
     }
 
+    if (!this.props.to) {
+      Logger.info(
+        "email",
+        `Email ${templateName} not sent due to missing email address`,
+        this.props
+      );
+      return;
+    }
+
     const data = { ...this.props, ...(bsResponse ?? ({} as S)) };
 
     try {
       await mailer.sendMail({
         to: this.props.to,
+        fromName: this.fromName?.(data),
         subject: this.subject(data),
         previewText: this.preview(data),
         component: this.render(data),
         text: this.renderAsText(data),
+        headCSS: this.headCSS?.(data),
       });
       Metrics.increment("email.sent", {
         templateName,
@@ -85,6 +103,23 @@ export default abstract class BaseEmail<T extends EmailProps, S = any> {
         templateName,
       });
       throw err;
+    }
+
+    if (this.metadata?.notificationId) {
+      try {
+        await Notification.update(
+          {
+            emailedAt: new Date(),
+          },
+          {
+            where: {
+              id: this.metadata.notificationId,
+            },
+          }
+        );
+      } catch (err) {
+        Logger.error(`Failed to update notification`, err, this.metadata);
+      }
     }
   }
 
@@ -124,6 +159,14 @@ export default abstract class BaseEmail<T extends EmailProps, S = any> {
   protected abstract render(props: S & T): JSX.Element;
 
   /**
+   * Allows injecting additional CSS into the head of the email.
+   *
+   * @param props Props in email constructor
+   * @returns A string of CSS
+   */
+  protected headCSS?(props: T): string | undefined;
+
+  /**
    * beforeSend hook allows async loading additional data that was not passed
    * through the serialized worker props. If false is returned then the email
    * send is aborted.
@@ -132,4 +175,9 @@ export default abstract class BaseEmail<T extends EmailProps, S = any> {
    * @returns A promise resolving to additional data
    */
   protected beforeSend?(props: T): Promise<S | false>;
+
+  /**
+   * fromName hook allows overriding the "from" name of the email.
+   */
+  protected fromName?(props: T): string | undefined;
 }

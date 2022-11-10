@@ -4,9 +4,11 @@ import { Link } from "react-router-dom";
 import { CompositeItem } from "reakit/Composite";
 import styled, { css } from "styled-components";
 import breakpoint from "styled-components-breakpoint";
+import { s, ellipsis } from "@shared/styles";
 import Document from "~/models/Document";
 import Highlight, { Mark } from "~/components/Highlight";
 import { hover } from "~/styles";
+import { sharedDocumentPath } from "~/utils/routeHelpers";
 
 type Props = {
   document: Document;
@@ -38,7 +40,9 @@ function DocumentListItem(
       ref={ref}
       dir={document.dir}
       to={{
-        pathname: shareId ? `/share/${shareId}${document.url}` : document.url,
+        pathname: shareId
+          ? sharedDocumentPath(shareId, document.url)
+          : document.url,
         state: {
           title: document.titleWithDefault,
         },
@@ -80,6 +84,7 @@ const DocumentLink = styled(Link)<{
   align-items: center;
   padding: 6px 12px;
   max-height: 50vh;
+  cursor: var(--pointer);
 
   &:not(:last-child) {
     margin-bottom: 4px;
@@ -97,13 +102,13 @@ const DocumentLink = styled(Link)<{
   &:active,
   &:focus,
   &:focus-within {
-    background: ${(props) => props.theme.listItemHoverBackground};
+    background: ${s("listItemHoverBackground")};
   }
 
   ${(props) =>
     props.$menuOpen &&
     css`
-      background: ${(props) => props.theme.listItemHoverBackground};
+      background: ${s("listItemHoverBackground")};
     `}
 `;
 
@@ -116,13 +121,12 @@ const Heading = styled.h4<{ rtl?: boolean }>`
   margin-bottom: 0.25em;
   overflow: hidden;
   white-space: nowrap;
-  color: ${(props) => props.theme.text};
+  color: ${s("text")};
 `;
 
 const Title = styled(Highlight)`
   max-width: 90%;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  ${ellipsis()}
 
   ${Mark} {
     padding: 0;
@@ -131,14 +135,11 @@ const Title = styled(Highlight)`
 
 const ResultContext = styled(Highlight)`
   display: block;
-  color: ${(props) => props.theme.textTertiary};
+  color: ${s("textTertiary")};
   font-size: 14px;
   margin-top: -0.25em;
   margin-bottom: 0.25em;
-
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  ${ellipsis()}
 
   ${Mark} {
     padding: 0;

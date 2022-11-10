@@ -1,13 +1,16 @@
 import styled from "styled-components";
+import { s } from "@shared/styles";
 
 type Props = { active?: boolean; disabled?: boolean };
 
-export default styled.button<Props>`
+export default styled.button.attrs((props) => ({
+  type: props.type || "button",
+}))<Props>`
   display: inline-block;
   flex: 0;
   width: 24px;
   height: 24px;
-  cursor: pointer;
+  cursor: var(--pointer);
   border: none;
   background: none;
   transition: opacity 100ms ease-in-out;
@@ -16,7 +19,7 @@ export default styled.button<Props>`
   outline: none;
   pointer-events: all;
   position: relative;
-  color: ${(props) => props.theme.toolbarItem};
+  color: ${s("toolbarItem")};
 
   &:hover {
     opacity: 1;

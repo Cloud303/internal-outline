@@ -1,49 +1,54 @@
-import { observable } from "mobx";
-import { observer } from "mobx-react";
+import { AnimatePresence } from "framer-motion";
+import { observer, useLocalStore } from "mobx-react";
 import * as React from "react";
-import { withTranslation, WithTranslation } from "react-i18next";
-import { Switch, Route } from "react-router-dom";
-import RootStore from "~/stores/RootStore";
+import { Switch, Route, useLocation, matchPath } from "react-router-dom";
+import { TeamPreference } from "@shared/types";
 import ErrorSuspended from "~/scenes/ErrorSuspended";
+import DocumentContext from "~/components/DocumentContext";
+import type { DocumentContextValue } from "~/components/DocumentContext";
 import Layout from "~/components/Layout";
 import RegisterKeyDown from "~/components/RegisterKeyDown";
 import Sidebar from "~/components/Sidebar";
+import SidebarRight from "~/components/Sidebar/Right";
 import SettingsSidebar from "~/components/Sidebar/Settings";
+import type { Editor as TEditor } from "~/editor";
+import usePolicy from "~/hooks/usePolicy";
+import useStores from "~/hooks/useStores";
 import history from "~/utils/history";
 import {
   searchPath,
-  matchDocumentSlug as slug,
   newDocumentPath,
   settingsPath,
+  matchDocumentHistory,
+  matchDocumentSlug as slug,
+  matchDocumentInsights,
 } from "~/utils/routeHelpers";
 import Fade from "./Fade";
-import withStores from "./withStores";
 
+const DocumentComments = React.lazy(
+  () => import("~/scenes/Document/components/Comments")
+);
 const DocumentHistory = React.lazy(
-  () =>
-    import(
-      /* webpackChunkName: "document-history" */
-      "~/components/DocumentHistory"
-    )
+  () => import("~/scenes/Document/components/History")
 );
-const CommandBar = React.lazy(
-  () =>
-    import(
-      /* webpackChunkName: "command-bar" */
-      "~/components/CommandBar"
-    )
+const DocumentInsights = React.lazy(
+  () => import("~/scenes/Document/components/Insights")
 );
+const CommandBar = React.lazy(() => import("~/components/CommandBar"));
 
-type Props = WithTranslation & RootStore;
+const AuthenticatedLayout: React.FC = ({ children }) => {
+  const { ui, auth } = useStores();
+  const location = useLocation();
+  const can = usePolicy(ui.activeCollectionId);
+  const { user, team } = auth;
+  const documentContext = useLocalStore<DocumentContextValue>(() => ({
+    editor: null,
+    setEditor: (editor: TEditor) => {
+      documentContext.editor = editor;
+    },
+  }));
 
-@observer
-class AuthenticatedLayout extends React.Component<Props> {
-  scrollable: HTMLDivElement | null | undefined;
-
-  @observable
-  keyboardShortcutsOpen = false;
-
-  goToSearch = (ev: KeyboardEvent) => {
+  const goToSearch = (ev: KeyboardEvent) => {
     if (!ev.metaKey && !ev.ctrlKey) {
       ev.preventDefault();
       ev.stopPropagation();
@@ -51,60 +56,72 @@ class AuthenticatedLayout extends React.Component<Props> {
     }
   };
 
-  goToNewDocument = (event: KeyboardEvent) => {
+  const goToNewDocument = (event: KeyboardEvent) => {
     if (event.metaKey || event.altKey) {
       return;
     }
-
-    const { activeCollectionId } = this.props.ui;
-    if (!activeCollectionId) {
-      return;
-    }
-    const can = this.props.policies.abilities(activeCollectionId);
-    if (!can.update) {
+    const { activeCollectionId } = ui;
+    if (!activeCollectionId || !can.createDocument) {
       return;
     }
     history.push(newDocumentPath(activeCollectionId));
   };
 
-  render() {
-    const { auth } = this.props;
-    const { user, team } = auth;
-    const showSidebar = auth.authenticated && user && team;
-    if (auth.isSuspended) {
-      return <ErrorSuspended />;
-    }
+  if (auth.isSuspended) {
+    return <ErrorSuspended />;
+  }
 
-    const sidebar = showSidebar ? (
-      <Fade>
-        <Switch>
-          <Route path={settingsPath()} component={SettingsSidebar} />
-          <Route component={Sidebar} />
-        </Switch>
-      </Fade>
-    ) : undefined;
+  const showSidebar = auth.authenticated && user && team;
 
-    const rightRail = (
-      <React.Suspense fallback={null}>
-        <Switch>
-          <Route
-            path={`/doc/${slug}/history/:revisionId?`}
-            component={DocumentHistory}
-          />
-        </Switch>
-      </React.Suspense>
-    );
+  const sidebar = showSidebar ? (
+    <Fade>
+      <Switch>
+        <Route path={settingsPath()} component={SettingsSidebar} />
+        <Route component={Sidebar} />
+      </Switch>
+    </Fade>
+  ) : undefined;
 
-    return (
-      <Layout title={team?.name} sidebar={sidebar} rightRail={rightRail}>
-        <RegisterKeyDown trigger="n" handler={this.goToNewDocument} />
-        <RegisterKeyDown trigger="t" handler={this.goToSearch} />
-        <RegisterKeyDown trigger="/" handler={this.goToSearch} />
-        {this.props.children}
+  const showHistory = !!matchPath(location.pathname, {
+    path: matchDocumentHistory,
+  });
+  const showInsights = !!matchPath(location.pathname, {
+    path: matchDocumentInsights,
+  });
+  const showComments =
+    !showInsights &&
+    !showHistory &&
+    ui.activeDocumentId &&
+    ui.commentsExpanded.includes(ui.activeDocumentId) &&
+    team?.getPreference(TeamPreference.Commenting);
+
+  const sidebarRight = (
+    <AnimatePresence>
+      {(showHistory || showInsights || showComments) && (
+        <Route path={`/doc/${slug}`}>
+          <SidebarRight>
+            <React.Suspense fallback={null}>
+              {showHistory && <DocumentHistory />}
+              {showInsights && <DocumentInsights />}
+              {showComments && <DocumentComments />}
+            </React.Suspense>
+          </SidebarRight>
+        </Route>
+      )}
+    </AnimatePresence>
+  );
+
+  return (
+    <DocumentContext.Provider value={documentContext}>
+      <Layout title={team?.name} sidebar={sidebar} sidebarRight={sidebarRight}>
+        <RegisterKeyDown trigger="n" handler={goToNewDocument} />
+        <RegisterKeyDown trigger="t" handler={goToSearch} />
+        <RegisterKeyDown trigger="/" handler={goToSearch} />
+        {children}
         <CommandBar />
       </Layout>
-    );
-  }
-}
+    </DocumentContext.Provider>
+  );
+};
 
-export default withTranslation()(withStores(AuthenticatedLayout));
+export default observer(AuthenticatedLayout);

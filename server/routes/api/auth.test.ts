@@ -1,20 +1,33 @@
 import sharedEnv from "@shared/env";
 import env from "@server/env";
 import { buildUser, buildTeam } from "@server/test/factories";
-import { getTestDatabase, getTestServer } from "@server/test/support";
+import { getTestServer } from "@server/test/support";
 
-const db = getTestDatabase();
+const mockTeamInSessionId = "1e023d05-951c-41c6-9012-c9fa0402e1c3";
+
+jest.mock("@server/utils/authentication", () => ({
+  getSessionsInCookie() {
+    return { [mockTeamInSessionId]: {} };
+  },
+}));
+
 const server = getTestServer();
-
-afterAll(server.disconnect);
-
-beforeEach(db.flush);
 
 describe("#auth.info", () => {
   it("should return current authentication", async () => {
     const team = await buildTeam();
+    const team2 = await buildTeam();
+    const team3 = await buildTeam({
+      id: mockTeamInSessionId,
+    });
+
     const user = await buildUser({
       teamId: team.id,
+    });
+    await buildUser();
+    await buildUser({
+      teamId: team2.id,
+      email: user.email,
     });
     const res = await server.post("/api/auth.info", {
       body: {
@@ -22,7 +35,13 @@ describe("#auth.info", () => {
       },
     });
     const body = await res.json();
+    const availableTeamIds = body.data.availableTeams.map((t: any) => t.id);
+
     expect(res.status).toEqual(200);
+    expect(availableTeamIds.length).toEqual(3);
+    expect(availableTeamIds).toContain(team.id);
+    expect(availableTeamIds).toContain(team2.id);
+    expect(availableTeamIds).toContain(team3.id);
     expect(body.data.user.name).toBe(user.name);
     expect(body.data.team.name).toBe(team.name);
     expect(body.data.team.allowedDomains).toEqual([]);
@@ -79,9 +98,10 @@ describe("#auth.config", () => {
     const res = await server.post("/api/auth.config");
     const body = await res.json();
     expect(res.status).toEqual(200);
-    expect(body.data.providers.length).toBe(2);
+    expect(body.data.providers.length).toBe(3);
     expect(body.data.providers[0].name).toBe("Slack");
-    expect(body.data.providers[1].name).toBe("Google");
+    expect(body.data.providers[1].name).toBe("OpenID Connect");
+    expect(body.data.providers[2].name).toBe("Google");
   });
 
   it("should return available providers for team subdomain", async () => {
@@ -200,9 +220,10 @@ describe("#auth.config", () => {
       const res = await server.post("/api/auth.config");
       const body = await res.json();
       expect(res.status).toEqual(200);
-      expect(body.data.providers.length).toBe(2);
+      expect(body.data.providers.length).toBe(3);
       expect(body.data.providers[0].name).toBe("Google");
-      expect(body.data.providers[1].name).toBe("Slack");
+      expect(body.data.providers[1].name).toBe("OpenID Connect");
+      expect(body.data.providers[2].name).toBe("Slack");
     });
 
     it("should return email provider for team when guest signin enabled", async () => {
@@ -219,10 +240,11 @@ describe("#auth.config", () => {
       const res = await server.post("/api/auth.config");
       const body = await res.json();
       expect(res.status).toEqual(200);
-      expect(body.data.providers.length).toBe(3);
+      expect(body.data.providers.length).toBe(4);
       expect(body.data.providers[0].name).toBe("Slack");
-      expect(body.data.providers[1].name).toBe("Google");
-      expect(body.data.providers[2].name).toBe("Email");
+      expect(body.data.providers[1].name).toBe("OpenID Connect");
+      expect(body.data.providers[2].name).toBe("Google");
+      expect(body.data.providers[3].name).toBe("Email");
     });
   });
 });

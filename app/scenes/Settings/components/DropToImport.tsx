@@ -4,6 +4,8 @@ import * as React from "react";
 import Dropzone from "react-dropzone";
 import { useTranslation } from "react-i18next";
 import styled from "styled-components";
+import { s } from "@shared/styles";
+import { AttachmentPreset } from "@shared/types";
 import Flex from "~/components/Flex";
 import LoadingIndicator from "~/components/LoadingIndicator";
 import useStores from "~/hooks/useStores";
@@ -39,6 +41,7 @@ function DropToImport({ disabled, onSubmit, children, format }: Props) {
       try {
         const attachment = await uploadFile(file, {
           name: file.name,
+          preset: AttachmentPreset.Import,
         });
         await collections.import(attachment.id, format);
         onSubmit();
@@ -112,15 +115,15 @@ const DropzoneContainer = styled.div<{
       ? props.theme.secondaryBackground
       : props.theme.background};
   border-radius: 8px;
-  border: 1px dashed ${(props) => props.theme.divider};
+  border: 1px dashed ${s("divider")};
   padding: 52px;
   text-align: center;
   font-size: 15px;
-  cursor: pointer;
+  cursor: var(--pointer);
   opacity: ${(props) => (props.$disabled ? 0.5 : 1)};
 
   &:hover {
-    background: ${(props) => props.theme.secondaryBackground};
+    background: ${s("secondaryBackground")};
   }
 `;
 

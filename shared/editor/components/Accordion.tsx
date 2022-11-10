@@ -35,7 +35,7 @@ const AccordionEditor = ({
   }, [values]);
 
   const setAttributes = () => {
-    console.log(headingElement);
+    // console.log(headingElement);
     if (
       headingElement.target.localName === "input" &&
       values.heading !== heading
@@ -153,7 +153,7 @@ const AccordionEditor = ({
             }}
             onBlur={setAttributes}
             draggable={false}
-          ></StyledArea>
+          />
         </div>
       )}
     </div>

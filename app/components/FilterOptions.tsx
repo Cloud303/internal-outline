@@ -1,6 +1,7 @@
 import * as React from "react";
 import { useMenuState, MenuButton } from "reakit/Menu";
 import styled from "styled-components";
+import { s } from "@shared/styles";
 import Button, { Inner } from "~/components/Button";
 import ContextMenu from "~/components/ContextMenu";
 import MenuItem from "~/components/ContextMenu/MenuItem";
@@ -10,6 +11,7 @@ type TFilterOption = {
   key: string;
   label: string;
   note?: string;
+  icon?: React.ReactNode;
 };
 
 type Props = {
@@ -57,6 +59,7 @@ const FilterOptions = ({
             selected={option.key === activeKey}
             {...menu}
           >
+            {option.icon && <Icon>{option.icon}</Icon>}
             {option.note ? (
               <LabelWithNote>
                 {option.label}
@@ -78,7 +81,7 @@ const Note = styled(Text)`
   line-height: 1.2em;
   font-size: 14px;
   font-weight: 400;
-  color: ${(props) => props.theme.textTertiary};
+  color: ${s("textTertiary")};
 `;
 
 const LabelWithNote = styled.div`
@@ -104,6 +107,12 @@ const StyledButton = styled(Button)`
     line-height: 24px;
     min-height: auto;
   }
+`;
+
+const Icon = styled.div`
+  margin-right: 8px;
+  width: 18px;
+  height: 18px;
 `;
 
 const Wrapper = styled.div`

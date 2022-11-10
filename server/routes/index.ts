@@ -5,12 +5,16 @@ import Router from "koa-router";
 import send from "koa-send";
 import userAgent, { UserAgentContext } from "koa-useragent";
 import { languages } from "@shared/i18n";
+import { IntegrationType } from "@shared/types";
 import env from "@server/env";
 import { NotFoundError } from "@server/errors";
+import { Integration } from "@server/models";
 import { opensearchResponse } from "@server/utils/opensearch";
+import { getTeamFromContext } from "@server/utils/passport";
 import { robotsResponse } from "@server/utils/robots";
 import apexRedirect from "../middlewares/apexRedirect";
 import { renderApp, renderShare } from "./app";
+import errors from "./errors";
 
 const isProduction = env.ENVIRONMENT === "production";
 const koa = new Koa();
@@ -41,6 +45,14 @@ router.use(["/images/*", "/email/*"], async (ctx, next) => {
   }
 });
 
+router.use(
+  ["/share/:shareId", "/share/:shareId/doc/:documentSlug", "/share/:shareId/*"],
+  (ctx) => {
+    ctx.redirect(ctx.path.replace(/^\/share/, "/s"));
+    ctx.status = 301;
+  }
+);
+
 if (isProduction) {
   router.get("/static/*", async (ctx) => {
     try {
@@ -51,10 +63,12 @@ if (isProduction) {
 
       await send(ctx, pathname, {
         root: path.join(__dirname, "../../app/"),
+        // Hashed static assets get 1 year expiry plus immutable flag
+        maxAge: 365 * 24 * 60 * 60 * 1000,
+        immutable: true,
         setHeaders: (res) => {
           res.setHeader("Service-Worker-Allowed", "/");
           res.setHeader("Access-Control-Allow-Origin", "*");
-          res.setHeader("Cache-Control", `max-age=${365 * 24 * 60 * 60}`);
         },
       });
     } catch (err) {
@@ -102,12 +116,32 @@ router.get("/opensearch.xml", (ctx) => {
   ctx.body = opensearchResponse(ctx.request.URL.origin);
 });
 
-router.get("/share/:shareId", renderShare);
-router.get("/share/:shareId/doc/:documentSlug", renderShare);
-router.get("/share/:shareId/*", renderShare);
+router.get("/s/:shareId", renderShare);
+router.get("/s/:shareId/doc/:documentSlug", renderShare);
+router.get("/s/:shareId/*", renderShare);
 
 // catch all for application
-router.get("*", renderApp);
+router.get("*", async (ctx, next) => {
+  const team = await getTeamFromContext(ctx);
+  const analytics = team
+    ? await Integration.findOne({
+        where: {
+          teamId: team.id,
+          type: IntegrationType.Analytics,
+        },
+      })
+    : undefined;
+
+  // Redirect all requests to custom domain if one is set
+  if (team?.domain && team.domain !== ctx.hostname) {
+    ctx.redirect(ctx.href.replace(ctx.hostname, team.domain));
+    return;
+  }
+
+  return renderApp(ctx, next, {
+    analytics,
+  });
+});
 
 // In order to report all possible performance metrics to Sentry this header
 // must be provided when serving the application, see:
@@ -123,6 +157,9 @@ koa.use(async (ctx, next) => {
   await next();
 });
 koa.use(apexRedirect());
+if (env.ENVIRONMENT === "test") {
+  koa.use(errors.routes());
+}
 koa.use(router.routes());
 
 export default koa;

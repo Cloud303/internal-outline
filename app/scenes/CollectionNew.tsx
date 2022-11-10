@@ -49,7 +49,6 @@ class CollectionNew extends React.Component<Props> {
   handleSubmit = async (ev: React.SyntheticEvent) => {
     ev.preventDefault();
     this.isSaving = true;
-
     const collection = new Collection(
       {
         name: this.name,

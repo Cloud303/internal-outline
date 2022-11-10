@@ -1,5 +1,5 @@
 import Token from "markdown-it/lib/token";
-import { WarningIcon, InfoIcon, StarredIcon } from "outline-icons";
+import { WarningIcon, InfoIcon, StarredIcon, DoneIcon } from "outline-icons";
 import { wrappingInputRule } from "prosemirror-inputrules";
 import { NodeSpec, Node as ProsemirrorNode, NodeType } from "prosemirror-model";
 import * as React from "react";
@@ -14,6 +14,7 @@ export default class Notice extends Node {
     return Object.entries({
       info: this.options.dictionary.info,
       warning: this.options.dictionary.warning,
+      success: this.options.dictionary.success,
       tip: this.options.dictionary.tip,
     });
   }
@@ -47,45 +48,72 @@ export default class Notice extends Node {
               ? "tip"
               : dom.className.includes("warning")
               ? "warning"
+              : dom.className.includes("success")
+              ? "success"
+              : undefined,
+          }),
+        },
+        // Quill editor parsing
+        {
+          tag: "div.ql-hint",
+          preserveWhitespace: "full",
+          getAttrs: (dom: HTMLDivElement) => ({
+            style: dom.dataset.hint,
+          }),
+        },
+        // GitBook parsing
+        {
+          tag: "div.alert.theme-admonition",
+          preserveWhitespace: "full",
+          getAttrs: (dom: HTMLDivElement) => ({
+            style: dom.className.includes("warning")
+              ? "warning"
+              : dom.className.includes("success")
+              ? "success"
               : undefined,
           }),
         },
       ],
       toDOM: (node) => {
-        const select = document.createElement("select");
-        select.addEventListener("change", this.handleStyleChange);
+        let icon, actions;
+        if (typeof document !== "undefined") {
+          const select = document.createElement("select");
+          select.addEventListener("change", this.handleStyleChange);
 
-        this.styleOptions.forEach(([key, label]) => {
-          const option = document.createElement("option");
-          option.value = key;
-          option.innerText = label;
-          option.selected = node.attrs.style === key;
-          select.appendChild(option);
-        });
+          this.styleOptions.forEach(([key, label]) => {
+            const option = document.createElement("option");
+            option.value = key;
+            option.innerText = label;
+            option.selected = node.attrs.style === key;
+            select.appendChild(option);
+          });
 
-        const actions = document.createElement("div");
-        actions.className = "notice-actions";
-        actions.appendChild(select);
+          actions = document.createElement("div");
+          actions.className = "notice-actions";
+          actions.appendChild(select);
 
-        let component;
+          let component;
 
-        if (node.attrs.style === "tip") {
-          component = <StarredIcon color="currentColor" />;
-        } else if (node.attrs.style === "warning") {
-          component = <WarningIcon color="currentColor" />;
-        } else {
-          component = <InfoIcon color="currentColor" />;
+          if (node.attrs.style === "tip") {
+            component = <StarredIcon />;
+          } else if (node.attrs.style === "warning") {
+            component = <WarningIcon />;
+          } else if (node.attrs.style === "success") {
+            component = <DoneIcon />;
+          } else {
+            component = <InfoIcon />;
+          }
+
+          icon = document.createElement("div");
+          icon.className = "icon";
+          ReactDOM.render(component, icon);
         }
-
-        const icon = document.createElement("div");
-        icon.className = "icon";
-        ReactDOM.render(component, icon);
 
         return [
           "div",
           { class: `notice-block ${node.attrs.style}` },
-          icon,
-          ["div", { contentEditable: "false" }, actions],
+          ...(icon ? [icon] : []),
+          ["div", { contentEditable: "false" }, ...(actions ? [actions] : [])],
           ["div", { class: "content" }, 0],
         ];
       },

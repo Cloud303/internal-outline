@@ -8,26 +8,24 @@ const TableOfContents = ({ editor }: { editor: any; node: any }) => {
   return (
     <StyledCon>
       {getHeadings(view.state.doc)?.map(
-        (heading: { id: string; title: string; level: number }) => {
-          return (
-            <StyledButton
-              key={heading.title}
-              style={{
-                paddingLeft:
-                  heading.level === 2
-                    ? "30px"
-                    : heading.level === 3
-                    ? "50px"
-                    : "15px",
-              }}
-              onClick={(e) => {
-                window.location.hash = `#${heading.id}`;
-              }}
-            >
-              {heading.title}
-            </StyledButton>
-          );
-        }
+        (heading: { id: string; title: string; level: number }) => (
+          <StyledButton
+            key={heading.title}
+            style={{
+              paddingLeft:
+                heading.level === 2
+                  ? "30px"
+                  : heading.level === 3
+                  ? "50px"
+                  : "15px",
+            }}
+            onClick={(e) => {
+              window.location.hash = `#${heading.id}`;
+            }}
+          >
+            {heading.title}
+          </StyledButton>
+        )
       )}
     </StyledCon>
   );

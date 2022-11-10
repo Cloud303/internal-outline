@@ -2,6 +2,7 @@ import { GoToIcon } from "outline-icons";
 import * as React from "react";
 import { Link } from "react-router-dom";
 import styled from "styled-components";
+import { s, ellipsis } from "@shared/styles";
 import Flex from "~/components/Flex";
 import BreadcrumbMenu from "~/menus/BreadcrumbMenu";
 import { MenuInternalLink } from "~/types";
@@ -60,19 +61,18 @@ function Breadcrumb({
 
 const Slash = styled(GoToIcon)`
   flex-shrink: 0;
-  fill: ${(props) => props.theme.divider};
+  fill: ${s("divider")};
 `;
 
 const Item = styled(Link)<{ $highlight: boolean; $withIcon: boolean }>`
+  ${ellipsis()}
   display: flex;
   flex-shrink: 1;
   min-width: 0;
-  color: ${(props) => props.theme.text};
+  cursor: var(--pointer);
+  color: ${s("text")};
   font-size: 15px;
   height: 24px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  overflow: hidden;
   font-weight: ${(props) => (props.$highlight ? "500" : "inherit")};
   margin-left: ${(props) => (props.$withIcon ? "4px" : "0")};
 

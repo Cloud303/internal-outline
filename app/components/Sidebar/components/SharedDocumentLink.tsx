@@ -1,10 +1,11 @@
 import { observer } from "mobx-react";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
+import { NavigationNode } from "@shared/types";
 import Collection from "~/models/Collection";
 import Document from "~/models/Document";
 import useStores from "~/hooks/useStores";
-import { NavigationNode } from "~/types";
+import { sharedDocumentPath } from "~/utils/routeHelpers";
 import Disclosure from "./Disclosure";
 import SidebarLink from "./SidebarLink";
 
@@ -41,9 +42,9 @@ function DocumentLink(
     !!node.children.length || activeDocument?.parentDocumentId === node.id;
   const document = documents.get(node.id);
 
-  const showChildren = React.useMemo(() => {
-    return !!hasChildDocuments;
-  }, [hasChildDocuments]);
+  const showChildren = React.useMemo(() => !!hasChildDocuments, [
+    hasChildDocuments,
+  ]);
 
   const [expanded, setExpanded] = React.useState(showChildren);
 
@@ -52,6 +53,12 @@ function DocumentLink(
       setExpanded(showChildren);
     }
   }, [showChildren]);
+
+  React.useEffect(() => {
+    if (isActiveDocument) {
+      setExpanded(true);
+    }
+  }, [isActiveDocument]);
 
   const handleDisclosureClick = React.useCallback(
     (ev: React.SyntheticEvent) => {
@@ -92,14 +99,14 @@ function DocumentLink(
     <>
       <SidebarLink
         to={{
-          pathname: `/share/${shareId}${node.url}`,
+          pathname: sharedDocumentPath(shareId, node.url),
           state: {
             title: node.title,
           },
         }}
         label={
           <>
-            {hasChildDocuments && (
+            {hasChildDocuments && depth !== 0 && (
               <Disclosure expanded={expanded} onClick={handleDisclosureClick} />
             )}
             {title}
@@ -110,9 +117,7 @@ function DocumentLink(
         scrollIntoViewIfNeeded={!document?.isStarred}
         isDraft={isDraft}
         ref={ref}
-        isActive={() => {
-          return !!isActiveDocument;
-        }}
+        isActive={() => !!isActiveDocument}
       />
       {expanded &&
         nodeChildren.map((childNode, index) => (

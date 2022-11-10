@@ -35,14 +35,11 @@ function InputSearchPage({
   const history = useHistory();
   const { t } = useTranslation();
   const [isFocused, setFocused, setUnfocused] = useBoolean(false);
-  const focus = React.useCallback(() => {
-    inputRef.current?.focus();
-  }, []);
 
   useKeyDown("f", (ev: KeyboardEvent) => {
-    if (isModKey(ev)) {
+    if (isModKey(ev) && document.activeElement !== inputRef.current) {
       ev.preventDefault();
-      focus();
+      inputRef.current?.focus();
     }
   });
 
@@ -57,6 +54,10 @@ function InputSearchPage({
           })
         );
       }
+      if (ev.key === "Escape") {
+        ev.preventDefault();
+        inputRef.current?.blur();
+      }
 
       if (onKeyDown) {
         onKeyDown(ev);
@@ -67,7 +68,7 @@ function InputSearchPage({
 
   return (
     <InputMaxWidth
-      innerRef={inputRef}
+      ref={inputRef}
       type="search"
       placeholder={placeholder || `${t("Search")}…`}
       value={value}

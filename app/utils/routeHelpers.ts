@@ -1,5 +1,6 @@
 import queryString from "query-string";
 import Collection from "~/models/Collection";
+import Comment from "~/models/Comment";
 import Document from "~/models/Document";
 
 export function homePath(): string {
@@ -34,18 +35,26 @@ export function profileSettingsPath(): string {
   return "/settings";
 }
 
+export function accountPreferencesPath(): string {
+  return "/settings/preferences";
+}
+
 export function groupSettingsPath(): string {
   return "/settings/groups";
 }
 
-export function collectionUrl(url: string, section?: string): string {
+export function commentPath(document: Document, comment: Comment): string {
+  return `${documentPath(document)}?commentId=${comment.id}`;
+}
+
+export function collectionPath(url: string, section?: string): string {
   if (section) {
     return `${url}/${section}`;
   }
   return url;
 }
 
-export function updateCollectionUrl(
+export function updateCollectionPath(
   oldUrl: string,
   collection: Collection
 ): string {
@@ -56,19 +65,22 @@ export function updateCollectionUrl(
   );
 }
 
-export function documentUrl(doc: Document): string {
+export function documentPath(doc: Document): string {
   return doc.url;
 }
 
-export function editDocumentUrl(doc: Document): string {
+export function documentEditPath(doc: Document): string {
   return `${doc.url}/edit`;
 }
 
-export function documentMoveUrl(doc: Document): string {
-  return `${doc.url}/move`;
+export function documentInsightsPath(doc: Document): string {
+  return `${doc.url}/insights`;
 }
 
-export function documentHistoryUrl(doc: Document, revisionId?: string): string {
+export function documentHistoryPath(
+  doc: Document,
+  revisionId?: string
+): string {
   let base = `${doc.url}/history`;
   if (revisionId) {
     base += `/${revisionId}`;
@@ -80,7 +92,7 @@ export function documentHistoryUrl(doc: Document, revisionId?: string): string {
  * Replace full url's document part with the new one in case
  * the document slug has been updated
  */
-export function updateDocumentUrl(oldUrl: string, document: Document): string {
+export function updateDocumentPath(oldUrl: string, document: Document): string {
   // Update url to match the current one
   return oldUrl.replace(
     new RegExp("/doc/([0-9a-zA-Z-_~]*-[a-zA-z0-9]{10,15})"),
@@ -89,14 +101,16 @@ export function updateDocumentUrl(oldUrl: string, document: Document): string {
 }
 
 export function newDocumentPath(
-  collectionId: string,
+  collectionId?: string | null,
   params: {
     parentDocumentId?: string;
     templateId?: string;
     template?: boolean;
   } = {}
 ): string {
-  return `/collection/${collectionId}/new?${queryString.stringify(params)}`;
+  return collectionId
+    ? `/collection/${collectionId}/new?${queryString.stringify(params)}`
+    : `/doc/new`;
 }
 
 export function searchPath(
@@ -117,8 +131,12 @@ export function searchPath(
   return `${route}${search}`;
 }
 
-export function notFoundUrl(): string {
-  return "/404";
+export function sharedDocumentPath(shareId: string, docPath?: string) {
+  return docPath ? `/s/${shareId}${docPath}` : `/s/${shareId}`;
+}
+
+export function urlify(path: string): string {
+  return `${window.location.origin}${path}`;
 }
 
 export const matchDocumentSlug =
@@ -127,3 +145,5 @@ export const matchDocumentSlug =
 export const matchDocumentEdit = `/doc/${matchDocumentSlug}/edit`;
 
 export const matchDocumentHistory = `/doc/${matchDocumentSlug}/history/:revisionId?`;
+
+export const matchDocumentInsights = `/doc/${matchDocumentSlug}/insights`;

@@ -1,10 +1,8 @@
 import { some } from "lodash";
-import { NodeSelection, TextSelection } from "prosemirror-state";
+import { EditorState, NodeSelection, TextSelection } from "prosemirror-state";
 import { CellSelection } from "prosemirror-tables";
-import { EditorView } from "prosemirror-view";
 import * as React from "react";
 import createAndInsertLink from "@shared/editor/commands/createAndInsertLink";
-import { CommandFactory } from "@shared/editor/lib/Extension";
 import filterExcessSeparators from "@shared/editor/lib/filterExcessSeparators";
 import getColumnIndex from "@shared/editor/queries/getColumnIndex";
 import getMarkRange from "@shared/editor/queries/getMarkRange";
@@ -12,7 +10,13 @@ import getRowIndex from "@shared/editor/queries/getRowIndex";
 import isMarkActive from "@shared/editor/queries/isMarkActive";
 import isNodeActive from "@shared/editor/queries/isNodeActive";
 import { MenuItem } from "@shared/editor/types";
-import { Dictionary } from "~/hooks/useDictionary";
+import { creatingUrlPrefix } from "@shared/utils/urls";
+import useBoolean from "~/hooks/useBoolean";
+import useDictionary from "~/hooks/useDictionary";
+import useEventListener from "~/hooks/useEventListener";
+import useMobile from "~/hooks/useMobile";
+import usePrevious from "~/hooks/usePrevious";
+import useToasts from "~/hooks/useToasts";
 import getDividerMenuItems from "../menus/divider";
 import getFormattingMenuItems from "../menus/formatting";
 import getImageMenuItems from "../menus/image";
@@ -20,15 +24,14 @@ import getTableMenuItems from "../menus/table";
 import getTableColMenuItems from "../menus/tableCol";
 import getTableRowMenuItems from "../menus/tableRow";
 import ColorEditor from "./ColorEditor";
+import { useEditor } from "./EditorContext";
 import FloatingToolbar from "./FloatingToolbar";
 import LinkEditor, { SearchResult } from "./LinkEditor";
 import ToolbarMenu from "./ToolbarMenu";
 
 type Props = {
-  dictionary: Dictionary;
   rtl: boolean;
   isTemplate: boolean;
-  commands: Record<string, CommandFactory>;
   onOpen: () => void;
   onClose: () => void;
   onSearchLink?: (term: string) => Promise<SearchResult[]>;
@@ -37,15 +40,12 @@ type Props = {
     event: MouseEvent | React.MouseEvent<HTMLButtonElement>
   ) => void;
   onCreateLink?: (title: string) => Promise<string>;
-  onShowToast: (message: string) => void;
-  view: EditorView;
 };
 
-function isVisible(props: Props) {
-  const { view } = props;
-  const { selection, doc } = view.state;
+function useIsActive(state: EditorState) {
+  const { selection, doc } = state;
 
-  if (isMarkActive(view.state.schema.marks.link)(view.state)) {
+  if (isMarkActive(state.schema.marks.link)(state)) {
     return true;
   }
   if (!selection || selection.empty) {
@@ -76,58 +76,69 @@ function isVisible(props: Props) {
   return some(nodes, (n) => n.content.size);
 }
 
-export default class SelectionToolbar extends React.Component<Props> {
-  isActive = false;
-  isColorSelected = true;
-  menuRef = React.createRef<HTMLDivElement>();
+function useIsDragging() {
+  const [isDragging, setDragging, setNotDragging] = useBoolean();
+  useEventListener("dragstart", setDragging);
+  useEventListener("dragend", setNotDragging);
+  useEventListener("drop", setNotDragging);
+  return isDragging;
+}
 
-  componentDidUpdate(): void {
-    const visible = isVisible(this.props);
-    if (this.isActive && !visible) {
-      this.isActive = false;
-      this.props.onClose();
+export default function SelectionToolbar(props: Props) {
+  const { onClose, onOpen } = props;
+  const { view, commands } = useEditor();
+  const { showToast: onShowToast } = useToasts();
+  const dictionary = useDictionary();
+  const menuRef = React.useRef<HTMLDivElement | null>(null);
+  const isActive = useIsActive(view.state);
+  // let isColorSelected = true;
+  const isDragging = useIsDragging();
+  const previousIsActuve = usePrevious(isActive);
+  const isMobile = useMobile();
+
+  React.useEffect(() => {
+    // Trigger callbacks when the toolbar is opened or closed
+    if (previousIsActuve && !isActive) {
+      onClose();
     }
-    if (!this.isActive && visible) {
-      this.isActive = true;
-      this.props.onOpen();
+    if (!previousIsActuve && isActive) {
+      onOpen();
     }
-  }
+  }, [isActive, onClose, onOpen, previousIsActuve]);
 
-  componentDidMount(): void {
-    window.addEventListener("mouseup", this.handleClickOutside);
-  }
+  React.useEffect(() => {
+    const handleClickOutside = (ev: MouseEvent): void => {
+      if (
+        ev.target instanceof HTMLElement &&
+        menuRef.current &&
+        menuRef.current.contains(ev.target)
+      ) {
+        return;
+      }
 
-  componentWillUnmount(): void {
-    window.removeEventListener("mouseup", this.handleClickOutside);
-  }
+      if (!isActive || document.activeElement?.tagName === "INPUT") {
+        return;
+      }
 
-  handleClickOutside = (ev: MouseEvent): void => {
-    if (
-      ev.target instanceof HTMLElement &&
-      this.menuRef.current &&
-      this.menuRef.current.contains(ev.target)
-    ) {
-      return;
-    }
+      if (view.hasFocus()) {
+        return;
+      }
 
-    if (!this.isActive) {
-      return;
-    }
+      const { dispatch } = view;
+      dispatch(
+        view.state.tr.setSelection(new TextSelection(view.state.doc.resolve(0)))
+      );
+    };
 
-    const { view } = this.props;
-    if (view.hasFocus()) {
-      return;
-    }
+    window.addEventListener("mouseup", handleClickOutside);
 
-    const { dispatch } = view;
+    return () => {
+      window.removeEventListener("mouseup", handleClickOutside);
+    };
+  }, [isActive, view]);
 
-    dispatch(
-      view.state.tr.setSelection(new TextSelection(view.state.doc.resolve(0)))
-    );
-  };
-
-  handleOnCreateLink = async (title: string): Promise<void> => {
-    const { dictionary, onCreateLink, view, onShowToast } = this.props;
+  const handleOnCreateLink = async (title: string): Promise<void> => {
+    const { onCreateLink } = props;
 
     if (!onCreateLink) {
       return;
@@ -140,7 +151,7 @@ export default class SelectionToolbar extends React.Component<Props> {
       return;
     }
 
-    const href = `creating#${title}…`;
+    const href = `${creatingUrlPrefix}${title}…`;
     const markType = state.schema.marks.link;
 
     // Insert a placeholder link
@@ -157,7 +168,7 @@ export default class SelectionToolbar extends React.Component<Props> {
     });
   };
 
-  handleOnSelectLink = ({
+  const handleOnSelectLink = ({
     href,
     from,
     to,
@@ -166,7 +177,6 @@ export default class SelectionToolbar extends React.Component<Props> {
     from: number;
     to: number;
   }): void => {
-    const { view } = this.props;
     const { state, dispatch } = view;
 
     const markType = state.schema.marks.link;
@@ -178,7 +188,7 @@ export default class SelectionToolbar extends React.Component<Props> {
     );
   };
 
-  handleOnSelectColor = ({
+  const handleOnSelectColor = ({
     color,
     from,
     to,
@@ -187,106 +197,106 @@ export default class SelectionToolbar extends React.Component<Props> {
     from: number;
     to: number;
   }): void => {
-    const { view } = this.props;
     const { state, dispatch } = view;
 
     const markType = state.schema.marks.color;
 
     dispatch(state.tr.addMark(from, to, markType.create({ color })));
-
-    this.isColorSelected = false;
+    // isColorSelected = false;
   };
 
-  render() {
-    const { dictionary, onCreateLink, isTemplate, rtl, ...rest } = this.props;
-    const { view } = rest;
-    const { state } = view;
-    const { selection }: { selection: any } = state;
-    const isCodeSelection = isNodeActive(state.schema.nodes.code_block)(state);
-    const isDividerSelection = isNodeActive(state.schema.nodes.hr)(state);
+  const { onCreateLink, isTemplate, rtl, ...rest } = props;
+  const { state } = view;
+  const { selection }: { selection: any } = state;
+  const isCodeSelection = isNodeActive(state.schema.nodes.code_block)(state);
+  const isDividerSelection = isNodeActive(state.schema.nodes.hr)(state);
 
-    // toolbar is disabled in code blocks, no bold / italic etc
-    if (isCodeSelection) {
-      return null;
-    }
-
-    const colIndex = getColumnIndex(
-      (state.selection as unknown) as CellSelection
-    );
-    const rowIndex = getRowIndex((state.selection as unknown) as CellSelection);
-    const isTableSelection = colIndex !== undefined && rowIndex !== undefined;
-    const link = isMarkActive(state.schema.marks.link)(state);
-    const range = getMarkRange(selection.$from, state.schema.marks.link);
-    const color = isMarkActive(state.schema.marks.color)(state);
-    const rangeColor = getMarkRange(selection.$from, state.schema.marks.color);
-    const isImageSelection = selection.node?.type?.name === "image";
-
-    let items: MenuItem[] = [];
-    if (isTableSelection) {
-      items = getTableMenuItems(dictionary);
-    } else if (colIndex !== undefined) {
-      items = getTableColMenuItems(state, colIndex, rtl, dictionary);
-    } else if (rowIndex !== undefined) {
-      items = getTableRowMenuItems(state, rowIndex, dictionary);
-    } else if (isImageSelection) {
-      items = getImageMenuItems(state, dictionary);
-    } else if (isDividerSelection) {
-      items = getDividerMenuItems(state, dictionary);
-    } else {
-      items = getFormattingMenuItems(state, isTemplate, dictionary);
-    }
-
-    // Some extensions may be disabled, remove corresponding items
-    items = items.filter((item) => {
-      if (item.name === "separator") {
-        return true;
-      }
-      if (item.name && !this.props.commands[item.name]) {
-        return false;
-      }
-      return true;
-    });
-
-    items = filterExcessSeparators(items);
-    if (!items.length) {
-      return null;
-    }
-
-    if (color === false) {
-      this.isColorSelected = true;
-    }
-
-    return (
-      <FloatingToolbar
-        view={view}
-        active={isVisible(this.props)}
-        ref={this.menuRef}
-      >
-        {link && range && (
-          <LinkEditor
-            key={`${range.from}-${range.to}`}
-            dictionary={dictionary}
-            mark={range.mark}
-            from={range.from}
-            to={range.to}
-            onCreateLink={onCreateLink ? this.handleOnCreateLink : undefined}
-            onSelectLink={this.handleOnSelectLink}
-            {...rest}
-          />
-        )}
-        {color && rangeColor && this.isColorSelected && (
-          <ColorEditor
-            key={`${rangeColor.from}-${rangeColor.to}`}
-            dictionary={dictionary}
-            mark={rangeColor.mark}
-            from={rangeColor.from}
-            to={rangeColor.to}
-            onSelectColor={this.handleOnSelectColor}
-            {...rest}
-          />
-        )}
-        <ToolbarMenu items={items} {...rest} />
-      </FloatingToolbar>
-    );
+  // toolbar is disabled in code blocks, no bold / italic etc
+  if (isCodeSelection || isDragging) {
+    return null;
   }
+
+  const colIndex = getColumnIndex(
+    (state.selection as unknown) as CellSelection
+  );
+  const rowIndex = getRowIndex((state.selection as unknown) as CellSelection);
+  const isTableSelection = colIndex !== undefined && rowIndex !== undefined;
+  const link = isMarkActive(state.schema.marks.link)(state);
+  const range = getMarkRange(selection.$from, state.schema.marks.link);
+  const isImageSelection = selection.node?.type?.name === "image";
+  const color = isMarkActive(state.schema.marks.color)(state);
+  const rangeColor = getMarkRange(selection.$from, state.schema.marks.color);
+
+  let items: MenuItem[] = [];
+  if (isTableSelection) {
+    items = getTableMenuItems(dictionary);
+  } else if (colIndex !== undefined) {
+    items = getTableColMenuItems(state, colIndex, rtl, dictionary);
+  } else if (rowIndex !== undefined) {
+    items = getTableRowMenuItems(state, rowIndex, dictionary);
+  } else if (isImageSelection) {
+    items = getImageMenuItems(state, dictionary);
+  } else if (isDividerSelection) {
+    items = getDividerMenuItems(state, dictionary);
+  } else {
+    items = getFormattingMenuItems(state, isTemplate, isMobile, dictionary);
+  }
+
+  // Some extensions may be disabled, remove corresponding items
+  items = items.filter((item) => {
+    if (item.name === "separator") {
+      return true;
+    }
+    if (item.name && !commands[item.name]) {
+      return false;
+    }
+    return true;
+  });
+
+  items = filterExcessSeparators(items);
+  if (!items.length) {
+    return null;
+  }
+
+  const showLinkToolbar = link && range;
+
+  if (color === false) {
+    // this.isColorSelected = true;
+  }
+
+  return (
+    <FloatingToolbar
+      active={isActive}
+      ref={menuRef}
+      width={showLinkToolbar ? 336 : undefined}
+    >
+      {showLinkToolbar && (
+        <LinkEditor
+          key={`${range.from}-${range.to}`}
+          dictionary={dictionary}
+          view={view}
+          mark={range.mark}
+          from={range.from}
+          to={range.to}
+          onShowToast={onShowToast}
+          onClickLink={props.onClickLink}
+          onSearchLink={props.onSearchLink}
+          onCreateLink={onCreateLink ? handleOnCreateLink : undefined}
+          onSelectLink={handleOnSelectLink}
+        />
+      )}
+      {color && rangeColor && (
+        <ColorEditor
+          key={`${rangeColor.from}-${rangeColor.to}`}
+          dictionary={dictionary}
+          mark={rangeColor.mark}
+          from={rangeColor.from}
+          to={rangeColor.to}
+          onSelectColor={handleOnSelectColor}
+          {...rest}
+        />
+      )}
+      <ToolbarMenu items={items} {...rest} />
+    </FloatingToolbar>
+  );
 }

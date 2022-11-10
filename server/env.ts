@@ -51,14 +51,14 @@ export class Environment {
    * set or your users will be unable to login.
    */
   @IsByteLength(32, 64)
-  public SECRET_KEY = `${process.env.SECRET_KEY}`;
+  public SECRET_KEY = process.env.SECRET_KEY ?? "";
 
   /**
    * The secret that should be passed to the cron utility endpoint to enable
    * triggering of scheduled tasks.
    */
   @IsNotEmpty()
-  public UTILS_SECRET = `${process.env.UTILS_SECRET}`;
+  public UTILS_SECRET = process.env.UTILS_SECRET ?? "";
 
   /**
    * The url of the database.
@@ -69,7 +69,7 @@ export class Environment {
     allow_underscores: true,
     protocols: ["postgres", "postgresql"],
   })
-  public DATABASE_URL = `${process.env.DATABASE_URL}`;
+  public DATABASE_URL = process.env.DATABASE_URL ?? "";
 
   /**
    * The url of the database pool.
@@ -125,7 +125,7 @@ export class Environment {
    */
   @IsNotEmpty()
   @IsUrl({ require_tld: false })
-  public URL = `${process.env.URL}`;
+  public URL = process.env.URL || "";
 
   /**
    * If using a Cloudfront/Cloudflare distribution or similar it can be set below.
@@ -148,6 +148,17 @@ export class Environment {
   );
 
   /**
+   * The maximum number of network clients that can be connected to a single
+   * document at once. Defaults to 100.
+   */
+  @IsOptional()
+  @IsNumber()
+  public COLLABORATION_MAX_CLIENTS_PER_DOCUMENT = parseInt(
+    process.env.COLLABORATION_MAX_CLIENTS_PER_DOCUMENT || "100",
+    10
+  );
+
+  /**
    * The port that the server will listen on, defaults to 3000.
    */
   @IsNumber()
@@ -157,7 +168,13 @@ export class Environment {
   /**
    * Optional extra debugging. Comma separated
    */
-  public DEBUG = `${process.env.DEBUG}`;
+  public DEBUG = process.env.DEBUG || "";
+
+  /**
+   * Configure lowest severity level for server logs
+   */
+  @IsIn(["error", "warn", "info", "http", "verbose", "debug", "silly"])
+  public LOG_LEVEL = process.env.LOG_LEVEL || "info";
 
   /**
    * How many processes should be spawned. As a reasonable rule divide your
@@ -196,11 +213,6 @@ export class Environment {
   @Equals("hosted")
   @IsOptional()
   public DEPLOYMENT = this.toOptionalString(process.env.DEPLOYMENT);
-
-  /**
-   * Custom company logo that displays on the authentication screen.
-   */
-  public TEAM_LOGO = process.env.TEAM_LOGO;
 
   /**
    * The default interface language. See translate.getoutline.com for a list of
@@ -248,15 +260,6 @@ export class Environment {
   );
 
   /**
-   * Because imports can be much larger than regular file attachments and are
-   * deleted automatically we allow an optional separate limit on the size of
-   * imports.
-   */
-  @IsNumber()
-  public MAXIMUM_IMPORT_SIZE =
-    this.toOptionalNumber(process.env.MAXIMUM_IMPORT_SIZE) ?? 5120000;
-
-  /**
    * An optional comma separated list of allowed domains.
    */
   public ALLOWED_DOMAINS =
@@ -268,6 +271,12 @@ export class Environment {
    * The host of your SMTP server for enabling emails.
    */
   public SMTP_HOST = process.env.SMTP_HOST;
+
+  /**
+   * Optional hostname of the client, used for identifying to the server
+   * defaults to hostname of the machine.
+   */
+  public SMTP_NAME = process.env.SMTP_NAME;
 
   /**
    * The port of your SMTP server.
@@ -323,19 +332,19 @@ export class Environment {
   public SENTRY_DSN = this.toOptionalString(process.env.SENTRY_DSN);
 
   /**
+   * Sentry tunnel URL for bypassing ad blockers
+   */
+  @IsUrl()
+  @IsOptional()
+  public SENTRY_TUNNEL = this.toOptionalString(process.env.SENTRY_TUNNEL);
+
+  /**
    * A release SHA or other identifier for Sentry.
    */
   public RELEASE = this.toOptionalString(process.env.RELEASE);
 
   /**
-   * An optional host from which to load default avatars.
-   */
-  @IsUrl()
-  public DEFAULT_AVATAR_HOST =
-    process.env.DEFAULT_AVATAR_HOST ?? "https://tiley.herokuapp.com";
-
-  /**
-   * A Google Analytics tracking ID, only v3 supported at this time.
+   * A Google Analytics tracking ID, supports only v3 properties.
    */
   @Contains("UA-")
   @IsOptional()
@@ -347,6 +356,11 @@ export class Environment {
    * A DataDog API key for tracking server metrics.
    */
   public DD_API_KEY = process.env.DD_API_KEY;
+
+  /**
+   * The name of the service to use in DataDog.
+   */
+  public DD_SERVICE = process.env.DD_SERVICE ?? "outline";
 
   /**
    * Google OAuth2 client credentials. To enable authentication with Google.
@@ -516,7 +530,6 @@ export class Environment {
   public OIDC_SCOPES = process.env.OIDC_SCOPES ?? "openid profile email";
 
   public OIDC_LOGOUT_URL = process.env.OIDC_LOGOUT_URL ?? "/";
-
   /**
    * A string representing the version of the software.
    *
@@ -555,6 +568,44 @@ export class Environment {
   @CannotUseWithout("RATE_LIMITER_ENABLED")
   public RATE_LIMITER_DURATION_WINDOW =
     this.toOptionalNumber(process.env.RATE_LIMITER_DURATION_WINDOW) ?? 60;
+
+  /**
+   * Set max allowed upload size for file attachments.
+   */
+  @IsOptional()
+  @IsNumber()
+  public AWS_S3_UPLOAD_MAX_SIZE =
+    this.toOptionalNumber(process.env.AWS_S3_UPLOAD_MAX_SIZE) ?? 100000000;
+
+  /**
+   * Set default AWS S3 ACL for file attachments.
+   */
+  @IsOptional()
+  public AWS_S3_ACL = process.env.AWS_S3_ACL ?? "private";
+
+  /**
+   * Because imports can be much larger than regular file attachments and are
+   * deleted automatically we allow an optional separate limit on the size of
+   * imports.
+   */
+  @IsNumber()
+  public MAXIMUM_IMPORT_SIZE = Math.max(
+    this.toOptionalNumber(process.env.MAXIMUM_IMPORT_SIZE) ?? 100000000,
+    this.AWS_S3_UPLOAD_MAX_SIZE
+  );
+
+  /**
+   * The product name
+   */
+  public APP_NAME = "Outline";
+
+  /**
+   * Returns true if the current installation is the cloud hosted version at
+   * getoutline.com
+   */
+  public isCloudHosted() {
+    return this.DEPLOYMENT === "hosted";
+  }
 
   private toOptionalString(value: string | undefined) {
     return value ? value : undefined;

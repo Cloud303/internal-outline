@@ -3,6 +3,11 @@ import { ArchiveIcon, DoneIcon, WarningIcon } from "outline-icons";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "styled-components";
+import {
+  FileOperationFormat,
+  FileOperationState,
+  FileOperationType,
+} from "@shared/types";
 import FileOperation from "~/models/FileOperation";
 import { Action } from "~/components/Actions";
 import ListItem from "~/components/List/Item";
@@ -21,22 +26,32 @@ const FileOperationListItem = ({ fileOperation, handleDelete }: Props) => {
   const user = useCurrentUser();
   const theme = useTheme();
   const stateMapping = {
-    creating: t("Processing"),
-    expired: t("Expired"),
-    uploading: t("Processing"),
-    error: t("Failed"),
+    [FileOperationState.Creating]: t("Processing"),
+    [FileOperationState.Uploading]: t("Processing"),
+    [FileOperationState.Expired]: t("Expired"),
+    [FileOperationState.Complete]: t("Completed"),
+    [FileOperationState.Error]: t("Failed"),
   };
 
   const iconMapping = {
-    creating: <Spinner />,
-    uploading: <Spinner />,
-    expired: <ArchiveIcon color={theme.textTertiary} />,
-    complete: <DoneIcon color={theme.primary} />,
-    error: <WarningIcon color={theme.danger} />,
+    [FileOperationState.Creating]: <Spinner />,
+    [FileOperationState.Uploading]: <Spinner />,
+    [FileOperationState.Expired]: <ArchiveIcon color={theme.textTertiary} />,
+    [FileOperationState.Complete]: <DoneIcon color={theme.accent} />,
+    [FileOperationState.Error]: <WarningIcon color={theme.danger} />,
   };
 
+  const formatMapping = {
+    [FileOperationFormat.JSON]: "JSON",
+    [FileOperationFormat.MarkdownZip]: "Markdown",
+    [FileOperationFormat.HTMLZip]: "HTML",
+    [FileOperationFormat.PDF]: "PDF",
+  };
+
+  const format = formatMapping[fileOperation.format];
   const title =
-    fileOperation.type === "import" || fileOperation.collectionId
+    fileOperation.type === FileOperationType.Import ||
+    fileOperation.collectionId
       ? fileOperation.name
       : t("All collections");
 
@@ -46,9 +61,7 @@ const FileOperationListItem = ({ fileOperation, handleDelete }: Props) => {
       image={iconMapping[fileOperation.state]}
       subtitle={
         <>
-          {fileOperation.state !== "complete" && (
-            <>{stateMapping[fileOperation.state]}&nbsp;•&nbsp;</>
-          )}
+          {stateMapping[fileOperation.state]}&nbsp;•&nbsp;
           {fileOperation.error && <>{fileOperation.error}&nbsp;•&nbsp;</>}
           {t(`{{userName}} requested`, {
             userName:
@@ -58,11 +71,12 @@ const FileOperationListItem = ({ fileOperation, handleDelete }: Props) => {
           })}
           &nbsp;
           <Time dateTime={fileOperation.createdAt} addSuffix shorten />
-          &nbsp;•&nbsp;{fileOperation.sizeInMB}
+          {format ? <>&nbsp;•&nbsp;{format}</> : ""}
+          {fileOperation.size ? <>&nbsp;•&nbsp;{fileOperation.sizeInMB}</> : ""}
         </>
       }
       actions={
-        fileOperation.state === "complete" && handleDelete ? (
+        fileOperation.state === FileOperationState.Complete && handleDelete ? (
           <Action>
             <FileOperationMenu
               id={fileOperation.id}

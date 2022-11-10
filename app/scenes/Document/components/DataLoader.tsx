@@ -1,18 +1,17 @@
 import { observer } from "mobx-react";
 import * as React from "react";
 import { useLocation, RouteComponentProps, StaticContext } from "react-router";
+import { NavigationNode, TeamPreference } from "@shared/types";
 import Document from "~/models/Document";
 import Revision from "~/models/Revision";
 import Error404 from "~/scenes/Error404";
 import ErrorOffline from "~/scenes/ErrorOffline";
 import usePolicy from "~/hooks/usePolicy";
 import useStores from "~/hooks/useStores";
-import { NavigationNode } from "~/types";
 import Logger from "~/utils/Logger";
 import { NotFoundError, OfflineError } from "~/utils/errors";
 import history from "~/utils/history";
 import { matchDocumentEdit } from "~/utils/routeHelpers";
-import HideSidebar from "./HideSidebar";
 import Loading from "./Loading";
 
 type Params = {
@@ -31,7 +30,6 @@ type Children = (options: {
   document: Document;
   revision: Revision | undefined;
   abilities: Record<string, boolean>;
-  isEditing: boolean;
   readOnly: boolean;
   onCreateLink: (title: string) => Promise<string>;
   sharedTree: NavigationNode | undefined;
@@ -42,7 +40,16 @@ type Props = RouteComponentProps<Params, StaticContext, LocationState> & {
 };
 
 function DataLoader({ match, children }: Props) {
-  const { ui, shares, documents, auth, revisions, subscriptions } = useStores();
+  const {
+    ui,
+    views,
+    shares,
+    comments,
+    documents,
+    auth,
+    revisions,
+    subscriptions,
+  } = useStores();
   const { team } = auth;
   const [error, setError] = React.useState<Error | null>(null);
   const { revisionId, shareId, documentSlug } = match.params;
@@ -57,7 +64,7 @@ function DataLoader({ match, children }: Props) {
     ? documents.getSharedTree(document.id)
     : undefined;
   const isEditRoute = match.path === matchDocumentEdit;
-  const isEditing = isEditRoute || !!auth.team?.collaborativeEditing;
+  const isEditing = isEditRoute || !!auth.team?.seamlessEditing;
   const can = usePolicy(document?.id);
   const location = useLocation<LocationState>();
 
@@ -89,7 +96,7 @@ function DataLoader({ match, children }: Props) {
 
   React.useEffect(() => {
     async function fetchSubscription() {
-      if (document?.id) {
+      if (document?.id && !revisionId) {
         try {
           await subscriptions.fetchPage({
             documentId: document.id,
@@ -101,7 +108,22 @@ function DataLoader({ match, children }: Props) {
       }
     }
     fetchSubscription();
-  }, [document?.id, subscriptions]);
+  }, [document?.id, subscriptions, revisionId]);
+
+  React.useEffect(() => {
+    async function fetchViews() {
+      if (document?.id && !document?.isDeleted && !revisionId) {
+        try {
+          await views.fetchPage({
+            documentId: document.id,
+          });
+        } catch (err) {
+          Logger.error("Failed to fetch views", err);
+        }
+      }
+    }
+    fetchViews();
+  }, [document?.id, document?.isDeleted, revisionId, views]);
 
   const onCreateLink = React.useCallback(
     async (title: string) => {
@@ -136,6 +158,12 @@ function DataLoader({ match, children }: Props) {
       // Prevents unauthorized request to load share information for the document
       // when viewing a public share link
       if (can.read) {
+        if (team?.getPreference(TeamPreference.Commenting)) {
+          comments.fetchDocumentComments(document.id, {
+            limit: 100,
+          });
+        }
+
         shares.fetch(document.id).catch((err) => {
           if (!(err instanceof NotFoundError)) {
             throw err;
@@ -143,7 +171,7 @@ function DataLoader({ match, children }: Props) {
         });
       }
     }
-  }, [can.read, can.update, document, isEditRoute, shares, ui]);
+  }, [can.read, can.update, document, isEditRoute, comments, team, shares, ui]);
 
   if (error) {
     return error instanceof OfflineError ? <ErrorOffline /> : <Error404 />;
@@ -153,27 +181,16 @@ function DataLoader({ match, children }: Props) {
     return (
       <>
         <Loading location={location} />
-        {isEditing && !team?.collaborativeEditing && <HideSidebar ui={ui} />}
       </>
     );
   }
 
-  // We do not want to remount the document when changing from view->edit
-  // on the multiplayer flag as the doc is guaranteed to be upto date.
-  const key = team.collaborativeEditing
-    ? ""
-    : isEditing
-    ? "editing"
-    : "read-only";
-
   return (
-    <React.Fragment key={key}>
-      {isEditing && !team.collaborativeEditing && <HideSidebar ui={ui} />}
+    <React.Fragment>
       {children({
         document,
         revision,
         abilities: can,
-        isEditing,
         readOnly:
           !isEditing || !can.update || document.isArchived || !!revisionId,
         onCreateLink,

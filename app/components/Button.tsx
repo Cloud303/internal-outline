@@ -1,23 +1,29 @@
 import { LocationDescriptor } from "history";
 import { ExpandedIcon } from "outline-icons";
-import { darken, lighten } from "polished";
+import { darken, lighten, transparentize } from "polished";
 import * as React from "react";
 import styled from "styled-components";
+import { s } from "@shared/styles";
+import ActionButton, {
+  Props as ActionButtonProps,
+} from "~/components/ActionButton";
+import { undraggableOnDesktop } from "~/styles";
 
-const RealButton = styled.button<{
-  fullwidth?: boolean;
-  borderOnHover?: boolean;
+type RealProps = {
+  $fullwidth?: boolean;
+  $borderOnHover?: boolean;
   $neutral?: boolean;
-  danger?: boolean;
-  iconColor?: string;
-}>`
-  display: ${(props) => (props.fullwidth ? "block" : "inline-block")};
-  width: ${(props) => (props.fullwidth ? "100%" : "auto")};
+  $danger?: boolean;
+};
+
+const RealButton = styled(ActionButton)<RealProps>`
+  display: ${(props) => (props.$fullwidth ? "block" : "inline-block")};
+  width: ${(props) => (props.$fullwidth ? "100%" : "auto")};
   margin: 0;
   padding: 0;
   border: 0;
-  background: ${(props) => props.theme.buttonBackground};
-  color: ${(props) => props.theme.buttonText};
+  background: ${s("accent")};
+  color: ${s("accentText")};
   box-shadow: rgba(0, 0, 0, 0.2) 0px 1px 2px;
   border-radius: 4px;
   font-size: 14px;
@@ -25,17 +31,10 @@ const RealButton = styled.button<{
   height: 32px;
   text-decoration: none;
   flex-shrink: 0;
-  cursor: pointer;
+  cursor: var(--pointer);
   user-select: none;
   appearance: none !important;
-
-  ${(props) =>
-    !props.borderOnHover &&
-    `
-      svg {
-        fill: ${props.iconColor || "currentColor"};
-      }
-    `}
+  ${undraggableOnDesktop()}
 
   &::-moz-focus-inner {
     padding: 0;
@@ -44,14 +43,14 @@ const RealButton = styled.button<{
 
   &:hover:not(:disabled),
   &[aria-expanded="true"] {
-    background: ${(props) => darken(0.05, props.theme.buttonBackground)};
+    background: ${(props) => darken(0.05, props.theme.accent)};
   }
 
   &:disabled {
     cursor: default;
     pointer-events: none;
-    color: ${(props) => props.theme.white50};
-    background: ${(props) => lighten(0.2, props.theme.buttonBackground)};
+    color: ${(props) => transparentize(0.5, props.theme.accentText)};
+    background: ${(props) => lighten(0.2, props.theme.accent)};
 
     svg {
       fill: ${(props) => props.theme.white50};
@@ -64,24 +63,15 @@ const RealButton = styled.button<{
     background: ${props.theme.buttonNeutralBackground};
     color: ${props.theme.buttonNeutralText};
     box-shadow: ${
-      props.borderOnHover
+      props.$borderOnHover
         ? "none"
         : `rgba(0, 0, 0, 0.07) 0px 1px 2px, ${props.theme.buttonNeutralBorder} 0 0 0 1px inset`
     };
 
-    ${
-      props.borderOnHover
-        ? ""
-        : `svg {
-      fill: ${props.iconColor || "currentColor"};
-    }`
-    }
-
-
     &:hover:not(:disabled),
     &[aria-expanded="true"] {
       background: ${
-        props.borderOnHover
+        props.$borderOnHover
           ? props.theme.buttonNeutralBackground
           : darken(0.05, props.theme.buttonNeutralBackground)
       };
@@ -101,7 +91,7 @@ const RealButton = styled.button<{
   `}
 
   ${(props) =>
-    props.danger &&
+    props.$danger &&
     `
       background: ${props.theme.danger};
       color: ${props.theme.white};
@@ -146,18 +136,17 @@ export const Inner = styled.span<{
   ${(props) => props.hasIcon && !props.hasText && "padding: 0 4px;"};
 `;
 
-export type Props<T> = {
+export type Props<T> = ActionButtonProps & {
   icon?: React.ReactNode;
-  iconColor?: string;
   children?: React.ReactNode;
   disclosure?: boolean;
   neutral?: boolean;
   danger?: boolean;
-  primary?: boolean;
   fullwidth?: boolean;
   as?: T;
   to?: LocationDescriptor;
   borderOnHover?: boolean;
+  hideIcon?: boolean;
   href?: string;
   "data-on"?: string;
   "data-event-category"?: string;
@@ -168,16 +157,39 @@ const Button = <T extends React.ElementType = "button">(
   props: Props<T> & React.ComponentPropsWithoutRef<T>,
   ref: React.Ref<HTMLButtonElement>
 ) => {
-  const { type, icon, children, value, disclosure, neutral, ...rest } = props;
+  const {
+    type,
+    children,
+    value,
+    disclosure,
+    neutral,
+    action,
+    icon,
+    borderOnHover,
+    hideIcon,
+    fullwidth,
+    danger,
+    ...rest
+  } = props;
   const hasText = children !== undefined || value !== undefined;
-  const hasIcon = icon !== undefined;
+  const ic = hideIcon ? undefined : action?.icon ?? icon;
+  const hasIcon = ic !== undefined;
 
   return (
-    <RealButton type={type || "button"} ref={ref} $neutral={neutral} {...rest}>
+    <RealButton
+      type={type || "button"}
+      ref={ref}
+      $neutral={neutral}
+      action={action}
+      $danger={danger}
+      $fullwidth={fullwidth}
+      $borderOnHover={borderOnHover}
+      {...rest}
+    >
       <Inner hasIcon={hasIcon} hasText={hasText} disclosure={disclosure}>
-        {hasIcon && icon}
+        {hasIcon && ic}
         {hasText && <Label hasIcon={hasIcon}>{children || value}</Label>}
-        {disclosure && <ExpandedIcon color="currentColor" />}
+        {disclosure && <ExpandedIcon />}
       </Inner>
     </RealButton>
   );

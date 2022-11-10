@@ -1,3 +1,4 @@
+import { NotificationSettings, UserPreferences } from "@shared/types";
 import env from "@server/env";
 import { User } from "@server/models";
 
@@ -18,9 +19,14 @@ type UserPresentation = {
   isViewer: boolean;
   email?: string | null;
   language?: string;
+  preferences?: UserPreferences | null;
+  notificationSettings?: NotificationSettings;
 };
 
-export default (user: User, options: Options = {}): UserPresentation => {
+export default function presentUser(
+  user: User,
+  options: Options = {}
+): UserPresentation {
   const userData: UserPresentation = {
     id: user.id,
     name: user.name,
@@ -37,7 +43,9 @@ export default (user: User, options: Options = {}): UserPresentation => {
   if (options.includeDetails) {
     userData.email = user.email;
     userData.language = user.language || env.DEFAULT_LANGUAGE;
+    userData.preferences = user.preferences;
+    userData.notificationSettings = user.notificationSettings;
   }
 
   return userData;
-};
+}

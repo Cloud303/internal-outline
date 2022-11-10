@@ -43,7 +43,7 @@ export default function download(
     return saver(x); // everyone else can save dataURLs un-processed
   }
 
-  //end if dataURL passed?
+  // end if dataURL passed?
   try {
     blob =
       x instanceof B
@@ -67,7 +67,6 @@ export default function download(
     if ("download" in a) {
       a.href = url;
       a.setAttribute("download", fn);
-      a.innerHTML = "downloading…";
       D.body && D.body.appendChild(a);
       setTimeout(function () {
         a.click();
@@ -82,7 +81,7 @@ export default function download(
       return true;
     }
 
-    //do iframe dataURL download (old ch+FF):
+    // do iframe dataURL download (old ch+FF):
     const f = D.createElement("iframe");
     D.body && D.body.appendChild(f);
 

@@ -1,5 +1,7 @@
 import invariant from "invariant";
-import { Op } from "sequelize";
+import { Op, WhereOptions } from "sequelize";
+import isUUID from "validator/lib/isUUID";
+import { SHARE_URL_SLUG_REGEX } from "@shared/utils/urlHelpers";
 import {
   NotFoundError,
   InvalidRequestError,
@@ -12,19 +14,23 @@ import { authorize, can } from "@server/policies";
 type Props = {
   id?: string;
   shareId?: string;
+  teamId?: string;
   user?: User;
+  includeState?: boolean;
 };
 
 type Result = {
   document: Document;
   share?: Share;
-  collection: Collection;
+  collection?: Collection | null;
 };
 
 export default async function loadDocument({
   id,
   shareId,
+  teamId,
   user,
+  includeState,
 }: Props): Promise<Result> {
   let document;
   let collection;
@@ -34,14 +40,35 @@ export default async function loadDocument({
     throw AuthenticationError(`Authentication or shareId required`);
   }
 
+  const shareUrlId =
+    shareId && !isUUID(shareId) && SHARE_URL_SLUG_REGEX.test(shareId)
+      ? shareId
+      : undefined;
+
+  if (shareUrlId && !teamId) {
+    throw InvalidRequestError(
+      "teamId required for fetching share using shareUrlId"
+    );
+  }
+
   if (shareId) {
-    share = await Share.findOne({
-      where: {
+    let whereClause: WhereOptions<Share> = {
+      revokedAt: {
+        [Op.is]: null,
+      },
+      id: shareId,
+    };
+    if (shareUrlId) {
+      whereClause = {
         revokedAt: {
           [Op.is]: null,
         },
-        id: shareId,
-      },
+        teamId,
+        urlId: shareUrlId,
+      };
+    }
+    share = await Share.findOne({
+      where: whereClause,
       include: [
         {
           // unscoping here allows us to return unpublished documents
@@ -99,7 +126,9 @@ export default async function loadDocument({
     if (canReadDocument) {
       // Cannot use document.collection here as it does not include the
       // documentStructure by default through the relationship.
-      collection = await Collection.findByPk(document.collectionId);
+      if (document.collectionId) {
+        collection = await Collection.findByPk(document.collectionId);
+      }
       if (!collection) {
         throw NotFoundError("Collection could not be found for document");
       }
@@ -119,7 +148,9 @@ export default async function loadDocument({
     }
 
     // It is possible to disable sharing at the collection so we must check
-    collection = await Collection.findByPk(document.collectionId);
+    if (document.collectionId) {
+      collection = await Collection.findByPk(document.collectionId);
+    }
     invariant(collection, "collection not found");
 
     if (!collection.sharing) {
@@ -156,6 +187,7 @@ export default async function loadDocument({
     document = await Document.findByPk(id as string, {
       userId: user ? user.id : undefined,
       paranoid: false,
+      includeState,
     });
 
     if (!document) {

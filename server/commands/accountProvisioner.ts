@@ -1,13 +1,11 @@
 import invariant from "invariant";
-import { UniqueConstraintError } from "sequelize";
 // import WelcomeEmail from "@server/emails/templates/WelcomeEmail";
 import {
   AuthenticationError,
   InvalidAuthenticationError,
-  EmailAuthenticationRequiredError,
   AuthenticationProviderDisabledError,
 } from "@server/errors";
-import { APM } from "@server/logging/tracing";
+import { traceFunction } from "@server/logging/tracing";
 import { AuthenticationProvider, Collection, Team, User } from "@server/models";
 import teamProvisioner from "./teamProvisioner";
 import userProvisioner from "./userProvisioner";
@@ -23,8 +21,6 @@ type Props = {
     email: string;
     /** The public url of an image representing the user */
     avatarUrl?: string | null;
-    /** The username of the user */
-    username?: string;
   };
   /** Details of the team the user is logging into */
   team: {
@@ -116,7 +112,11 @@ async function accountProvisioner({
     }
 
     if (!result) {
-      throw InvalidAuthenticationError(err.message);
+      if (err.id) {
+        throw err;
+      } else {
+        throw InvalidAuthenticationError(err.message);
+      }
     }
   }
 
@@ -131,27 +131,27 @@ async function accountProvisioner({
     const result = await userProvisioner({
       name: userParams.name,
       email: userParams.email,
-      username: userParams.username,
       isAdmin: isNewTeam || undefined,
       avatarUrl: userParams.avatarUrl,
       teamId: team.id,
-      emailMatchOnly,
       ip,
-      authentication: {
-        authenticationProviderId: authenticationProvider.id,
-        ...authenticationParams,
-        expiresAt: authenticationParams.expiresIn
-          ? new Date(Date.now() + authenticationParams.expiresIn * 1000)
-          : undefined,
-      },
+      authentication: emailMatchOnly
+        ? undefined
+        : {
+            authenticationProviderId: authenticationProvider.id,
+            ...authenticationParams,
+            expiresAt: authenticationParams.expiresIn
+              ? new Date(Date.now() + authenticationParams.expiresIn * 1000)
+              : undefined,
+          },
     });
     const { isNewUser, user } = result;
 
     // if (isNewUser) {
-    //   await WelcomeEmail.schedule({
+    //   await new WelcomeEmail({
     //     to: user.email,
     //     teamUrl: team.url,
-    //   });
+    //   }).schedule();
     // }
 
     if (isNewUser || isNewTeam) {
@@ -181,29 +181,10 @@ async function accountProvisioner({
       isNewTeam,
     };
   } catch (err) {
-    if (err instanceof UniqueConstraintError) {
-      const exists = await User.findOne({
-        where: {
-          email: userParams.email,
-          teamId: team.id,
-        },
-      });
-
-      if (exists) {
-        throw EmailAuthenticationRequiredError(
-          "Email authentication required",
-          team.url
-        );
-      } else {
-        throw AuthenticationError(err.message, team.url);
-      }
-    }
-
-    throw err;
+    throw AuthenticationError(err.message);
   }
 }
 
-export default APM.traceFunction({
-  serviceName: "command",
+export default traceFunction({
   spanName: "accountProvisioner",
 })(accountProvisioner);

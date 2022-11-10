@@ -1,7 +1,13 @@
 import { observer } from "mobx-react";
+import { Slice } from "prosemirror-model";
+import { Selection } from "prosemirror-state";
+import { __parseFromClipboard } from "prosemirror-view";
 import * as React from "react";
 import styled from "styled-components";
 import breakpoint from "styled-components-breakpoint";
+import isMarkdown from "@shared/editor/lib/isMarkdown";
+import normalizePastedMarkdown from "@shared/editor/lib/markdown/normalize";
+import { s } from "@shared/styles";
 import { light } from "@shared/styles/theme";
 import {
   getCurrentDateAsString,
@@ -11,14 +17,15 @@ import {
 import { DocumentValidation } from "@shared/validations";
 import Document from "~/models/Document";
 import ContentEditable, { RefHandle } from "~/components/ContentEditable";
+import { useDocumentContext } from "~/components/DocumentContext";
 import Star, { AnimatedStar } from "~/components/Star";
 import useEmojiWidth from "~/hooks/useEmojiWidth";
 import { isModKey } from "~/utils/keyboard";
 
 type Props = {
-  value: string;
-  placeholder: string;
   document: Document;
+  /** Placeholder to display when the document has no title */
+  placeholder: string;
   /** Should the title be editable, policies will also be considered separately */
   readOnly?: boolean;
   /** Whether the title show the option to star, policies will also be considered separately (defaults to true) */
@@ -39,7 +46,6 @@ const fontSize = "2.25em";
 const EditableTitle = React.forwardRef(
   (
     {
-      value,
       document,
       readOnly,
       onChange,
@@ -51,9 +57,7 @@ const EditableTitle = React.forwardRef(
     }: Props,
     ref: React.RefObject<RefHandle>
   ) => {
-    const normalizedTitle =
-      !value && readOnly ? document.titleWithDefault : value;
-
+    const { editor } = useDocumentContext();
     const handleClick = React.useCallback(() => {
       ref.current?.focus();
     }, [ref]);
@@ -116,22 +120,81 @@ const EditableTitle = React.forwardRef(
       [ref, onChange]
     );
 
+    // Custom paste handling so that if a multiple lines are pasted we
+    // only take the first line and insert the rest directly into the editor.
+    const handlePaste = React.useCallback(
+      (event: React.ClipboardEvent) => {
+        event.preventDefault();
+
+        const text = event.clipboardData.getData("text/plain");
+        const html = event.clipboardData.getData("text/html");
+        const [firstLine, ...rest] = text.split(`\n`);
+        const content = rest.join(`\n`).trim();
+
+        window.document.execCommand(
+          "insertText",
+          false,
+          firstLine.replace(/^#+\s?/, "")
+        );
+
+        if (editor && content) {
+          const { view, pasteParser } = editor;
+          let slice;
+
+          if (isMarkdown(text)) {
+            const paste = pasteParser.parse(normalizePastedMarkdown(content));
+            slice = paste.slice(0);
+          } else {
+            const defaultSlice = __parseFromClipboard(
+              view,
+              text,
+              html,
+              false,
+              view.state.selection.$from
+            );
+
+            // remove first node from slice
+            slice = defaultSlice.content.firstChild
+              ? new Slice(
+                  defaultSlice.content.cut(
+                    defaultSlice.content.firstChild.nodeSize
+                  ),
+                  defaultSlice.openStart,
+                  defaultSlice.openEnd
+                )
+              : defaultSlice;
+          }
+
+          view.dispatch(
+            view.state.tr
+              .setSelection(Selection.atStart(view.state.doc))
+              .replaceSelection(slice)
+          );
+        }
+      },
+      [editor]
+    );
+
     const emojiWidth = useEmojiWidth(document.emoji, {
       fontSize,
       lineHeight,
     });
+
+    const value =
+      !document.title && readOnly ? document.titleWithDefault : document.title;
 
     return (
       <Title
         onClick={handleClick}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
+        onPaste={handlePaste}
         onBlur={onBlur}
         placeholder={placeholder}
-        value={normalizedTitle}
+        value={value}
         $emojiWidth={emojiWidth}
         $isStarred={document.isStarred}
-        autoFocus={!value}
+        autoFocus={!document.title}
         maxLength={DocumentValidation.maxTitleLength}
         readOnly={readOnly}
         dir="auto"
@@ -176,8 +239,8 @@ const Title = styled(ContentEditable)<TitleProps>`
   }
 
   &::placeholder {
-    color: ${(props) => props.theme.placeholder};
-    -webkit-text-fill-color: ${(props) => props.theme.placeholder};
+    color: ${s("placeholder")};
+    -webkit-text-fill-color: ${s("placeholder")};
   }
 
   ${breakpoint("tablet")`

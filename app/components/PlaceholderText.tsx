@@ -1,6 +1,7 @@
 import * as React from "react";
 import styled from "styled-components";
 import { randomInteger } from "@shared/random";
+import { s } from "@shared/styles";
 import Flex from "~/components/Flex";
 import { pulsate } from "~/styles/animations";
 
@@ -12,23 +13,11 @@ export type Props = {
   delay?: number;
 };
 
-class PlaceholderText extends React.Component<Props> {
-  width = randomInteger(this.props.minWidth || 75, this.props.maxWidth || 100);
+function PlaceholderText({ minWidth, maxWidth, ...restProps }: Props) {
+  // We only want to compute the width once so we are storing it inside ref
+  const widthRef = React.useRef(randomInteger(minWidth || 75, maxWidth || 100));
 
-  shouldComponentUpdate() {
-    return false;
-  }
-
-  render() {
-    return (
-      <Mask
-        width={this.width}
-        height={this.props.height}
-        delay={this.props.delay}
-        header={this.props.header}
-      />
-    );
-  }
+  return <Mask width={widthRef.current} {...restProps} />;
 }
 
 const Mask = styled(Flex)<{
@@ -42,7 +31,7 @@ const Mask = styled(Flex)<{
     props.height ? props.height : props.header ? 24 : 18}px;
   margin-bottom: 6px;
   border-radius: 6px;
-  background-color: ${(props) => props.theme.divider};
+  background-color: ${s("divider")};
   animation: ${pulsate} 2s infinite;
   animation-delay: ${(props) => props.delay || 0}s;
 
@@ -51,4 +40,6 @@ const Mask = styled(Flex)<{
   }
 `;
 
-export default PlaceholderText;
+// We don't want the component to re-render on any props change
+// So returning true from the custom comparison function to avoid re-render
+export default React.memo(PlaceholderText, () => true);

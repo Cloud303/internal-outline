@@ -1,14 +1,14 @@
 import { disableBodyScroll, enableBodyScroll } from "body-scroll-lock";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
-import { Portal } from "react-portal";
-import { Menu } from "reakit/Menu";
+import { Menu, MenuStateReturn } from "reakit/Menu";
 import styled, { DefaultTheme } from "styled-components";
 import breakpoint from "styled-components-breakpoint";
-import { depths } from "@shared/styles";
+import { depths, s } from "@shared/styles";
 import Scrollable from "~/components/Scrollable";
 import useMenuContext from "~/hooks/useMenuContext";
 import useMenuHeight from "~/hooks/useMenuHeight";
+import useMobile from "~/hooks/useMobile";
 import usePrevious from "~/hooks/usePrevious";
 import useStores from "~/hooks/useStores";
 import useUnmount from "~/hooks/useUnmount";
@@ -36,21 +36,23 @@ export type Placement =
   | "left"
   | "left-start";
 
-type Props = {
-  "aria-label": string;
-  visible?: boolean;
-  placement?: Placement;
-  animating?: boolean;
-  unstable_disclosureRef?: React.RefObject<HTMLElement | null>;
+type Props = MenuStateReturn & {
+  "aria-label"?: string;
+  /** The parent menu state if this is a submenu. */
+  parentMenuState?: Omit<MenuStateReturn, "items">;
+  /** Called when the context menu is opened. */
   onOpen?: () => void;
+  /** Called when the context menu is closed. */
   onClose?: () => void;
-  hide?: () => void;
+  /** Called when the context menu is clicked. */
+  onClick?: (ev: React.MouseEvent) => void;
 };
 
 const ContextMenu: React.FC<Props> = ({
   children,
   onOpen,
   onClose,
+  parentMenuState,
   ...rest
 }) => {
   const previousVisible = usePrevious(rest.visible);
@@ -59,6 +61,8 @@ const ContextMenu: React.FC<Props> = ({
   const { ui } = useStores();
   const { t } = useTranslation();
   const { setIsMenuOpen } = useMenuContext();
+  const isMobile = useMobile();
+  const isSubMenu = !!parentMenuState;
 
   useUnmount(() => {
     setIsMenuOpen(false);
@@ -66,19 +70,17 @@ const ContextMenu: React.FC<Props> = ({
 
   React.useEffect(() => {
     if (rest.visible && !previousVisible) {
-      if (onOpen) {
-        onOpen();
-      }
-      if (rest["aria-label"] !== t("Submenu")) {
+      onOpen?.();
+
+      if (!isSubMenu) {
         setIsMenuOpen(true);
       }
     }
 
     if (!rest.visible && previousVisible) {
-      if (onClose) {
-        onClose();
-      }
-      if (rest["aria-label"] !== t("Submenu")) {
+      onClose?.();
+
+      if (!isSubMenu) {
         setIsMenuOpen(false);
       }
     }
@@ -89,7 +91,7 @@ const ContextMenu: React.FC<Props> = ({
     rest.visible,
     ui.sidebarCollapsed,
     setIsMenuOpen,
-    rest,
+    isSubMenu,
     t,
   ]);
 
@@ -98,13 +100,15 @@ const ContextMenu: React.FC<Props> = ({
   // https://github.com/ariakit/ariakit/issues/469
   React.useEffect(() => {
     const scrollElement = backgroundRef.current;
-    if (rest.visible && scrollElement) {
-      disableBodyScroll(scrollElement);
+    if (rest.visible && scrollElement && !isSubMenu) {
+      disableBodyScroll(scrollElement, {
+        reserveScrollBarGap: true,
+      });
     }
     return () => {
-      scrollElement && enableBodyScroll(scrollElement);
+      scrollElement && !isSubMenu && enableBodyScroll(scrollElement);
     };
-  }, [rest.visible]);
+  }, [isSubMenu, rest.visible]);
 
   // Perf win – don't render anything until the menu has been opened
   if (!rest.visible && !previousVisible) {
@@ -115,7 +119,7 @@ const ContextMenu: React.FC<Props> = ({
   // trigger and the bottom of the window
   return (
     <>
-      <Menu hideOnClickOutside preventBodyScroll={false} {...rest}>
+      <Menu hideOnClickOutside={!isMobile} preventBodyScroll={false} {...rest}>
         {(props) => {
           // kind of hacky, but this is an effective way of telling which way
           // the menu will _actually_ be placed when taking into account screen
@@ -125,32 +129,38 @@ const ContextMenu: React.FC<Props> = ({
           const rightAnchor = props.placement === "bottom-end";
 
           return (
-            <Position {...props}>
-              <Background
-                dir="auto"
-                topAnchor={topAnchor}
-                rightAnchor={rightAnchor}
-                ref={backgroundRef}
-                hiddenScrollbars
-                style={
-                  maxHeight && topAnchor
-                    ? {
-                        maxHeight,
-                      }
-                    : undefined
-                }
-              >
-                {rest.visible || rest.animating ? children : null}
-              </Background>
-            </Position>
+            <>
+              {isMobile && (
+                <Backdrop
+                  onClick={(ev) => {
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                    rest.hide?.();
+                  }}
+                />
+              )}
+              <Position {...props}>
+                <Background
+                  dir="auto"
+                  topAnchor={topAnchor}
+                  rightAnchor={rightAnchor}
+                  ref={backgroundRef}
+                  hiddenScrollbars
+                  style={
+                    maxHeight && topAnchor
+                      ? {
+                          maxHeight,
+                        }
+                      : undefined
+                  }
+                >
+                  {rest.visible || rest.animating ? children : null}
+                </Background>
+              </Position>
+            </>
           );
         }}
       </Menu>
-      {(rest.visible || rest.animating) && (
-        <Portal>
-          <Backdrop onClick={rest.hide} />
-        </Portal>
-      )}
     </>
   );
 };
@@ -164,12 +174,8 @@ export const Backdrop = styled.div`
   left: 0;
   right: 0;
   bottom: 0;
-  background: ${(props) => props.theme.backdrop};
+  background: ${s("backdrop")};
   z-index: ${depths.menu - 1};
-
-  ${breakpoint("tablet")`
-    display: none;
-  `};
 `;
 
 export const Position = styled.div`
@@ -200,9 +206,9 @@ export const Background = styled(Scrollable)<BackgroundProps>`
   animation: ${mobileContextMenu} 200ms ease;
   transform-origin: 50% 100%;
   max-width: 100%;
-  background: ${(props) => props.theme.menuBackground};
+  background: ${s("menuBackground")};
   border-radius: 6px;
-  padding: 6px 0;
+  padding: 6px;
   min-width: 180px;
   min-height: 44px;
   max-height: 75vh;

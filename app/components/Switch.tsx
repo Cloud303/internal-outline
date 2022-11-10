@@ -1,7 +1,9 @@
 import * as React from "react";
 import styled from "styled-components";
+import { s } from "@shared/styles";
 import { LabelText } from "~/components/Input";
 import Text from "~/components/Text";
+import { undraggableOnDesktop } from "~/styles";
 
 type Props = React.HTMLAttributes<HTMLInputElement> & {
   width?: number;
@@ -62,6 +64,7 @@ function Switch({
 
 const Wrapper = styled.div`
   padding-bottom: 8px;
+  ${undraggableOnDesktop()}
 `;
 
 const InlineLabelText = styled(LabelText)`
@@ -86,7 +89,7 @@ const Input = styled.label<{ width: number; height: number }>`
 
 const Slider = styled.span<{ width: number; height: number }>`
   position: absolute;
-  cursor: pointer;
+  cursor: var(--pointer);
   top: 0;
   left: 0;
   right: 0;
@@ -122,11 +125,11 @@ const HiddenInput = styled.input<{ width: number; height: number }>`
   }
 
   &:checked + ${Slider} {
-    background-color: ${(props) => props.theme.primary};
+    background-color: ${s("accent")};
   }
 
   &:focus + ${Slider} {
-    box-shadow: 0 0 1px ${(props) => props.theme.primary};
+    box-shadow: 0 0 1px ${s("accent")};
   }
 
   &:checked + ${Slider}:before {
