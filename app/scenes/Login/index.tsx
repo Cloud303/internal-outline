@@ -211,6 +211,7 @@ function Login({ children }: Props) {
           if (defaultProvider && provider.id === defaultProvider.id) {
             return null;
           }
+          console.log(provider, defaultProvider);
 
           return (
             <AuthenticationProvider
