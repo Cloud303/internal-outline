@@ -70,22 +70,36 @@ function Login({ children }: Props) {
     setEmailLinkSentTo(email);
   }, []);
 
-  const isCustomAuth: any = config?.providers?.filter((provider) => {
-    return provider?.id === "unkown";
-  });
+  const isCustomAuth: any = (type: string) => {
+    return config?.providers?.filter((provider) => {
+      return provider?.id === type;
+    })[0];
+  };
 
-  // const { custom, teamSubdomain, host } = parseDomain(window.location.origin);
-  // const needsRedirect = custom || teamSubdomain;
+  const { custom, teamSubdomain, host } = parseDomain(window.location.origin);
+  const needsRedirect = custom || teamSubdomain;
 
-  // React.useEffect(() => {
-  //   console.log(isCustomAuth);
-  //   if (isCustomAuth && isCustomAuth[0]?.id) {
-  //     const href = needsRedirect
-  //       ? `${env.URL}${isCustomAuth[0]?.authUrl}?host=${encodeURI(host)}`
-  //       : isCustomAuth[0]?.authUrl;
-  //     window.location.href = href;
-  //   }
-  // }, [isCustomAuth]);
+  React.useEffect(() => {
+    if (window.location.search.slice(6) === "internal") {
+      if (isCustomAuth("oidc-internal")?.id) {
+        const href = needsRedirect
+          ? `${env.URL}${
+              isCustomAuth("oidc-internal")?.authUrl
+            }?host=${encodeURI(host)}`
+          : isCustomAuth("oidc-internal")?.authUrl;
+        window.location.href = href;
+      }
+    } else if (window.location.search.slice(6) === "external") {
+      if (isCustomAuth("oidc-external")?.id) {
+        const href = needsRedirect
+          ? `${env.URL}${
+              isCustomAuth("oidc-internal")?.authUrl
+            }?host=${encodeURI(host)}`
+          : isCustomAuth("oidc-internal")?.authUrl;
+        window.location.href = href;
+      }
+    }
+  }, [config?.providers]);
 
   React.useEffect(() => {
     auth.fetchConfig().catch(setError);
@@ -178,7 +192,7 @@ function Login({ children }: Props) {
     <Background>
       <Header config={config} />
       <Centered align="center" justify="center" gap={12} column auto>
-        {isCustomAuth?.length > 0 ? (
+        {window && window.location.search.slice(6) ? (
           <FullscreenLoading />
         ) : (
           <>
