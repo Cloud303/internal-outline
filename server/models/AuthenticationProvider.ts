@@ -15,7 +15,8 @@ import {
 import env from "@server/env";
 import AzureClient from "@server/utils/azure";
 import GoogleClient from "@server/utils/google";
-import OIDCClient from "@server/utils/oidc";
+import OIDCExternalClient from "@server/utils/oidc-external";
+import OIDCInternalClient from "@server/utils/oidc-internal";
 import { ValidationError } from "../errors";
 import Team from "./Team";
 import UserAuthentication from "./UserAuthentication";
@@ -87,10 +88,15 @@ class AuthenticationProvider extends Model {
           env.AZURE_CLIENT_ID || "",
           env.AZURE_CLIENT_SECRET || ""
         );
-      case "oidc":
-        return new OIDCClient(
-          env.OIDC_CLIENT_ID || "",
-          env.OIDC_CLIENT_SECRET || ""
+      case "oidc-internal":
+        return new OIDCInternalClient(
+          env.OIDC_INTERNAL_CLIENT_ID || "",
+          env.OIDC_INTERNAL_CLIENT_SECRET || ""
+        );
+      case "oidc-external":
+        return new OIDCExternalClient(
+          env.OIDC_EXTERNAL_CLIENT_ID || "",
+          env.OIDC_EXTERNAL_CLIENT_SECRET || ""
         );
       default:
         return undefined;
