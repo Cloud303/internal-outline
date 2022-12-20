@@ -57,6 +57,7 @@ type Props = {
     level: number;
     id: string;
   }[];
+  handleCoverImg: (e: React.ChangeEvent<HTMLInputElement>) => void;
 };
 
 function DocumentHeader({
@@ -74,12 +75,14 @@ function DocumentHeader({
   onSelectTemplate,
   onSave,
   headings,
+  handleCoverImg,
 }: Props) {
   const { t } = useTranslation();
   const { ui, auth } = useStores();
   const { resolvedTheme } = ui;
   const { team } = auth;
   const isMobile = useMobile();
+  let inputRef: HTMLInputElement | null = null;
 
   // We cache this value for as long as the component is mounted so that if you
   // apply a template there is still the option to replace it until the user
@@ -270,6 +273,24 @@ function DocumentHeader({
                   )}
                 />
               </Action>
+            )}
+            {canEdit && can.createChildDocument && !isMobile && (
+              <>
+                <Button
+                  icon={<PlusIcon />}
+                  onClick={() => inputRef && inputRef.click()}
+                  style={{ marginLeft: 12 }}
+                  neutral
+                >
+                  {t("Upload cover")}
+                </Button>
+                <input
+                  type="file"
+                  hidden
+                  onChange={handleCoverImg}
+                  ref={(refParam) => (inputRef = refParam)}
+                />
+              </>
             )}
             {canEdit && isTemplate && !isDraft && !isRevision && (
               <Action>

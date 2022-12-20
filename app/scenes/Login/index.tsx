@@ -71,21 +71,21 @@ function Login({ children }: Props) {
   }, []);
 
   const isCustomAuth: any = config?.providers?.filter((provider) => {
-    return provider?.id === "oidc";
+    return provider?.id === "unkown";
   });
 
-  const { custom, teamSubdomain, host } = parseDomain(window.location.origin);
-  const needsRedirect = custom || teamSubdomain;
+  // const { custom, teamSubdomain, host } = parseDomain(window.location.origin);
+  // const needsRedirect = custom || teamSubdomain;
 
-  React.useEffect(() => {
-    console.log(isCustomAuth);
-    if (isCustomAuth && isCustomAuth[0]?.id) {
-      const href = needsRedirect
-        ? `${env.URL}${isCustomAuth[0]?.authUrl}?host=${encodeURI(host)}`
-        : isCustomAuth[0]?.authUrl;
-      window.location.href = href;
-    }
-  }, [isCustomAuth]);
+  // React.useEffect(() => {
+  //   console.log(isCustomAuth);
+  //   if (isCustomAuth && isCustomAuth[0]?.id) {
+  //     const href = needsRedirect
+  //       ? `${env.URL}${isCustomAuth[0]?.authUrl}?host=${encodeURI(host)}`
+  //       : isCustomAuth[0]?.authUrl;
+  //     window.location.href = href;
+  //   }
+  // }, [isCustomAuth]);
 
   React.useEffect(() => {
     auth.fetchConfig().catch(setError);
