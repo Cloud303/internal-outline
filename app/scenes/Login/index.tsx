@@ -192,7 +192,9 @@ function Login({ children }: Props) {
     <Background>
       <Header config={config} />
       <Centered align="center" justify="center" gap={12} column auto>
-        {window && window.location.search.slice(6) ? (
+        {window &&
+        (window.location.search.slice(6) === "internal" ||
+          window.location.search.slice(6) === "external") ? (
           <FullscreenLoading />
         ) : (
           <>
