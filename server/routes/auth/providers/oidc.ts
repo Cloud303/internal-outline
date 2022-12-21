@@ -21,16 +21,16 @@ import {
 } from "@server/utils/passport";
 
 const router = new Router();
-const providerName = "oidc-external";
-const OIDC_AUTH_URI = env.OIDC_EXTERNAL_AUTH_URI || "";
-const OIDC_TOKEN_URI = env.OIDC_EXTERNAL_TOKEN_URI || "";
-const OIDC_USERINFO_URI = env.OIDC_EXTERNAL_USERINFO_URI || "";
+const providerName = "oidc";
+const OIDC_AUTH_URI = env.OIDC_AUTH_URI || "";
+const OIDC_TOKEN_URI = env.OIDC_TOKEN_URI || "";
+const OIDC_USERINFO_URI = env.OIDC_USERINFO_URI || "";
 
 export const config = {
-  name: env.OIDC_EXTERNAL_DISPLAY_NAME,
-  enabled: !!env.OIDC_EXTERNAL_CLIENT_ID,
+  name: env.OIDC_DISPLAY_NAME,
+  enabled: !!env.OIDC_CLIENT_ID,
 };
-const scopes = env.OIDC_EXTERNAL_SCOPES.split(" ");
+const scopes = env.OIDC_SCOPES.split(" ");
 
 Strategy.prototype.userProfile = async function (accessToken, done) {
   try {
@@ -41,18 +41,18 @@ Strategy.prototype.userProfile = async function (accessToken, done) {
   }
 };
 
-if (env.OIDC_EXTERNAL_CLIENT_ID && env.OIDC_EXTERNAL_CLIENT_SECRET) {
+if (env.OIDC_CLIENT_ID && env.OIDC_CLIENT_SECRET) {
   passport.use(
     providerName,
     new Strategy(
       {
         authorizationURL: OIDC_AUTH_URI,
         tokenURL: OIDC_TOKEN_URI,
-        clientID: env.OIDC_EXTERNAL_CLIENT_ID,
-        clientSecret: env.OIDC_EXTERNAL_CLIENT_SECRET,
+        clientID: env.OIDC_CLIENT_ID,
+        clientSecret: env.OIDC_CLIENT_SECRET,
         callbackURL: `${env.URL}/auth/${providerName}.callback`,
         passReqToCallback: true,
-        scope: env.OIDC_EXTERNAL_SCOPES,
+        scope: env.OIDC_SCOPES,
         // @ts-expect-error custom state store
         store: new StateStore(),
         state: true,
@@ -109,7 +109,7 @@ if (env.OIDC_EXTERNAL_CLIENT_ID && env.OIDC_EXTERNAL_CLIENT_SECRET) {
               avatarUrl: profile.picture,
               // Claim name can be overriden using an env variable.
               // Default is 'preferred_username' as per OIDC spec.
-              username: get(profile, env.OIDC_EXTERNAL_USERNAME_CLAIM),
+              username: get(profile, env.OIDC_USERNAME_CLAIM),
             },
             authenticationProvider: {
               name: providerName,

@@ -434,19 +434,17 @@ export class Environment {
    * compatible provider.
    */
   @IsOptional()
-  @CannotUseWithout("OIDC_INTERNAL_CLIENT_SECRET")
-  @CannotUseWithout("OIDC_INTERNAL_AUTH_URI")
-  @CannotUseWithout("OIDC_INTERNAL_TOKEN_URI")
-  @CannotUseWithout("OIDC_INTERNAL_USERINFO_URI")
-  @CannotUseWithout("OIDC_INTERNAL_DISPLAY_NAME")
-  public OIDC_INTERNAL_CLIENT_ID = this.toOptionalString(
-    process.env.OIDC_INTERNAL_CLIENT_ID
-  );
+  @CannotUseWithout("OIDC_CLIENT_SECRET")
+  @CannotUseWithout("OIDC_AUTH_URI")
+  @CannotUseWithout("OIDC_TOKEN_URI")
+  @CannotUseWithout("OIDC_USERINFO_URI")
+  @CannotUseWithout("OIDC_DISPLAY_NAME")
+  public OIDC_CLIENT_ID = this.toOptionalString(process.env.OIDC_CLIENT_ID);
 
   @IsOptional()
-  @CannotUseWithout("OIDC_INTERNAL_CLIENT_ID")
-  public OIDC_INTERNAL_CLIENT_SECRET = this.toOptionalString(
-    process.env.OIDC_INTERNAL_CLIENT_SECRET
+  @CannotUseWithout("OIDC_CLIENT_ID")
+  public OIDC_CLIENT_SECRET = this.toOptionalString(
+    process.env.OIDC_CLIENT_SECRET
   );
 
   /**
@@ -455,8 +453,7 @@ export class Environment {
    * "OpenID Connect".
    */
   @MaxLength(50)
-  public OIDC_INTERNAL_DISPLAY_NAME =
-    process.env.OIDC_INTERNAL_DISPLAY_NAME ?? "OpenID Connect";
+  public OIDC_DISPLAY_NAME = process.env.OIDC_DISPLAY_NAME ?? "OpenID Connect";
 
   /**
    * The OIDC authorization endpoint.
@@ -466,9 +463,7 @@ export class Environment {
     require_tld: false,
     allow_underscores: true,
   })
-  public OIDC_INTERNAL_AUTH_URI = this.toOptionalString(
-    process.env.OIDC_INTERNAL_AUTH_URI
-  );
+  public OIDC_AUTH_URI = this.toOptionalString(process.env.OIDC_AUTH_URI);
 
   /**
    * The OIDC token endpoint.
@@ -478,9 +473,7 @@ export class Environment {
     require_tld: false,
     allow_underscores: true,
   })
-  public OIDC_INTERNAL_TOKEN_URI = this.toOptionalString(
-    process.env.OIDC_INTERNAL_TOKEN_URI
-  );
+  public OIDC_TOKEN_URI = this.toOptionalString(process.env.OIDC_TOKEN_URI);
 
   /**
    * The OIDC userinfo endpoint.
@@ -490,98 +483,22 @@ export class Environment {
     require_tld: false,
     allow_underscores: true,
   })
-  public OIDC_INTERNAL_USERINFO_URI = this.toOptionalString(
-    process.env.OIDC_INTERNAL_USERINFO_URI
+  public OIDC_USERINFO_URI = this.toOptionalString(
+    process.env.OIDC_USERINFO_URI
   );
 
   /**
    * The OIDC profile field to use as the username. The default value is
    * "preferred_username".
    */
-  public OIDC_INTERNAL_USERNAME_CLAIM =
-    process.env.OIDC_INTERNAL_USERNAME_CLAIM ?? "preferred_username";
+  public OIDC_USERNAME_CLAIM =
+    process.env.OIDC_USERNAME_CLAIM ?? "preferred_username";
 
   /**
    * A space separated list of OIDC scopes to request. Defaults to "openid
    * profile email".
    */
-  public OIDC_INTERNAL_SCOPES =
-    process.env.OIDC_INTERNAL_SCOPES ?? "openid profile email";
-
-  @IsOptional()
-  @CannotUseWithout("OIDC_EXTERNAL_CLIENT_SECRET")
-  @CannotUseWithout("OIDC_EXTERNAL_AUTH_URI")
-  @CannotUseWithout("OIDC_EXTERNAL_TOKEN_URI")
-  @CannotUseWithout("OIDC_EXTERNAL_USERINFO_URI")
-  @CannotUseWithout("OIDC_EXTERNAL_DISPLAY_NAME")
-  public OIDC_EXTERNAL_CLIENT_ID = this.toOptionalString(
-    process.env.OIDC_EXTERNAL_CLIENT_ID
-  );
-
-  @IsOptional()
-  @CannotUseWithout("OIDC_EXTERNAL_CLIENT_ID")
-  public OIDC_EXTERNAL_CLIENT_SECRET = this.toOptionalString(
-    process.env.OIDC_EXTERNAL_CLIENT_SECRET
-  );
-
-  /**
-   * The name of the OIDC provider, eg "GitLab" – this will be displayed on the
-   * sign-in button and other places in the UI. The default value is:
-   * "OpenID Connect".
-   */
-  @MaxLength(50)
-  public OIDC_EXTERNAL_DISPLAY_NAME =
-    process.env.OIDC_EXTERNAL_DISPLAY_NAME ?? "OpenID Connect";
-
-  /**
-   * The OIDC authorization endpoint.
-   */
-  @IsOptional()
-  @IsUrl({
-    require_tld: false,
-    allow_underscores: true,
-  })
-  public OIDC_EXTERNAL_AUTH_URI = this.toOptionalString(
-    process.env.OIDC_EXTERNAL_AUTH_URI
-  );
-
-  /**
-   * The OIDC token endpoint.
-   */
-  @IsOptional()
-  @IsUrl({
-    require_tld: false,
-    allow_underscores: true,
-  })
-  public OIDC_EXTERNAL_TOKEN_URI = this.toOptionalString(
-    process.env.OIDC_EXTERNAL_TOKEN_URI
-  );
-
-  /**
-   * The OIDC userinfo endpoint.
-   */
-  @IsOptional()
-  @IsUrl({
-    require_tld: false,
-    allow_underscores: true,
-  })
-  public OIDC_EXTERNAL_USERINFO_URI = this.toOptionalString(
-    process.env.OIDC_EXTERNAL_USERINFO_URI
-  );
-
-  /**
-   * The OIDC profile field to use as the username. The default value is
-   * "preferred_username".
-   */
-  public OIDC_EXTERNAL_USERNAME_CLAIM =
-    process.env.OIDC_EXTERNAL_USERNAME_CLAIM ?? "preferred_username";
-
-  /**
-   * A space separated list of OIDC scopes to request. Defaults to "openid
-   * profile email".
-   */
-  public OIDC_EXTERNAL_SCOPES =
-    process.env.OIDC_EXTERNAL_SCOPES ?? "openid profile email";
+  public OIDC_SCOPES = process.env.OIDC_SCOPES ?? "openid profile email";
 
   /**
    * A string representing the version of the software.
