@@ -86,6 +86,7 @@ if (env.OIDC_INTERNAL_CLIENT_ID && env.OIDC_INTERNAL_CLIENT_SECRET) {
 
           const parts = profile.email.toLowerCase().split("@");
           const domain = parts.length && parts[1];
+          console.log("DOMAIN:", domain);
 
           if (!domain) {
             throw OIDCMalformedUserInfoError();
