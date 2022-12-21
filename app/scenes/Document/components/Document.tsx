@@ -101,6 +101,10 @@ class DocumentScene extends React.Component<Props> {
   isEmpty = true;
 
   @observable
+  coverImg =
+    "data:image/jpeg;base64,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";
+
+  @observable
   lastRevision: number = this.props.document.revision;
 
   @observable
@@ -418,6 +422,13 @@ class DocumentScene extends React.Component<Props> {
     }
   };
 
+  handleCoverImg = (e: React.ChangeEvent<HTMLInputElement>) => {
+    this.coverImg =
+      e?.target?.files !== null
+        ? URL.createObjectURL(e?.target?.files[0])
+        : this.coverImg;
+  };
+
   render() {
     const {
       document,
@@ -551,7 +562,16 @@ class DocumentScene extends React.Component<Props> {
               onSelectTemplate={this.replaceDocument}
               onSave={this.onSave}
               headings={this.headings}
+              handleCoverImg={this.handleCoverImg}
             />
+            <div
+              style={{
+                backgroundImage: `url(${this.coverImg})`,
+                backgroundSize: "cover",
+                width: "100%",
+                height: "20rem",
+              }}
+            ></div>
             <MaxWidth
               archived={document.isArchived}
               showContents={showContents}
@@ -561,6 +581,7 @@ class DocumentScene extends React.Component<Props> {
               auto
             >
               <Notices document={document} readOnly={readOnly} />
+
               <React.Suspense fallback={<PlaceholderDocument />}>
                 <Flex auto={!readOnly}>
                   {showContents && (
