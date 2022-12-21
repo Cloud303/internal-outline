@@ -11,7 +11,7 @@ import { Config } from "~/stores/AuthStore";
 import ButtonLarge from "~/components/ButtonLarge";
 import Fade from "~/components/Fade";
 import Flex from "~/components/Flex";
-import FullscreenLoading from "~/components/FullscreenLoading";
+// import FullscreenLoading from "~/components/FullscreenLoading";
 import Heading from "~/components/Heading";
 import LoadingIndicator from "~/components/LoadingIndicator";
 import NoticeAlert from "~/components/NoticeAlert";
@@ -70,36 +70,36 @@ function Login({ children }: Props) {
     setEmailLinkSentTo(email);
   }, []);
 
-  const isCustomAuth: any = (type: string) => {
-    return config?.providers?.filter((provider) => {
-      return provider?.id === type;
-    })[0];
-  };
+  // const isCustomAuth: any = (type: string) => {
+  //   return config?.providers?.filter((provider) => {
+  //     return provider?.id === type;
+  //   })[0];
+  // };
 
-  const { custom, teamSubdomain, host } = parseDomain(window.location.origin);
-  const needsRedirect = custom || teamSubdomain;
+  // const { custom, teamSubdomain, host } = parseDomain(window.location.origin);
+  // const needsRedirect = custom || teamSubdomain;
 
-  React.useEffect(() => {
-    if (window.location.search.slice(6) === "internal") {
-      if (isCustomAuth("oidc-internal")?.id) {
-        const href = needsRedirect
-          ? `${env.URL}${
-              isCustomAuth("oidc-internal")?.authUrl
-            }?host=${encodeURI(host)}`
-          : isCustomAuth("oidc-internal")?.authUrl;
-        window.location.href = href;
-      }
-    } else if (window.location.search.slice(6) === "external") {
-      if (isCustomAuth("oidc-external")?.id) {
-        const href = needsRedirect
-          ? `${env.URL}${
-              isCustomAuth("oidc-internal")?.authUrl
-            }?host=${encodeURI(host)}`
-          : isCustomAuth("oidc-internal")?.authUrl;
-        window.location.href = href;
-      }
-    }
-  }, [config?.providers]);
+  // React.useEffect(() => {
+  //   if (window.location.search.slice(6) === "internal") {
+  //     if (isCustomAuth("oidc-internal")?.id) {
+  //       const href = needsRedirect
+  //         ? `${env.URL}${
+  //             isCustomAuth("oidc-internal")?.authUrl
+  //           }?host=${encodeURI(host)}`
+  //         : isCustomAuth("oidc-internal")?.authUrl;
+  //       window.location.href = href;
+  //     }
+  //   } else if (window.location.search.slice(6) === "external") {
+  //     if (isCustomAuth("oidc-external")?.id) {
+  //       const href = needsRedirect
+  //         ? `${env.URL}${
+  //             isCustomAuth("oidc-internal")?.authUrl
+  //           }?host=${encodeURI(host)}`
+  //         : isCustomAuth("oidc-internal")?.authUrl;
+  //       window.location.href = href;
+  //     }
+  //   }
+  // }, [config?.providers]);
 
   React.useEffect(() => {
     auth.fetchConfig().catch(setError);
@@ -192,86 +192,83 @@ function Login({ children }: Props) {
     <Background>
       <Header config={config} />
       <Centered align="center" justify="center" gap={12} column auto>
-        {window &&
+        {/* {window &&
         (window.location.search.slice(6) === "internal" ||
           window.location.search.slice(6) === "external") ? (
           <FullscreenLoading />
         ) : (
+          <> */}
+        <PageTitle title={t("Login")} />
+        <Logo>
+          {env.TEAM_LOGO && !isCloudHosted ? (
+            <TeamLogo src={env.TEAM_LOGO} />
+          ) : (
+            <OutlineLogo size={38} fill="currentColor" />
+          )}
+        </Logo>
+        {isCreate ? (
           <>
-            <PageTitle title={t("Login")} />
-            <Logo>
-              {env.TEAM_LOGO && !isCloudHosted ? (
-                <TeamLogo src={env.TEAM_LOGO} />
-              ) : (
-                <OutlineLogo size={38} fill="currentColor" />
+            <StyledHeading centered>{t("Create an account")}</StyledHeading>
+            <GetStarted>
+              {t(
+                "Get started by choosing a sign-in method for your new team below…"
               )}
-            </Logo>
-            {isCreate ? (
-              <>
-                <StyledHeading centered>{t("Create an account")}</StyledHeading>
-                <GetStarted>
-                  {t(
-                    "Get started by choosing a sign-in method for your new team below…"
-                  )}
-                </GetStarted>
-              </>
-            ) : (
-              <>
-                <StyledHeading centered>
-                  {t("Login to {{ authProviderName }}", {
-                    authProviderName: config.name || "Outline",
-                  })}
-                </StyledHeading>
-                {children?.(config)}
-              </>
-            )}
-            <Notices />
-            {defaultProvider && (
-              <React.Fragment key={defaultProvider.id}>
-                <AuthenticationProvider
-                  isCreate={isCreate}
-                  onEmailSuccess={handleEmailSuccess}
-                  {...defaultProvider}
-                />
-                {hasMultipleProviders && (
-                  <>
-                    <Note>
-                      {t(
-                        "You signed in with {{ authProviderName }} last time.",
-                        {
-                          authProviderName: defaultProvider.name,
-                        }
-                      )}
-                    </Note>
-                    <Or data-text={t("Or")} />
-                  </>
-                )}
-              </React.Fragment>
-            )}
-            {config.providers.map((provider) => {
-              if (defaultProvider && provider.id === defaultProvider.id) {
-                return null;
-              }
-              console.log(provider, defaultProvider);
-
-              return (
-                <AuthenticationProvider
-                  key={provider.id}
-                  isCreate={isCreate}
-                  onEmailSuccess={handleEmailSuccess}
-                  {...provider}
-                />
-              );
-            })}
-            {isCreate && (
-              <Note>
-                <Trans>
-                  Already have an account? Go to <Link to="/">login</Link>.
-                </Trans>
-              </Note>
-            )}
+            </GetStarted>
+          </>
+        ) : (
+          <>
+            <StyledHeading centered>
+              {t("Login to {{ authProviderName }}", {
+                authProviderName: config.name || "Outline",
+              })}
+            </StyledHeading>
+            {children?.(config)}
           </>
         )}
+        <Notices />
+        {defaultProvider && (
+          <React.Fragment key={defaultProvider.id}>
+            <AuthenticationProvider
+              isCreate={isCreate}
+              onEmailSuccess={handleEmailSuccess}
+              {...defaultProvider}
+            />
+            {hasMultipleProviders && (
+              <>
+                <Note>
+                  {t("You signed in with {{ authProviderName }} last time.", {
+                    authProviderName: defaultProvider.name,
+                  })}
+                </Note>
+                <Or data-text={t("Or")} />
+              </>
+            )}
+          </React.Fragment>
+        )}
+        {config.providers.map((provider) => {
+          if (defaultProvider && provider.id === defaultProvider.id) {
+            return null;
+          }
+          console.log(provider, defaultProvider);
+
+          return (
+            <AuthenticationProvider
+              key={provider.id}
+              isCreate={isCreate}
+              onEmailSuccess={handleEmailSuccess}
+              {...provider}
+            />
+          );
+        })}
+        {isCreate && (
+          <Note>
+            <Trans>
+              Already have an account? Go to <Link to="/">login</Link>.
+            </Trans>
+          </Note>
+        )}
+        {/* </>
+        )} */}
       </Centered>
     </Background>
   );
