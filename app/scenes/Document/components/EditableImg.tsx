@@ -3,14 +3,14 @@ import * as React from "react";
 import Document from "~/models/Document";
 
 type Props = {
-  value: string;
+  value?: string | null | void | unknown;
   document: Document;
   readOnly?: boolean;
 };
 
 const EditableImg = React.forwardRef(({ value }: Props) => {
   return (
-    <>
+    <div style={{ paddingBottom: "20rem" }}>
       {value ? (
         <div
           style={{
@@ -18,12 +18,14 @@ const EditableImg = React.forwardRef(({ value }: Props) => {
             backgroundSize: "cover",
             width: "100%",
             height: "20rem",
+            position: "absolute",
+            left: 0,
           }}
         ></div>
       ) : (
         <div />
       )}
-    </>
+    </div>
   );
 });
 

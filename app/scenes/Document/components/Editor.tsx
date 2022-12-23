@@ -19,7 +19,7 @@ import EditableTitle from "./EditableTitle";
 
 type Props = Omit<EditorProps, "extensions"> & {
   onChangeTitle: (text: string) => void;
-  coverImg: string;
+  coverImg?: string | null | void | unknown;
   title: string;
   id: string;
   document: Document;
