@@ -101,7 +101,7 @@ class DocumentScene extends React.Component<Props> {
   isEmpty = true;
 
   @observable
-  coverImg: string | null = null;
+  coverImg: string | void | null | unknown = null;
 
   @observable
   lastRevision: number = this.props.document.revision;
@@ -421,18 +421,30 @@ class DocumentScene extends React.Component<Props> {
     }
   };
 
-  handleCoverImg = (e: React.ChangeEvent<HTMLInputElement>) => {
-    this.coverImg =
-      e?.target?.files !== null
-        ? URL.createObjectURL(e?.target?.files[0])
-        : this.coverImg;
-    this.props.document.coverImg =
-      e?.target?.files !== null
-        ? URL.createObjectURL(e?.target?.files[0])
-        : this.coverImg;
-    this.updateIsDirty();
-    this.autosave();
-  };
+  // getBase64(file: any, cb: any) {
+  //   let reader = new FileReader();
+  //   reader.readAsDataURL(file);
+  //   reader.onload = function () {
+  //     cb(reader.result);
+  //   };
+  //   reader.onerror = function (error) {
+  //     console.log("Error: ", error);
+  //   };
+  // }
+
+  getBase64(file: any) {
+    let document: string | ArrayBuffer | null = "";
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = function () {
+      document = reader.result;
+    };
+    reader.onerror = function (error) {
+      console.log("Error: ", error);
+    };
+
+    return document;
+  }
 
   render() {
     const {
@@ -465,6 +477,32 @@ class DocumentScene extends React.Component<Props> {
     const canonicalUrl = shareId
       ? this.props.match.url
       : updateDocumentUrl(this.props.match.url, document);
+
+    const convertToBase64 = (file: any) => {
+      return new Promise((resolve, reject) => {
+        const fileReader = new FileReader();
+        fileReader.readAsDataURL(file);
+        fileReader.onload = () => {
+          resolve(fileReader.result);
+        };
+        fileReader.onerror = (error) => {
+          reject(error);
+        };
+      });
+    };
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files ? e.target.files[0] : {};
+      const base64: string | void | null | unknown = await convertToBase64(
+        file
+      );
+
+      this.coverImg = e?.target?.files !== null ? base64 : this.coverImg;
+      document.coverImg = e?.target?.files !== null ? base64 : this.coverImg;
+
+      this.updateIsDirty();
+      this.autosave();
+    };
 
     console.log(document);
 
@@ -569,7 +607,7 @@ class DocumentScene extends React.Component<Props> {
               onSelectTemplate={this.replaceDocument}
               onSave={this.onSave}
               headings={this.headings}
-              handleCoverImg={this.handleCoverImg}
+              handleCoverImg={handleFileUpload}
             />
             {/* {this.coverImg && (
               <div
