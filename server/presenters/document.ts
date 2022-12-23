@@ -48,6 +48,7 @@ async function present(
     url: document.url,
     urlId: document.urlId,
     title: document.title,
+    coverImg: document.coverImg,
     text,
     tasks: document.tasks,
     createdAt: document.createdAt,
