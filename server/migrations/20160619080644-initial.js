@@ -136,10 +136,6 @@ module.exports = {
         type: "CHARACTER VARYING",
         allowNull: false,
       },
-      coverImg: {
-        type: "TEXT",
-        allowNull: true,
-      },
       text: {
         type: "TEXT",
         allowNull: true,

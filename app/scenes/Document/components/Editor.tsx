@@ -14,12 +14,10 @@ import {
   matchDocumentHistory,
 } from "~/utils/routeHelpers";
 import MultiplayerEditor from "./AsyncMultiplayerEditor";
-import EditableImg from "./EditableImg";
 import EditableTitle from "./EditableTitle";
 
 type Props = Omit<EditorProps, "extensions"> & {
   onChangeTitle: (text: string) => void;
-  coverImg?: string | null | void | unknown;
   title: string;
   id: string;
   document: Document;
@@ -39,13 +37,11 @@ type Props = Omit<EditorProps, "extensions"> & {
  */
 function DocumentEditor(props: Props, ref: React.RefObject<any>) {
   const titleRef = React.useRef<RefHandle>(null);
-  const imgRef = React.useRef<RefHandle>(null);
   const { t } = useTranslation();
   const match = useRouteMatch();
   const {
     document,
     title,
-    coverImg,
     onChangeTitle,
     isDraft,
     shareId,
@@ -84,12 +80,6 @@ function DocumentEditor(props: Props, ref: React.RefObject<any>) {
 
   return (
     <Flex auto column>
-      <EditableImg
-        ref={imgRef}
-        value={coverImg}
-        readOnly={readOnly}
-        document={document}
-      />
       <EditableTitle
         ref={titleRef}
         value={title}
