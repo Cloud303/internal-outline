@@ -11,7 +11,6 @@ import { Config } from "~/stores/AuthStore";
 import ButtonLarge from "~/components/ButtonLarge";
 import Fade from "~/components/Fade";
 import Flex from "~/components/Flex";
-import FullscreenLoading from "~/components/FullscreenLoading";
 import Heading from "~/components/Heading";
 import LoadingIndicator from "~/components/LoadingIndicator";
 import NoticeAlert from "~/components/NoticeAlert";
@@ -69,23 +68,6 @@ function Login({ children }: Props) {
   const handleEmailSuccess = React.useCallback((email) => {
     setEmailLinkSentTo(email);
   }, []);
-
-  const isCustomAuth: any = config?.providers?.filter((provider) => {
-    return provider?.id === "oidc";
-  });
-
-  const { custom, teamSubdomain, host } = parseDomain(window.location.origin);
-  const needsRedirect = custom || teamSubdomain;
-
-  React.useEffect(() => {
-    console.log(isCustomAuth);
-    if (isCustomAuth && isCustomAuth[0]?.id) {
-      const href = needsRedirect
-        ? `${env.URL}${isCustomAuth[0]?.authUrl}?host=${encodeURI(host)}`
-        : isCustomAuth[0]?.authUrl;
-      window.location.href = href;
-    }
-  }, [isCustomAuth]);
 
   React.useEffect(() => {
     auth.fetchConfig().catch(setError);
@@ -178,83 +160,73 @@ function Login({ children }: Props) {
     <Background>
       <Header config={config} />
       <Centered align="center" justify="center" gap={12} column auto>
-        {isCustomAuth?.length > 0 ? (
-          <FullscreenLoading />
+        <PageTitle title={t("Login")} />
+        <Logo>
+          {env.TEAM_LOGO && !isCloudHosted ? (
+            <TeamLogo src={env.TEAM_LOGO} />
+          ) : (
+            <OutlineLogo size={38} fill="currentColor" />
+          )}
+        </Logo>
+        {isCreate ? (
+          <>
+            <StyledHeading centered>{t("Create an account")}</StyledHeading>
+            <GetStarted>
+              {t(
+                "Get started by choosing a sign-in method for your new team below…"
+              )}
+            </GetStarted>
+          </>
         ) : (
           <>
-            <PageTitle title={t("Login")} />
-            <Logo>
-              {env.TEAM_LOGO && !isCloudHosted ? (
-                <TeamLogo src={env.TEAM_LOGO} />
-              ) : (
-                <OutlineLogo size={38} fill="currentColor" />
-              )}
-            </Logo>
-            {isCreate ? (
-              <>
-                <StyledHeading centered>{t("Create an account")}</StyledHeading>
-                <GetStarted>
-                  {t(
-                    "Get started by choosing a sign-in method for your new team below…"
-                  )}
-                </GetStarted>
-              </>
-            ) : (
-              <>
-                <StyledHeading centered>
-                  {t("Login to {{ authProviderName }}", {
-                    authProviderName: config.name || "Outline",
-                  })}
-                </StyledHeading>
-                {children?.(config)}
-              </>
-            )}
-            <Notices />
-            {defaultProvider && (
-              <React.Fragment key={defaultProvider.id}>
-                <AuthenticationProvider
-                  isCreate={isCreate}
-                  onEmailSuccess={handleEmailSuccess}
-                  {...defaultProvider}
-                />
-                {hasMultipleProviders && (
-                  <>
-                    <Note>
-                      {t(
-                        "You signed in with {{ authProviderName }} last time.",
-                        {
-                          authProviderName: defaultProvider.name,
-                        }
-                      )}
-                    </Note>
-                    <Or data-text={t("Or")} />
-                  </>
-                )}
-              </React.Fragment>
-            )}
-            {config.providers.map((provider) => {
-              if (defaultProvider && provider.id === defaultProvider.id) {
-                return null;
-              }
-              console.log(provider, defaultProvider);
-
-              return (
-                <AuthenticationProvider
-                  key={provider.id}
-                  isCreate={isCreate}
-                  onEmailSuccess={handleEmailSuccess}
-                  {...provider}
-                />
-              );
-            })}
-            {isCreate && (
-              <Note>
-                <Trans>
-                  Already have an account? Go to <Link to="/">login</Link>.
-                </Trans>
-              </Note>
-            )}
+            <StyledHeading centered>
+              {t("Login to {{ authProviderName }}", {
+                authProviderName: config.name || "Outline",
+              })}
+            </StyledHeading>
+            {children?.(config)}
           </>
+        )}
+        <Notices />
+        {defaultProvider && (
+          <React.Fragment key={defaultProvider.id}>
+            <AuthenticationProvider
+              isCreate={isCreate}
+              onEmailSuccess={handleEmailSuccess}
+              {...defaultProvider}
+            />
+            {hasMultipleProviders && (
+              <>
+                <Note>
+                  {t("You signed in with {{ authProviderName }} last time.", {
+                    authProviderName: defaultProvider.name,
+                  })}
+                </Note>
+                <Or data-text={t("Or")} />
+              </>
+            )}
+          </React.Fragment>
+        )}
+        {config.providers.map((provider) => {
+          if (defaultProvider && provider.id === defaultProvider.id) {
+            return null;
+          }
+
+          return (
+            <AuthenticationProvider
+              key={provider.id}
+              isCreate={isCreate}
+              onEmailSuccess={handleEmailSuccess}
+              {...provider}
+            />
+          );
+        })}
+        {isCreate && (
+          <Note>
+            <Trans>
+              Already have an account? Go to <Link to="/">login</Link>.
+            </Trans>
+          </Note>
         )}
       </Centered>
     </Background>

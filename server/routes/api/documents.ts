@@ -787,7 +787,6 @@ router.post("documents.update", auth(), async (ctx) => {
     lastRevision,
     templateId,
     append,
-    coverImg,
   } = ctx.body;
   const editorVersion = ctx.headers["x-editor-version"] as string | undefined;
   assertPresent(id, "id is required");
@@ -823,7 +822,6 @@ router.post("documents.update", auth(), async (ctx) => {
       templateId,
       editorVersion,
       transaction,
-      coverImg,
       ip: ctx.request.ip,
     });
   });
@@ -1269,8 +1267,8 @@ async function createChildDuplicates({
       text: `${childDoc?.text}`,
       publish: body.publish,
       collectionId: `${childDoc?.collectionId}`,
-      parentDocumentId,
-      templateDocument,
+      parentDocumentId: parentDocumentId,
+      templateDocument: templateDocument,
       template: childDoc?.template,
       index: i,
       user,

@@ -3,7 +3,6 @@ build
 node_modules/*
 .env
 .log
-outline.env
 .vscode/*
 npm-debug.log
 stats.json
