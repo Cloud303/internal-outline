@@ -59,7 +59,7 @@ class ImageUpload extends React.Component<RootStore & Props> {
     const canvas = this.avatarEditorRef.current?.getImage();
     invariant(canvas, "canvas is not defined");
     const imageBlob = dataUrlToBlob(canvas.toDataURL());
-
+    console.log(imageBlob, canvas);
     try {
       const compressed = await compressImage(imageBlob, {
         maxHeight: 512,

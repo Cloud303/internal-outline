@@ -54,7 +54,7 @@ export default async function documentUpdater({
   if (title !== undefined) {
     document.title = title;
   }
-  if (coverImg) {
+  if (coverImg || coverImg === "") {
     document.coverImg = coverImg;
   }
   if (editorVersion) {

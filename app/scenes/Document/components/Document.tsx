@@ -35,6 +35,7 @@ import type { Editor as TEditor } from "~/editor";
 import { NavigationNode } from "~/types";
 import { client } from "~/utils/ApiClient";
 import { emojiToUrl } from "~/utils/emoji";
+import { uploadFile } from "~/utils/files";
 import { isModKey } from "~/utils/keyboard";
 import {
   documentMoveUrl,
@@ -478,27 +479,30 @@ class DocumentScene extends React.Component<Props> {
       ? this.props.match.url
       : updateDocumentUrl(this.props.match.url, document);
 
-    const convertToBase64 = (file: any) => {
-      return new Promise((resolve, reject) => {
-        const fileReader = new FileReader();
-        fileReader.readAsDataURL(file);
-        fileReader.onload = () => {
-          resolve(fileReader.result);
-        };
-        fileReader.onerror = (error) => {
-          reject(error);
-        };
-      });
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file: any = e.target.files ? e.target.files[0] : null;
+
+      this.coverImg =
+        e?.target?.files !== null
+          ? window.URL.createObjectURL(file)
+          : this.coverImg;
+
+      try {
+        const attachment = await uploadFile(file, {
+          name: file.name,
+          public: true,
+        });
+        document.coverImg = attachment?.url;
+        this.updateIsDirty();
+        this.autosave();
+      } catch (err) {
+        console.log(err.message);
+      }
     };
 
-    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files ? e.target.files[0] : {};
-      const base64: string | void | null | unknown = await convertToBase64(
-        file
-      );
-
-      this.coverImg = e?.target?.files !== null ? base64 : this.coverImg;
-      document.coverImg = e?.target?.files !== null ? base64 : this.coverImg;
+    const handleRemoveCoverImg = () => {
+      this.coverImg = "";
+      document.coverImg = "";
 
       this.updateIsDirty();
       this.autosave();
@@ -608,6 +612,7 @@ class DocumentScene extends React.Component<Props> {
               onSave={this.onSave}
               headings={this.headings}
               handleCoverImg={handleFileUpload}
+              handleRemoveCoverImg={handleRemoveCoverImg}
             />
             {/* {this.coverImg && (
               <div
