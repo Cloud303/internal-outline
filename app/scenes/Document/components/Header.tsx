@@ -6,6 +6,7 @@ import {
   MoonIcon,
   MoreIcon,
   SunIcon,
+  TrashIcon,
 } from "outline-icons";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
@@ -58,6 +59,7 @@ type Props = {
     id: string;
   }[];
   handleCoverImg: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleRemoveCoverImg: (e: React.ChangeEvent<HTMLInputElement>) => void;
 };
 
 function DocumentHeader({
@@ -76,6 +78,7 @@ function DocumentHeader({
   onSave,
   headings,
   handleCoverImg,
+  handleRemoveCoverImg,
 }: Props) {
   const { t } = useTranslation();
   const { ui, auth } = useStores();
@@ -292,6 +295,21 @@ function DocumentHeader({
                 />
               </>
             )}
+            {canEdit &&
+              can.createChildDocument &&
+              !isMobile &&
+              document.coverImg && (
+                <>
+                  <Button
+                    icon={<TrashIcon />}
+                    onClick={handleRemoveCoverImg}
+                    style={{ marginLeft: 12 }}
+                    danger
+                  >
+                    {t("Remove Cover")}
+                  </Button>
+                </>
+              )}
             {canEdit && isTemplate && !isDraft && !isRevision && (
               <Action>
                 <Button
