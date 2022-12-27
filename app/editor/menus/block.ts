@@ -18,6 +18,7 @@ import {
   AttachmentIcon,
   ClockIcon,
   CalendarIcon,
+  NewDocumentIcon,
 } from "outline-icons";
 import { MenuItem } from "@shared/editor/types";
 import { Dictionary } from "~/hooks/useDictionary";
@@ -98,6 +99,11 @@ export default function blockMenuItems(dictionary: Dictionary): MenuItem[] {
       title: dictionary.table,
       icon: TableIcon,
       attrs: { rowsCount: 3, colsCount: 3 },
+    },
+    {
+      name: "toggleList",
+      title: dictionary.toggleList,
+      icon: NewDocumentIcon,
     },
     {
       name: "blockquote",
