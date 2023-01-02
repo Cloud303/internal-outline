@@ -100,6 +100,12 @@ export default function blockMenuItems(dictionary: Dictionary): MenuItem[] {
       attrs: { rowsCount: 3, colsCount: 3 },
     },
     {
+      name: "tableOfContents",
+      title: dictionary.tableOfContents,
+      icon: TableIcon,
+      keywords: "toc",
+    },
+    {
       name: "blockquote",
       title: dictionary.quote,
       icon: BlockQuoteIcon,

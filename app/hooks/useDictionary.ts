@@ -79,6 +79,7 @@ export default function useDictionary() {
       insertTime: t("Current time"),
       insertDateTime: t("Current date and time"),
       color: t("Select color"),
+      tableOfContents: t("Table of Contents"),
     };
   }, [t]);
 }

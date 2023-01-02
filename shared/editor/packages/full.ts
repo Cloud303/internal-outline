@@ -19,6 +19,7 @@ import OrderedList from "../nodes/OrderedList";
 import Table from "../nodes/Table";
 import TableCell from "../nodes/TableCell";
 import TableHeadCell from "../nodes/TableHeadCell";
+import TableOfContents from "../nodes/TableOfContents";
 import TableRow from "../nodes/TableRow";
 import BlockMenuTrigger from "../plugins/BlockMenuTrigger";
 import Folding from "../plugins/Folding";
@@ -40,6 +41,7 @@ const fullPackage: (typeof Node | typeof Mark | typeof Extension)[] = [
   Notice,
   Heading,
   HorizontalRule,
+  TableOfContents,
   Table,
   TableCell,
   TableHeadCell,
