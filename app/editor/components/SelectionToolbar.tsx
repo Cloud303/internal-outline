@@ -78,6 +78,7 @@ function isVisible(props: Props) {
 
 export default class SelectionToolbar extends React.Component<Props> {
   isActive = false;
+  isColorSelected = true;
   menuRef = React.createRef<HTMLDivElement>();
 
   componentDidUpdate(): void {
@@ -192,6 +193,8 @@ export default class SelectionToolbar extends React.Component<Props> {
     const markType = state.schema.marks.color;
 
     dispatch(state.tr.addMark(from, to, markType.create({ color })));
+
+    this.isColorSelected = false;
   };
 
   render() {
@@ -249,6 +252,10 @@ export default class SelectionToolbar extends React.Component<Props> {
       return null;
     }
 
+    if (color === false) {
+      this.isColorSelected = true;
+    }
+
     return (
       <FloatingToolbar
         view={view}
@@ -267,7 +274,7 @@ export default class SelectionToolbar extends React.Component<Props> {
             {...rest}
           />
         )}
-        {color && rangeColor && (
+        {color && rangeColor && this.isColorSelected && (
           <ColorEditor
             key={`${rangeColor.from}-${rangeColor.to}`}
             dictionary={dictionary}
