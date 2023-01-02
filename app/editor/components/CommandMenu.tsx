@@ -514,6 +514,7 @@ class CommandMenu<T = MenuItem> extends React.Component<Props<T>, State> {
           ) : (
             <List>
               {items.map((item, index) => {
+                // console.log("item", item);
                 if (item.name === "separator") {
                   return (
                     <ListItem key={index}>
