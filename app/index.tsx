@@ -21,6 +21,8 @@ import Logger from "./utils/Logger";
 import history from "./utils/history";
 import { initSentry } from "./utils/sentry";
 
+import ChatwootWidget from "app/components/ChatwootWidget";
+
 initI18n();
 const element = window.document.getElementById("root");
 
@@ -72,6 +74,7 @@ if (element) {
   const App = () => (
     <React.StrictMode>
       <Provider {...stores}>
+        <ChatwootWidget />
         <Analytics>
           <Theme>
             <ErrorBoundary>
