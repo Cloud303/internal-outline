@@ -70,42 +70,45 @@ const commandBarOptions = {
 };
 
 if (element) {
-  const App = () => (
-    <React.StrictMode>
-      <Provider {...stores}>
-        {env.CHATWOOT_MODE && (
+  const App = () => {
+    console.log("CHATWOOT_BASE_URL", env.CHATWOOT_BASE_URL);
+    console.log("CHATWOOT_WEBSITE_TOKEN", env.CHATWOOT_WEBSITE_TOKEN);
+    console.log("CHATWOOT_MODE", env.CHATWOOT_MODE);
+    return (
+      <React.StrictMode>
+        <Provider {...stores}>
           <ChatwootWidget
             options={{
               BASE_URL: env.CHATWOOT_BASE_URL,
               WEBSITE_TOKEN: env.CHATWOOT_WEBSITE_TOKEN,
             }}
           />
-        )}
-        <Analytics>
-          <Theme>
-            <ErrorBoundary>
-              <KBarProvider actions={[]} options={commandBarOptions}>
-                <LazyPolyfill>
-                  <LazyMotion features={loadFeatures}>
-                    <Router history={history}>
-                      <>
-                        <PageTheme />
-                        <ScrollToTop>
-                          <Routes />
-                        </ScrollToTop>
-                        <Toasts />
-                        <Dialogs />
-                      </>
-                    </Router>
-                  </LazyMotion>
-                </LazyPolyfill>
-              </KBarProvider>
-            </ErrorBoundary>
-          </Theme>
-        </Analytics>
-      </Provider>
-    </React.StrictMode>
-  );
+          <Analytics>
+            <Theme>
+              <ErrorBoundary>
+                <KBarProvider actions={[]} options={commandBarOptions}>
+                  <LazyPolyfill>
+                    <LazyMotion features={loadFeatures}>
+                      <Router history={history}>
+                        <>
+                          <PageTheme />
+                          <ScrollToTop>
+                            <Routes />
+                          </ScrollToTop>
+                          <Toasts />
+                          <Dialogs />
+                        </>
+                      </Router>
+                    </LazyMotion>
+                  </LazyPolyfill>
+                </KBarProvider>
+              </ErrorBoundary>
+            </Theme>
+          </Analytics>
+        </Provider>
+      </React.StrictMode>
+    );
+  };
 
   render(<App />, element);
 }
