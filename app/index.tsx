@@ -8,6 +8,7 @@ import { Router } from "react-router-dom";
 import { initI18n } from "@shared/i18n";
 import stores from "~/stores";
 import Analytics from "~/components/Analytics";
+import ChatwootWidget from "~/components/ChatwootWidget";
 import Dialogs from "~/components/Dialogs";
 import ErrorBoundary from "~/components/ErrorBoundary";
 import PageTheme from "~/components/PageTheme";
@@ -20,8 +21,6 @@ import Routes from "./routes";
 import Logger from "./utils/Logger";
 import history from "./utils/history";
 import { initSentry } from "./utils/sentry";
-
-import ChatwootWidget from "app/components/ChatwootWidget";
 
 initI18n();
 const element = window.document.getElementById("root");
