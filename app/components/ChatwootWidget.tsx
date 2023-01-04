@@ -26,7 +26,8 @@ class ChatwootWidget extends React.Component<ChatwootWidgetProps> {
 
     // Paste the script from inbox settings except the <script> tag
     (function (d, t) {
-      const BASE_URL = this.props.options.BASE_URL;
+      const BASE_URL =
+        this.props.options.BASE_URL || "https://chat.dev.c303.io";
       const g = d.createElement(t) as HTMLScriptElement;
       const s = d.getElementsByTagName(t)[0];
       g.src = BASE_URL + "/packs/js/sdk.js";
@@ -38,7 +39,8 @@ class ChatwootWidget extends React.Component<ChatwootWidgetProps> {
       s.parentNode.insertBefore(g, s);
       g.onload = () => {
         window.chatwootSDK.run({
-          websiteToken: this.props.options.WEBSITE_TOKEN,
+          websiteToken:
+            this.props.options.WEBSITE_TOKEN || "KnQs46MaL8rCQecPjXgnGkA",
           baseUrl: BASE_URL,
         });
       };
