@@ -3,6 +3,9 @@ export type Role = "admin" | "viewer" | "member";
 export type DateFilter = "day" | "week" | "month" | "year";
 
 export type PublicEnv = {
+  CHATWOOT_MODE: boolean | undefined;
+  CHATWOOT_BASE_URL: string | undefined;
+  CHATWOOT_WEBSITE_TOKEN: string | undefined;
   URL: string;
   CDN_URL: string;
   COLLABORATION_URL: string;

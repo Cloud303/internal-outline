@@ -73,7 +73,14 @@ if (element) {
   const App = () => (
     <React.StrictMode>
       <Provider {...stores}>
-        <ChatwootWidget />
+        {env.CHATWOOT_MODE && (
+          <ChatwootWidget
+            options={{
+              BASE_URL: env.CHATWOOT_BASE_URL,
+              WEBSITE_TOKEN: env.CHATWOOT_WEBSITE_TOKEN,
+            }}
+          />
+        )}
         <Analytics>
           <Theme>
             <ErrorBoundary>
