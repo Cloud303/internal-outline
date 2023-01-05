@@ -8,9 +8,19 @@ const TableOfContents = ({ editor }: { editor: any; node: any }) => {
   return (
     <StyledCon>
       {getHeadings(view.state.doc)?.map(
-        (heading: { id: string; title: string }) => {
+        (heading: { id: string; title: string; level: number }) => {
           return (
-            <StyledAnchor href={`#${heading.id}`}>
+            <StyledAnchor
+              href={`#${heading.id}`}
+              style={{
+                marginLeft:
+                  heading.level === 2
+                    ? "20px"
+                    : heading.level === 3
+                    ? "40px"
+                    : 0,
+              }}
+            >
               <StyledButton key={heading.title}>{heading.title}</StyledButton>
             </StyledAnchor>
           );
