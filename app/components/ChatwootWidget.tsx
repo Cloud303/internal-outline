@@ -41,7 +41,7 @@ class ChatwootWidget extends React.Component<ChatwootWidgetProps> {
       s.parentNode.insertBefore(g, s);
       g.onload = () => {
         window.chatwootSDK.run({
-          websiteToken: "KnQs46MaL8rCQecPjXgnGkA",
+          websiteToken: "9KnQs46MaL8rCQecPjXgnGkA",
           baseUrl: BASE_URL,
         });
       };
