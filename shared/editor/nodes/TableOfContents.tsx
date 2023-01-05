@@ -35,14 +35,7 @@ export default class ToggleList extends Node {
   }
 
   toMarkdown(state: MarkdownSerializerState) {
-    state.write(
-      `
-          <details>
-          <summary>das</summary>
-          dsa
-          </details>
-          `
-    );
+    state.write(`TOC`);
   }
 
   parseMarkdown() {
