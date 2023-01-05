@@ -16,6 +16,7 @@ export type PublicEnv = {
   SENTRY_DSN: string | undefined;
   TEAM_LOGO: string | undefined;
   SLACK_CLIENT_ID: string | undefined;
+  OIDC_LOGOUT_URL: string | undefined;
   SLACK_APP_ID: string | undefined;
   MAXIMUM_IMPORT_SIZE: number;
   SUBDOMAINS_ENABLED: boolean;

@@ -71,8 +71,6 @@ const commandBarOptions = {
 
 if (element) {
   const App = () => {
-    console.log("CHATWOOT_BASE_URL", env.CHATWOOT_BASE_URL);
-    console.log("CHATWOOT_MODE", env.CHATWOOT_MODE);
     return (
       <React.StrictMode>
         <Provider {...stores}>

@@ -515,6 +515,8 @@ export class Environment {
    */
   public OIDC_SCOPES = process.env.OIDC_SCOPES ?? "openid profile email";
 
+  public OIDC_LOGOUT_URL = process.env.OIDC_LOGOUT_URL ?? "/";
+
   /**
    * A string representing the version of the software.
    *
