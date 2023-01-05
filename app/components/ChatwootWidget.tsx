@@ -1,5 +1,6 @@
 import React from "react";
-// import env from "~/env";
+import env from "~/env";
+
 declare global {
   interface Window {
     chatwootSDK: any;
@@ -23,13 +24,13 @@ class ChatwootWidget extends React.Component<ChatwootWidgetProps> {
       locale: "en", // Language to be set
       type: "standard", // [standard, expanded_bubble]
     };
-    // if (!env.CHATWOOT_MODE) {
-    //   return;
-    // }
+    if (!env.CHATWOOT_MODE) {
+      return;
+    }
 
     // Paste the script from inbox settings except the <script> tag
     (function (d, t) {
-      const BASE_URL = "https://chat.dev.c303.io";
+      const BASE_URL = this.props.options.BASE_URL;
       const g = d.createElement(t) as HTMLScriptElement;
       const s = d.getElementsByTagName(t)[0];
       g.src = BASE_URL + "/packs/js/sdk.js";
@@ -41,7 +42,7 @@ class ChatwootWidget extends React.Component<ChatwootWidgetProps> {
       s.parentNode.insertBefore(g, s);
       g.onload = () => {
         window.chatwootSDK.run({
-          websiteToken: "9KnQs46MaL8rCQecPjXgnGkA",
+          websiteToken: this.props.options.WEBSITE_TOKEN,
           baseUrl: BASE_URL,
         });
       };

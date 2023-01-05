@@ -72,17 +72,18 @@ const commandBarOptions = {
 if (element) {
   const App = () => {
     console.log("CHATWOOT_BASE_URL", env.CHATWOOT_BASE_URL);
-    console.log("CHATWOOT_WEBSITE_TOKEN", env.CHATWOOT_WEBSITE_TOKEN);
     console.log("CHATWOOT_MODE", env.CHATWOOT_MODE);
     return (
       <React.StrictMode>
         <Provider {...stores}>
-          <ChatwootWidget
-            options={{
-              BASE_URL: env.CHATWOOT_BASE_URL,
-              WEBSITE_TOKEN: env.CHATWOOT_WEBSITE_TOKEN,
-            }}
-          />
+          {env.CHATWOOT_MODE && (
+            <ChatwootWidget
+              options={{
+                BASE_URL: env.CHATWOOT_BASE_URL,
+                WEBSITE_TOKEN: env.CHATWOOT_WEBSITE_TOKEN,
+              }}
+            />
+          )}
           <Analytics>
             <Theme>
               <ErrorBoundary>
