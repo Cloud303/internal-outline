@@ -7,7 +7,7 @@ import {
 import React from "react";
 import ReactDOM from "react-dom";
 import { Editor } from "~/editor";
-import toggleList from "../commands/toggleList";
+import toggleBlockType from "../commands/toggleBlockType";
 import Accordion from "../components/Accordion";
 import { MarkdownSerializerState } from "../lib/markdown/serializer";
 import Node from "./Node";
@@ -48,7 +48,9 @@ export default class ToggleList extends Node {
   }
 
   commands({ type, schema }: { type: NodeType; schema: Schema }) {
-    return () => toggleList(type, schema.nodes.toggleList);
+    return () => {
+      return toggleBlockType(type, schema.nodes.paragraph);
+    };
   }
 
   toMarkdown(state: MarkdownSerializerState, node: ProsemirrorModel) {

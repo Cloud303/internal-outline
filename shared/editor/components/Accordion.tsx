@@ -65,6 +65,7 @@ const AccordionEditor = ({
           display: "flex",
           flexDirection: "row",
           justifyContent: "flex-start",
+          alignItems: "center",
           padding: "0.4rem 0",
           border: "none",
           backgroundColor: "transparent",
@@ -82,8 +83,9 @@ const AccordionEditor = ({
               aria-hidden="true"
               viewBox="0 0 24 24"
               data-testid="ArrowDropDownIcon"
-              width={28}
-              height={28}
+              width="100%"
+              height="100%"
+              fill="currentColor"
             >
               <path d="m7 10 5 5 5-5z" />
             </svg>
@@ -94,8 +96,9 @@ const AccordionEditor = ({
               aria-hidden="true"
               viewBox="0 0 24 24"
               data-testid="ArrowRightIcon"
-              width={28}
-              height={28}
+              width="100%"
+              height="100%"
+              fill="currentColor"
             >
               <path d="m10 17 5-5-5-5v10z" />
             </svg>
@@ -142,15 +145,16 @@ const StyledInput = styled.input`
   width: auto;
   outline: none;
   margin-left: 5px;
-  margin-bottom: -20px !important;
+  /* margin-bottom: -20px !important; */
+  background-color: transparent;
 `;
 
 const StyledButton = styled.button`
   border: none;
-  padding: 0;
-  width: 28px;
-  height: 28px;
-  border-radius: 5px;
+  padding: 0 !important;
+  width: 24px;
+  height: 22px;
+  border-radius: 3px;
   background-color: #8080806c;
   cursor: pointer;
   outline: none;
@@ -164,6 +168,7 @@ const StyledArea = styled.textarea`
   width: 100%;
   height: 100%;
   border: none;
-  resize: vertical;
+  resize: none;
   outline: none;
+  background-color: transparent;
 `;
