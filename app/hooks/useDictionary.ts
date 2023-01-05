@@ -80,6 +80,7 @@ export default function useDictionary() {
       insertDateTime: t("Current date and time"),
       color: t("Select color"),
       toggleList: t("Add Toggle List"),
+      tableOfContents: t("Table of Contents"),
     };
   }, [t]);
 }
