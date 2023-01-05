@@ -23,6 +23,7 @@ const scriptSrc = [
   "'unsafe-inline'",
   "'unsafe-eval'",
   "gist.github.com",
+  "chat.dev.c303.io",
 ];
 
 if (env.GOOGLE_ANALYTICS_ID) {
