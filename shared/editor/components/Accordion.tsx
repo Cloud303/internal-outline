@@ -114,6 +114,9 @@ const AccordionEditor = ({
           }}
           onClick={(e) => e.stopPropagation()}
           onFocus={(e) => setHeadingElement(e)}
+          onKeyDown={(e) => {
+            e.stopPropagation();
+          }}
           onBlur={setAttributes}
         />
       </button>
@@ -127,6 +130,9 @@ const AccordionEditor = ({
               setValues({ ...values, desc: e.target.value });
             }}
             onFocus={(e) => setHeadingElement(e)}
+            onKeyDown={(e) => {
+              e.stopPropagation();
+            }}
             onBlur={setAttributes}
             draggable={false}
           ></StyledArea>

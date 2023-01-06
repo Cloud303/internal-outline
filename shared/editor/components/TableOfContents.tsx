@@ -10,19 +10,22 @@ const TableOfContents = ({ editor }: { editor: any; node: any }) => {
       {getHeadings(view.state.doc)?.map(
         (heading: { id: string; title: string; level: number }) => {
           return (
-            <StyledAnchor
-              href={`#${heading.id}`}
+            <StyledButton
+              key={heading.title}
               style={{
-                marginLeft:
+                paddingLeft:
                   heading.level === 2
-                    ? "20px"
+                    ? "30px"
                     : heading.level === 3
-                    ? "40px"
-                    : 0,
+                    ? "50px"
+                    : "15px",
+              }}
+              onClick={(e) => {
+                window.location.hash = `#${heading.id}`;
               }}
             >
-              <StyledButton key={heading.title}>{heading.title}</StyledButton>
-            </StyledAnchor>
+              {heading.title}
+            </StyledButton>
           );
         }
       )}
@@ -35,16 +38,24 @@ export default TableOfContents;
 const StyledCon = styled.div`
   display: flex;
   flex-direction: column;
-  width: 50%;
+  width: 100%;
 `;
 
 const StyledButton = styled.button`
   width: 100%;
   cursor: pointer;
-  margin-top: 3px;
+  border-radius: 5px;
+  background-color: transparent;
+  border: none;
+  text-align: left;
+  padding: 0.4rem 1rem;
+
+  &:hover {
+    background-color: gray;
+  }
 `;
 
-const StyledAnchor = styled.a`
+const StyledAnchor = styled.button`
   color: white !important;
   text-decoration: none;
   width: 100% !important;
