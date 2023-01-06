@@ -74,20 +74,7 @@ if (element) {
     return (
       <React.StrictMode>
         <Provider {...stores}>
-          {/* {env.CHATWOOT_MODE && (
-            <ChatwootWidget
-              options={{
-                BASE_URL: env.CHATWOOT_BASE_URL,
-                WEBSITE_TOKEN: env.CHATWOOT_WEBSITE_TOKEN,
-              }}
-            />
-          )} */}
-          <ChatwootWidget
-            options={{
-              BASE_URL: env.CHATWOOT_BASE_URL,
-              WEBSITE_TOKEN: env.CHATWOOT_WEBSITE_TOKEN,
-            }}
-          />
+          {env.CHATWOOT_MODE && <ChatwootWidget />}
           <Analytics>
             <Theme>
               <ErrorBoundary>
