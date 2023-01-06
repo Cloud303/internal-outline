@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import styled from "styled-components";
 
 const AccordionEditor = ({
@@ -10,7 +10,18 @@ const AccordionEditor = ({
   desc: any;
   editor?: any;
 }) => {
+  const useFocus = () => {
+    const htmlElRef = useRef<any>(null);
+    const setFocus = () => {
+      htmlElRef.current && htmlElRef.current.focus();
+    };
+
+    return [htmlElRef, setFocus] as const;
+  };
+
   const [open, setOpen] = useState(false);
+  const [inputRef, setInputFocus] = useFocus();
+  const [inputAreaRef, setInputAreaFocus] = useFocus();
   const [headingElement, setHeadingElement] = useState<any>(null);
   const [values, setValues] = useState({
     heading,
@@ -18,6 +29,14 @@ const AccordionEditor = ({
   });
   const { view } = editor;
   const { tr } = view.state;
+
+  useEffect(() => {
+    if (!values?.heading) {
+      setInputFocus();
+    } else if (!values?.desc) {
+      setInputAreaFocus();
+    }
+  }, [values]);
 
   const setAttributes = () => {
     console.log(headingElement);
@@ -73,7 +92,9 @@ const AccordionEditor = ({
           outline: "none",
           boxShadow: "none !important",
         }}
-        onClick={() => setOpen(!open)}
+        onClick={() => {
+          setOpen(!open);
+        }}
       >
         <StyledButton>
           {open ? (
@@ -106,6 +127,7 @@ const AccordionEditor = ({
         </StyledButton>
         <StyledInput
           type="text"
+          ref={inputRef}
           value={values.heading}
           placeholder="Enter title"
           onChange={(e) => {
@@ -123,6 +145,7 @@ const AccordionEditor = ({
       {open && (
         <div style={{ paddingTop: "0.4rem" }}>
           <StyledArea
+            ref={inputAreaRef}
             value={values.desc}
             placeholder="Enter description"
             onChange={(e) => {
@@ -161,10 +184,13 @@ const StyledButton = styled.button`
   width: 24px;
   height: 22px;
   border-radius: 3px;
-  background-color: #8080806c;
+  background-color: transparent;
   cursor: pointer;
   outline: none;
 
+  &:hover {
+    background-color: #8080806c;
+  }
   &:active {
     background-color: #80808094;
   }

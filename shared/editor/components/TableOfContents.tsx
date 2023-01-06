@@ -42,16 +42,19 @@ const StyledCon = styled.div`
 `;
 
 const StyledButton = styled.button`
-  width: 100%;
+  /* width: 100%; */
   cursor: pointer;
   border-radius: 5px;
   background-color: transparent;
   border: none;
   text-align: left;
+  text-decoration: underline;
+  font-family: monospace;
   padding: 0.4rem 1rem;
+  color: #dad1d1;
 
   &:hover {
-    background-color: gray;
+    background-color: #80808099;
   }
 `;
 
