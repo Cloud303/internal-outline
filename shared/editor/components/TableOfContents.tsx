@@ -49,7 +49,9 @@ const StyledButton = styled.button`
   border: none;
   text-align: left;
   text-decoration: underline;
-  font-family: monospace;
+  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji",
+    "Segoe UI Symbol";
   padding: 0.4rem 1rem;
   color: #dad1d1;
 
