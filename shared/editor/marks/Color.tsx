@@ -1,6 +1,4 @@
-import { TokenConfig } from "prosemirror-markdown";
-import { MarkSpec, Node as ProsemirrorNode } from "prosemirror-model";
-import { MarkdownSerializerState } from "../lib/markdown/serializer";
+import { MarkSpec } from "prosemirror-model";
 import Mark from "./Mark";
 
 export default class Color extends Mark {
@@ -36,11 +34,16 @@ export default class Color extends Mark {
     };
   }
 
-  toMarkdown(state: MarkdownSerializerState, node: ProsemirrorNode) {
-    console.error("toMarkdown not implemented", state, node);
+  toMarkdown() {
+    return {
+      open: "<span>",
+      close: "<span>",
+      mixable: true,
+      expelEnclosingWhitespace: true,
+    };
   }
 
-  parseMarkdown(): TokenConfig | void {
-    return undefined;
+  parseMarkdown() {
+    return { mark: "color" };
   }
 }

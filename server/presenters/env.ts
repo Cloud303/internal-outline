@@ -23,6 +23,10 @@ export default function present(env: Environment): PublicEnv {
     DEFAULT_LANGUAGE: env.DEFAULT_LANGUAGE,
     EMAIL_ENABLED: !!env.SMTP_HOST || env.ENVIRONMENT === "development",
     GOOGLE_ANALYTICS_ID: env.GOOGLE_ANALYTICS_ID,
+    CHATWOOT_MODE: env.CHATWOOT_MODE,
+    CHATWOOT_BASE_URL: env.CHATWOOT_BASE_URL,
+    CHATWOOT_WEBSITE_TOKEN: env.CHATWOOT_WEBSITE_TOKEN,
+    OIDC_LOGOUT_URL: env.OIDC_LOGOUT_URL,
     RELEASE:
       process.env.SOURCE_COMMIT || process.env.SOURCE_VERSION || undefined,
   };

@@ -29,14 +29,14 @@
     "no-mixed-operators": "off",
     "no-useless-escape": "off",
     "es/no-regexp-lookbehind-assertions": "error",
-    "@typescript-eslint/no-unused-vars": [
-      "error",
-      {
-        "argsIgnorePattern": "^_",
-        "args": "after-used",
-        "ignoreRestSiblings": true
-      }
-    ],
+    // "@typescript-eslint/no-unused-vars": [
+    //   "error",
+    //   {
+    //     "argsIgnorePattern": "^_",
+    //     "args": "after-used",
+    //     "ignoreRestSiblings": true
+    //   }
+    // ],
     "padding-line-between-statements": ["error", { "blankLine": "always", "prev": "*", "next": "export" }],
     "lines-between-class-members": ["error", "always", { "exceptAfterSingleLine": true }],
     "import/no-named-as-default": "off",

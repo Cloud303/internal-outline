@@ -29,6 +29,10 @@ if (env.GOOGLE_ANALYTICS_ID) {
   scriptSrc.push("www.google-analytics.com");
 }
 
+if (env.CHATWOOT_BASE_URL) {
+  scriptSrc.push("chat.dev.c303.io");
+}
+
 if (env.CDN_URL) {
   scriptSrc.push(env.CDN_URL);
   defaultSrc.push(env.CDN_URL);

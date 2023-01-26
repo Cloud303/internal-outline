@@ -31,6 +31,7 @@ import {
   Length as SimpleLength,
   IsNumeric,
   IsDate,
+  AllowNull,
 } from "sequelize-typescript";
 import MarkdownSerializer from "slate-md-serializer";
 import isUUID from "validator/lib/isUUID";
@@ -201,6 +202,10 @@ class Document extends ParanoidModel {
   })
   @Column
   title: string;
+
+  @AllowNull
+  @Column
+  coverImg: string | null;
 
   @Column(DataType.ARRAY(DataType.STRING))
   previousTitles: string[] = [];

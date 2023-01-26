@@ -8,6 +8,8 @@ type Props = {
   document: Document;
   /** The new title */
   title?: string;
+  /** The new cover image content */
+  coverImg?: string;
   /** The new text content */
   text?: string;
   /** The version of the client editor that was used */
@@ -44,12 +46,16 @@ export default async function documentUpdater({
   append,
   publish,
   transaction,
+  coverImg,
   ip,
 }: Props): Promise<Document> {
   const previousTitle = document.title;
 
   if (title !== undefined) {
     document.title = title;
+  }
+  if (coverImg || coverImg === "") {
+    document.coverImg = coverImg;
   }
   if (editorVersion) {
     document.editorVersion = editorVersion;

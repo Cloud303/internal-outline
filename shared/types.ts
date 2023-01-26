@@ -3,6 +3,9 @@ export type Role = "admin" | "viewer" | "member";
 export type DateFilter = "day" | "week" | "month" | "year";
 
 export type PublicEnv = {
+  CHATWOOT_MODE: boolean | undefined;
+  CHATWOOT_BASE_URL: string | undefined;
+  CHATWOOT_WEBSITE_TOKEN: string | undefined;
   URL: string;
   CDN_URL: string;
   COLLABORATION_URL: string;
@@ -13,6 +16,7 @@ export type PublicEnv = {
   SENTRY_DSN: string | undefined;
   TEAM_LOGO: string | undefined;
   SLACK_CLIENT_ID: string | undefined;
+  OIDC_LOGOUT_URL: string | undefined;
   SLACK_APP_ID: string | undefined;
   MAXIMUM_IMPORT_SIZE: number;
   SUBDOMAINS_ENABLED: boolean;

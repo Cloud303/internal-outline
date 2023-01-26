@@ -35,6 +35,7 @@ import type { Editor as TEditor } from "~/editor";
 import { NavigationNode } from "~/types";
 import { client } from "~/utils/ApiClient";
 import { emojiToUrl } from "~/utils/emoji";
+import { uploadFile } from "~/utils/files";
 import { isModKey } from "~/utils/keyboard";
 import {
   documentMoveUrl,
@@ -99,6 +100,9 @@ class DocumentScene extends React.Component<Props> {
 
   @observable
   isEmpty = true;
+
+  @observable
+  coverImg: string | void | null | unknown = null;
 
   @observable
   lastRevision: number = this.props.document.revision;
@@ -175,7 +179,7 @@ class DocumentScene extends React.Component<Props> {
     view.dispatch(
       view.state.tr
         .setSelection(new AllSelection(view.state.doc))
-        .replaceSelectionWith(parser.parse(template.text))
+        .replaceSelectionWith(parser.parse(template.text) as any)
     );
 
     this.isEditorDirty = true;
@@ -418,6 +422,31 @@ class DocumentScene extends React.Component<Props> {
     }
   };
 
+  // getBase64(file: any, cb: any) {
+  //   let reader = new FileReader();
+  //   reader.readAsDataURL(file);
+  //   reader.onload = function () {
+  //     cb(reader.result);
+  //   };
+  //   reader.onerror = function (error) {
+  //     console.log("Error: ", error);
+  //   };
+  // }
+
+  getBase64(file: any) {
+    let document: string | ArrayBuffer | null = "";
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = function () {
+      document = reader.result;
+    };
+    reader.onerror = function (error) {
+      console.log("Error: ", error);
+    };
+
+    return document;
+  }
+
   render() {
     const {
       document,
@@ -449,6 +478,37 @@ class DocumentScene extends React.Component<Props> {
     const canonicalUrl = shareId
       ? this.props.match.url
       : updateDocumentUrl(this.props.match.url, document);
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file: any = e.target.files ? e.target.files[0] : null;
+
+      this.coverImg =
+        e?.target?.files !== null
+          ? window.URL.createObjectURL(file)
+          : this.coverImg;
+
+      try {
+        const attachment = await uploadFile(file, {
+          name: file.name,
+          public: true,
+        });
+        document.coverImg = attachment?.url;
+        this.updateIsDirty();
+        this.autosave();
+      } catch (err) {
+        console.log(err.message);
+      }
+    };
+
+    const handleRemoveCoverImg = () => {
+      this.coverImg = "";
+      document.coverImg = "";
+
+      this.updateIsDirty();
+      this.autosave();
+    };
+
+    console.log(document);
 
     return (
       <ErrorBoundary>
@@ -551,7 +611,19 @@ class DocumentScene extends React.Component<Props> {
               onSelectTemplate={this.replaceDocument}
               onSave={this.onSave}
               headings={this.headings}
+              handleCoverImg={handleFileUpload}
+              handleRemoveCoverImg={handleRemoveCoverImg}
             />
+            {/* {this.coverImg && (
+              <div
+                style={{
+                  backgroundImage: `url(${this.coverImg})`,
+                  backgroundSize: "cover",
+                  width: "100%",
+                  height: "20rem",
+                }}
+              ></div>
+            )} */}
             <MaxWidth
               archived={document.isArchived}
               showContents={showContents}
@@ -561,6 +633,7 @@ class DocumentScene extends React.Component<Props> {
               auto
             >
               <Notices document={document} readOnly={readOnly} />
+
               <React.Suspense fallback={<PlaceholderDocument />}>
                 <Flex auto={!readOnly}>
                   {showContents && (
@@ -577,6 +650,7 @@ class DocumentScene extends React.Component<Props> {
                     shareId={shareId}
                     isDraft={document.isDraft}
                     template={document.isTemplate}
+                    coverImg={this.coverImg ? this.coverImg : document.coverImg}
                     title={revision ? revision.title : document.title}
                     document={document}
                     value={readOnly ? value : undefined}

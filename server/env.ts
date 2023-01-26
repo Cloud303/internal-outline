@@ -430,6 +430,21 @@ export class Environment {
   );
 
   /**
+   * Chatwoot config
+   */
+  @IsOptional()
+  public CHATWOOT_BASE_URL = this.toOptionalString(
+    process.env.CHATWOOT_BASE_URL
+  );
+
+  @IsOptional()
+  public CHATWOOT_WEBSITE_TOKEN = this.toOptionalString(
+    process.env.CHATWOOT_WEBSITE_TOKEN
+  );
+
+  public CHATWOOT_MODE = this.toBoolean(process.env.CHATWOOT_MODE ?? "false");
+
+  /**
    * OICD client credentials. To enable authentication with any
    * compatible provider.
    */
@@ -499,6 +514,8 @@ export class Environment {
    * profile email".
    */
   public OIDC_SCOPES = process.env.OIDC_SCOPES ?? "openid profile email";
+
+  public OIDC_LOGOUT_URL = process.env.OIDC_LOGOUT_URL ?? "/";
 
   /**
    * A string representing the version of the software.

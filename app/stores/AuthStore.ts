@@ -299,5 +299,9 @@ export default class AuthStore {
     this.team = null;
     this.policies = [];
     this.token = null;
+
+    if (env.OIDC_LOGOUT_URL) {
+      window.location.href = env.OIDC_LOGOUT_URL;
+    }
   };
 }
