@@ -1,6 +1,5 @@
 import http, { IncomingMessage } from "http";
 import { Duplex } from "stream";
-// @ts-nocheck
 import url from "url";
 import { Server } from "@hocuspocus/server";
 import Koa from "koa";
