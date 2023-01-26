@@ -1,5 +1,5 @@
 import querystring from "querystring";
-import { addMonths } from "date-fns";
+import { addHours } from "date-fns";
 import { Context } from "koa";
 import { pick } from "lodash";
 import { getCookieDomain } from "@shared/utils/domains";
@@ -55,7 +55,7 @@ export async function signIn(
     ip: ctx.request.ip,
   });
   const domain = getCookieDomain(ctx.request.hostname);
-  const expires = addMonths(new Date(), 3);
+  const expires = addHours(new Date(), 8);
   // set a cookie for which service we last signed in with. This is
   // only used to display a UI hint for the user for next time
   ctx.cookies.set("lastSignedIn", service, {
