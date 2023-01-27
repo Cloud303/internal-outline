@@ -81,6 +81,7 @@ export default function useDictionary() {
       color: t("Select color"),
       toggleList: t("Add Toggle List"),
       tableOfContents: t("Table of Contents"),
+      template: t("Add a Template"),
     };
   }, [t]);
 }

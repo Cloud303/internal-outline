@@ -2,7 +2,7 @@ Arguments:
   /usr/local/lib/nodejs/node-v14.17.6-linux-x64/bin/node /home/dawood/.local/share/pnpm/global/5/node_modules/yarn/bin/yarn.js build:server
 
 PATH: 
-  /home/dawood/Desktop/Work/wiki/node_modules/.bin:/tmp/yarn--1672837767710-0.052570313590270645:/home/dawood/Desktop/Work/wiki/node_modules/.bin:/home/dawood/.config/yarn/link/node_modules/.bin:/home/dawood/.yarn/bin:/usr/local/lib/nodejs/node-v14.17.6-linux-x64/libexec/lib/node_modules/npm/bin/node-gyp-bin:/usr/local/lib/nodejs/node-v14.17.6-linux-x64/lib/node_modules/npm/bin/node-gyp-bin:/usr/local/lib/nodejs/node-v14.17.6-linux-x64/bin/node_modules/npm/bin/node-gyp-bin:/home/dawood/.local/share/pnpm:/home/dawood/Downloads/google-cloud-sdk/bin:/usr/local/lib/nodejs/node-v14.17.6-linux-x64/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin
+  /home/dawood/Desktop/Work/wiki/node_modules/.bin:/tmp/yarn--1673454779688-0.5340244998939938:/home/dawood/Desktop/Work/wiki/node_modules/.bin:/home/dawood/.config/yarn/link/node_modules/.bin:/home/dawood/.yarn/bin:/usr/local/lib/nodejs/node-v14.17.6-linux-x64/libexec/lib/node_modules/npm/bin/node-gyp-bin:/usr/local/lib/nodejs/node-v14.17.6-linux-x64/lib/node_modules/npm/bin/node-gyp-bin:/usr/local/lib/nodejs/node-v14.17.6-linux-x64/bin/node_modules/npm/bin/node-gyp-bin:/home/dawood/.local/share/pnpm:/home/dawood/Downloads/google-cloud-sdk/bin:/usr/local/lib/nodejs/node-v14.17.6-linux-x64/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin
 
 Yarn version: 
   1.22.19

@@ -1,0 +1,100 @@
+import { observer } from "mobx-react";
+import * as React from "react";
+import { useTranslation } from "react-i18next";
+import { useRouteMatch } from "react-router-dom";
+import fullPackage from "@shared/editor/packages/full";
+import Document from "~/models/Document";
+import { RefHandle } from "~/components/ContentEditable";
+import DocumentMetaWithViews from "~/components/DocumentMetaWithViews";
+import Flex from "~/components/Flex";
+import Editor, { Props as EditorProps } from "~/components/TemplateEditor";
+import {
+  documentHistoryUrl,
+  documentUrl,
+  matchDocumentHistory,
+} from "~/utils/routeHelpers";
+import MultiplayerEditor from "./AsyncMultiplayerEditor";
+import EditableImg from "./EditableImg";
+import EditableTitle from "./EditableTitle";
+
+type Props = Omit<EditorProps, "extensions"> & {
+  onChangeTitle: (text: string) => void;
+  coverImg?: string | null | void | unknown;
+  title: string;
+  id: string;
+  document: Document;
+  isDraft: boolean;
+  multiplayer?: boolean;
+  onSave: (options: {
+    done?: boolean;
+    autosave?: boolean;
+    publish?: boolean;
+  }) => void;
+  children: React.ReactNode;
+};
+
+/**
+ * The main document editor includes an editable title with metadata below it,
+ * and support for hover previews of internal links.
+ */
+function DocumentEditor(props: Props, ref: React.RefObject<any>) {
+  const titleRef = React.useRef<RefHandle>(null);
+  const imgRef = React.useRef<RefHandle>(null);
+  const { t } = useTranslation();
+  const match = useRouteMatch();
+  const {
+    document,
+    title,
+    coverImg,
+    onChangeTitle,
+    shareId,
+    readOnly,
+    multiplayer,
+    ...rest
+  } = props;
+
+  // const focusAtStart = React.useCallback(() => {
+  //   if (ref.current) {
+  //     ref.current.focusAtStart();
+  //   }
+  // }, [ref]);
+
+  // Save document when blurring title, but delay so that if clicking on a
+  // button this is allowed to execute first.
+  // const handleBlur = React.useCallback(() => {
+  //   setTimeout(() => props.onSave({ autosave: true }), 250);
+  // }, [props]);
+
+  // const handleGoToNextInput = React.useCallback(
+  //   (insertParagraph: boolean) => {
+  //     if (insertParagraph && ref.current) {
+  //       const { view } = ref.current;
+  //       const { dispatch, state } = view;
+  //       dispatch(state.tr.insert(0, state.schema.nodes.paragraph.create()));
+  //     }
+
+  //     focusAtStart();
+  //   },
+  //   [focusAtStart, ref]
+  // );
+
+  const EditorComponent = Editor;
+
+  return (
+    <Flex auto column>
+      <EditorComponent
+        ref={ref}
+        autoFocus={true}
+        placeholder={t("Type '/' to insert, or start writing…")}
+        // scrollTo={window.location.hash}
+        readOnly={false}
+        // shareId={shareId}
+        extensions={fullPackage}
+        grow
+        {...rest}
+      />
+    </Flex>
+  );
+}
+
+export default observer(React.forwardRef(DocumentEditor));

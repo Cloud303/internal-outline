@@ -112,6 +112,11 @@ export default function blockMenuItems(dictionary: Dictionary): MenuItem[] {
       keywords: "toc",
     },
     {
+      name: "template",
+      title: dictionary.template,
+      icon: NewDocumentIcon,
+    },
+    {
       name: "blockquote",
       title: dictionary.quote,
       icon: BlockQuoteIcon,

@@ -29,14 +29,6 @@ import { isModKey } from "~/utils/keyboard";
 import { isHash } from "~/utils/urls";
 import DocumentBreadcrumb from "./DocumentBreadcrumb";
 
-const LazyLoadedEditor = React.lazy(
-  () =>
-    import(
-      /* webpackChunkName: "shared-editor" */
-      "~/editor"
-    )
-);
-
 export type Props = Optional<
   EditorProps,
   | "placeholder"
@@ -131,46 +123,40 @@ function Editor(props: Props, ref: React.RefObject<SharedEditor> | null) {
   const onUploadFile = React.useCallback(
     async (file: File) => {
       const result = await uploadFile(file, {
-        documentId: id,
+        name: file.name,
+        public: true,
       });
       return result.url;
     },
     [id]
   );
 
-  const onClickLink = React.useCallback(
-    (href: string, event: MouseEvent) => {
-      // on page hash
-      if (isHash(href)) {
-        window.location.href = href;
-        return;
+  const onClickLink = React.useCallback((href: string, event: MouseEvent) => {
+    // on page hash
+    if (isHash(href)) {
+      window.location.href = href;
+      return;
+    }
+
+    if (isInternalUrl(href) && !isModKey(event) && !event.shiftKey) {
+      // relative
+      let navigateTo = href;
+
+      // probably absolute
+      if (href[0] !== "/") {
+        try {
+          const url = new URL(href);
+          navigateTo = url.pathname + url.hash;
+        } catch (err) {
+          navigateTo = href;
+        }
       }
 
-      if (isInternalUrl(href) && !isModKey(event) && !event.shiftKey) {
-        // relative
-        let navigateTo = href;
-
-        // probably absolute
-        if (href[0] !== "/") {
-          try {
-            const url = new URL(href);
-            navigateTo = url.pathname + url.hash;
-          } catch (err) {
-            navigateTo = href;
-          }
-        }
-
-        if (shareId) {
-          navigateTo = `/share/${shareId}${navigateTo}`;
-        }
-
-        history.push(navigateTo);
-      } else if (href) {
-        window.open(href, "_blank");
-      }
-    },
-    [shareId]
-  );
+      history.push(navigateTo);
+    } else if (href) {
+      window.open(href, "_blank");
+    }
+  }, []);
 
   const focusAtEnd = React.useCallback(() => {
     ref?.current?.focusAtEnd();
@@ -279,7 +265,7 @@ function Editor(props: Props, ref: React.RefObject<SharedEditor> | null) {
   return (
     <ErrorBoundary reloadOnChunkMissing>
       <>
-        <LazyLoadedEditor
+        <DocumentEditor
           ref={mergeRefs([ref, handleRefChanged])}
           uploadFile={onUploadFile}
           onShowToast={showToast}
