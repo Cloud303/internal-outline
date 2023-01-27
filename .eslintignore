@@ -1,1 +1,2 @@
 server/migrations/*.js
+server/services/collaboration.ts

@@ -99,7 +99,7 @@ if (env.OIDC_CLIENT_ID && env.OIDC_CLIENT_SECRET) {
             team: {
               teamId: team?.id,
               // https://github.com/outline/outline/pull/2388#discussion_r681120223
-              name: "Welcome",
+              name: "Wiki",
               domain,
               subdomain,
             },

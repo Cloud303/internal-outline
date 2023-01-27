@@ -179,7 +179,7 @@ class DocumentScene extends React.Component<Props> {
     view.dispatch(
       view.state.tr
         .setSelection(new AllSelection(view.state.doc))
-        .replaceSelectionWith(parser.parse(template.text))
+        .replaceSelectionWith(parser.parse(template.text) as any)
     );
 
     this.isEditorDirty = true;
