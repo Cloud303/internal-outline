@@ -787,6 +787,7 @@ router.post("documents.update", auth(), async (ctx) => {
     lastRevision,
     templateId,
     append,
+    coverImg,
   } = ctx.body;
   const editorVersion = ctx.headers["x-editor-version"] as string | undefined;
   assertPresent(id, "id is required");
@@ -822,6 +823,7 @@ router.post("documents.update", auth(), async (ctx) => {
       templateId,
       editorVersion,
       transaction,
+      coverImg,
       ip: ctx.request.ip,
     });
   });
