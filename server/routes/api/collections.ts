@@ -881,7 +881,7 @@ router.post("collections.duplicate", auth(), async (ctx) => {
   // create duplicate documents in the collection
   let templateDocument: Document | null | undefined;
   const editorVersion = ctx.headers["x-editor-version"] as string | undefined;
-
+  authorize(user, "createDocument", user.team);
   for (const documentId of documentIds || []) {
     const document: Document | null = await Document.findByPk(documentId, {
       userId: user.id,
@@ -909,6 +909,12 @@ router.post("collections.duplicate", auth(), async (ctx) => {
     );
     if (documentTree?.children?.length) {
       // Create duplicates of nested docs
+      authorize(user, "read", document, {
+        collection,
+      });
+      authorize(user, "read", duplicateDocument, {
+        collection,
+      });
       await createChildDuplicates({
         collection,
         user,

@@ -1230,6 +1230,9 @@ router.post("documents.duplicate", auth(), async (ctx) => {
   const document: Document | null = await Document.findByPk(documentId, {
     userId: user.id,
   });
+  authorize(user, "read", document, {
+    collection,
+  });
 
   const duplicateDocument = await sequelize.transaction(async (transaction) => {
     return documentCreator({
@@ -1246,6 +1249,10 @@ router.post("documents.duplicate", auth(), async (ctx) => {
       ip: ctx.request.ip,
       transaction,
     });
+  });
+
+  authorize(user, "read", duplicateDocument, {
+    collection,
   });
 
   if (documentId) {
