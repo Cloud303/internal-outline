@@ -10,7 +10,7 @@ import userSuspender from "@server/commands/userSuspender";
 import userUnsuspender from "@server/commands/userUnsuspender";
 import { sequelize } from "@server/database/sequelize";
 import ConfirmUserDeleteEmail from "@server/emails/templates/ConfirmUserDeleteEmail";
-import InviteEmail from "@server/emails/templates/InviteEmail";
+// import InviteEmail from "@server/emails/templates/InviteEmail";
 import env from "@server/env";
 import { ValidationError } from "@server/errors";
 import logger from "@server/logging/Logger";
@@ -348,14 +348,14 @@ router.post("users.resendInvite", auth(), async (ctx) => {
       throw ValidationError("This invite has been sent too many times");
     }
 
-    await InviteEmail.schedule({
-      to: user.email,
-      name: user.name,
-      actorName: actor.name,
-      actorEmail: actor.email,
-      teamName: actor.team.name,
-      teamUrl: actor.team.url,
-    });
+    // await InviteEmail.schedule({
+    //   to: user.email,
+    //   name: user.name,
+    //   actorName: actor.name,
+    //   actorEmail: actor.email,
+    //   teamName: actor.team.name,
+    //   teamUrl: actor.team.url,
+    // });
 
     user.incrementFlag(UserFlag.InviteSent);
     await user.save({ transaction });

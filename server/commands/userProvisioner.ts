@@ -1,5 +1,5 @@
 import { sequelize } from "@server/database/sequelize";
-import InviteAcceptedEmail from "@server/emails/templates/InviteAcceptedEmail";
+// import InviteAcceptedEmail from "@server/emails/templates/InviteAcceptedEmail";
 import {
   DomainNotAllowedError,
   InvalidAuthenticationError,
@@ -180,17 +180,17 @@ export default async function userProvisioner({
       );
     });
 
-    if (isInvite) {
-      const inviter = await existingUser.$get("invitedBy");
-      if (inviter) {
-        await InviteAcceptedEmail.schedule({
-          to: inviter.email,
-          inviterId: inviter.id,
-          invitedName: existingUser.name,
-          teamUrl: existingUser.team.url,
-        });
-      }
-    }
+    // if (isInvite) {
+    //   const inviter = await existingUser.$get("invitedBy");
+    //   if (inviter) {
+    //     await InviteAcceptedEmail.schedule({
+    //       to: inviter.email,
+    //       inviterId: inviter.id,
+    //       invitedName: existingUser.name,
+    //       teamUrl: existingUser.team.url,
+    //     });
+    //   }
+    // }
 
     return {
       user: existingUser,
