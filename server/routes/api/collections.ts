@@ -1,12 +1,14 @@
 import fractionalIndex from "fractional-index";
 import invariant from "invariant";
+import { Request } from "koa";
 import Router from "koa-router";
-import { Sequelize, Op, WhereOptions } from "sequelize";
+import { Sequelize, Op, WhereOptions, Transaction } from "sequelize";
 import { randomElement } from "@shared/random";
 import { CollectionPermission } from "@shared/types";
 import { colorPalette } from "@shared/utils/collections";
 import { RateLimiterStrategy } from "@server/RateLimiter";
 import collectionExporter from "@server/commands/collectionExporter";
+import documentCreator from "@server/commands/documentCreator";
 import teamUpdater from "@server/commands/teamUpdater";
 import { sequelize } from "@server/database/sequelize";
 import { AuthorizationError, ValidationError } from "@server/errors";
@@ -22,6 +24,7 @@ import {
   Group,
   Attachment,
   FileOperation,
+  Document,
 } from "@server/models";
 import {
   FileOperationFormat,
@@ -47,7 +50,9 @@ import {
   assertHexColor,
   assertIndexCharacters,
   assertCollectionPermission,
+  assertPositiveInteger,
 } from "@server/validation";
+import { NavigationNode } from "~/types";
 import pagination from "./middlewares/pagination";
 
 const router = new Router();
@@ -785,5 +790,266 @@ router.post("collections.move", auth(), async (ctx) => {
     },
   };
 });
+
+router.post("collections.duplicate", auth(), async (ctx) => {
+  const {
+    name,
+    color = randomElement(colorPalette),
+    description,
+    permission,
+    sharing,
+    icon = "collection",
+    sort = Collection.DEFAULT_SORT,
+    collectionId,
+  } = ctx.body;
+
+  assertPresent(name, "name is required");
+  assertUuid(collectionId, "collection must be a UUID");
+
+  if (color) {
+    assertHexColor(color, "Invalid hex value (please use format #FFFFFF)");
+  }
+
+  const { user } = ctx.state;
+
+  let documentIds: string[] = [];
+
+  // get documet tree
+  let where: WhereOptions<Document> = {
+    teamId: user.teamId,
+    archivedAt: {
+      [Op.is]: null,
+    },
+  };
+  authorize(user, "createCollection", user.team);
+  where = { ...where, collectionId };
+  const collection = await Collection.scope({
+    method: ["withMembership", user.id],
+  }).findByPk(collectionId);
+  authorize(user, "read", collection);
+  // index sort is special because it uses the order of the documents in the
+  // collection.documentStructure rather than a database column
+  if (sort === "index") {
+    documentIds = (collection?.documentStructure || [])
+      .map((node) => node.id)
+      .slice(ctx.state.pagination.offset, ctx.state.pagination.limit);
+    where = { ...where, id: documentIds };
+  } // otherwise, filter by all collections the user has access to
+
+  // create new collection
+  const collections = await Collection.findAll({
+    where: {
+      teamId: user.teamId,
+      deletedAt: null,
+    },
+    attributes: ["id", "index", "updatedAt"],
+    limit: 1,
+    order: [
+      // using LC_COLLATE:"C" because we need byte order to drive the sorting
+      Sequelize.literal('"collection"."index" collate "C"'),
+      ["updatedAt", "DESC"],
+    ],
+  });
+  let index = fractionalIndex(
+    null,
+    collections.length ? collections[0].index : null
+  );
+  index = await removeIndexCollision(user.teamId, index);
+  const duplicateCollection = await Collection.create({
+    name,
+    description,
+    icon,
+    color,
+    teamId: user.teamId,
+    createdById: user.id,
+    permission: permission ? permission : null,
+    sharing,
+    sort,
+    index,
+  });
+  await Event.create({
+    name: "collections.create",
+    collectionId: duplicateCollection.id,
+    teamId: duplicateCollection.teamId,
+    actorId: user.id,
+    data: {
+      name,
+    },
+    ip: ctx.request.ip,
+  });
+
+  // create duplicate documents in the collection
+  let templateDocument: Document | null | undefined;
+  const editorVersion = ctx.headers["x-editor-version"] as string | undefined;
+
+  for (const documentId of documentIds || []) {
+    const document: Document | null = await Document.findByPk(documentId, {
+      userId: user.id,
+    });
+    const duplicateDocument = await sequelize.transaction(
+      async (transaction) => {
+        return documentCreator({
+          title: `${document?.title}`,
+          text: `${document?.text}`,
+          publish: true,
+          collectionId: duplicateCollection.id,
+          parentDocumentId: undefined,
+          templateDocument,
+          template: undefined,
+          index: undefined,
+          user,
+          editorVersion,
+          ip: ctx.request.ip,
+          transaction,
+        });
+      }
+    );
+    const documentTree: NavigationNode | null = collection.getDocumentTree(
+      documentId
+    );
+    if (documentTree?.children?.length) {
+      // Create duplicates of nested docs
+      await createChildDuplicates({
+        collection,
+        user,
+        request: ctx.request,
+        body: ctx.body,
+        parentDocumentId: duplicateDocument.id,
+        childs: documentTree?.children,
+      });
+    }
+  }
+
+  // we must reload the collection to get memberships for policy presenter
+  const reloaded = await Collection.scope({
+    method: ["withMembership", user.id],
+  }).findByPk(duplicateCollection.id);
+  invariant(reloaded, "collection not found");
+
+  ctx.body = {
+    data: presentCollection(reloaded),
+    policies: presentPolicies(user, [reloaded]),
+  };
+});
+
+// Recursive function to loop through nested documents
+async function createChildDuplicates({
+  collection,
+  user,
+  request,
+  body,
+  parentDocumentId,
+  childs,
+}: {
+  collection: Collection;
+  user: User;
+  request: Request;
+  body: {
+    index: number | undefined;
+    publish: boolean | undefined;
+    editorVersion: string | undefined;
+  };
+  parentDocumentId: string | undefined;
+  childs: NavigationNode[] | undefined;
+}) {
+  if (parentDocumentId) {
+    assertUuid(parentDocumentId, "parentDocumentId must be an uuid");
+  }
+
+  if (body.index) {
+    assertPositiveInteger(body.index, "index must be an integer (>=0)");
+  }
+  authorize(user, "createDocument", user.team);
+
+  let parentDocument;
+
+  if (parentDocumentId) {
+    parentDocument = await Document.findOne({
+      where: {
+        id: parentDocumentId,
+        collectionId: collection.id,
+      },
+    });
+    authorize(user, "read", parentDocument, {
+      collection,
+    });
+  }
+  for (const child of childs || []) {
+    let i = 1;
+    const childDoc: Document | null = await Document.findByPk(child.id, {
+      userId: user.id,
+    });
+
+    let templateDocument: Document | null | undefined;
+    if (childDoc?.templateId) {
+      templateDocument = await Document.findByPk(childDoc?.templateId, {
+        userId: user.id,
+      });
+      authorize(user, "read", templateDocument);
+    }
+    const obj = {
+      title: `${childDoc?.title}`,
+      text: `${childDoc?.text}`,
+      publish: body.publish,
+      collectionId: `${childDoc?.collectionId}`,
+      parentDocumentId,
+      templateDocument,
+      template: childDoc?.template,
+      index: i,
+      user,
+      editorVersion: body.editorVersion,
+      ip: request.ip,
+    };
+    const childData = await createDoc({ doc: obj });
+    if (child.children.length > 0) {
+      await createChildDuplicates({
+        collection,
+        user,
+        request,
+        body,
+        parentDocumentId: childData?.id,
+        childs: child.children,
+      });
+    }
+    i += 1;
+  }
+}
+
+// Function creates a new document
+async function createDoc({
+  doc,
+}: {
+  doc: {
+    title: string;
+    text: string;
+    publish: boolean | undefined;
+    collectionId: string;
+    parentDocumentId: string | undefined;
+    templateDocument: Document | null | undefined;
+    template: boolean | undefined;
+    index: number | undefined;
+    user: User;
+    editorVersion: string | undefined;
+    ip: string | undefined;
+    id?: string | undefined;
+    publishedAt?: Date | undefined;
+    createdAt?: Date | undefined;
+    updatedAt?: Date | undefined;
+    source?: "import" | undefined;
+    transaction?: Transaction;
+  };
+}): Promise<Document | undefined> {
+  try {
+    return await sequelize.transaction(async (transaction) => {
+      return documentCreator({
+        ...doc,
+        transaction,
+      });
+    });
+  } catch (err) {
+    console.log("ERROR:", err);
+    return;
+  }
+}
 
 export default router;
