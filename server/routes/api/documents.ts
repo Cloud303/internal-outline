@@ -1266,7 +1266,11 @@ router.post("documents.duplicate", auth(), async (ctx) => {
         collection,
         user,
         request: ctx.request,
-        body: ctx.body,
+        body: {
+          index: undefined,
+          publish: true,
+          editorVersion,
+        },
         parentDocumentId: duplicateDocument.id,
         childs: documentTree?.children,
       });

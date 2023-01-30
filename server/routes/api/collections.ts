@@ -882,7 +882,7 @@ router.post("collections.duplicate", auth(), async (ctx) => {
   let templateDocument: Document | null | undefined;
   const editorVersion = ctx.headers["x-editor-version"] as string | undefined;
   authorize(user, "createDocument", user.team);
-  for (const documentId of documentIds || []) {
+  for await (const documentId of documentIds || []) {
     const document: Document | null = await Document.findByPk(documentId, {
       userId: user.id,
     });
@@ -919,7 +919,11 @@ router.post("collections.duplicate", auth(), async (ctx) => {
         collection,
         user,
         request: ctx.request,
-        body: ctx.body,
+        body: {
+          index: undefined,
+          publish: true,
+          editorVersion,
+        },
         parentDocumentId: duplicateDocument.id,
         childs: documentTree?.children,
       });
