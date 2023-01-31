@@ -827,15 +827,13 @@ router.post("collections.duplicate", auth(), async (ctx) => {
     method: ["withMembership", user.id],
   }).findByPk(collectionId);
   authorize(user, "read", collection);
-  // index sort is special because it uses the order of the documents in the
-  // collection.documentStructure rather than a database column
-  if (sort === "index") {
-    documentIds = (collection?.documentStructure || [])
-      .map((node) => node.id)
-      .slice(ctx.state.pagination.offset, ctx.state.pagination.limit);
-    where = { ...where, id: documentIds };
-  } // otherwise, filter by all collections the user has access to
 
+  documentIds = (collection?.documentStructure || [])
+    .map((node) => node.id)
+    .slice(ctx.state.pagination.offset, ctx.state.pagination.limit);
+  where = { ...where, id: documentIds };
+
+  console.log("collections.duplicate:", documentIds);
   // create new collection
   const collections = await Collection.findAll({
     where: {
@@ -870,7 +868,6 @@ router.post("collections.duplicate", auth(), async (ctx) => {
 
   const editorVersion = ctx.headers["x-editor-version"] as string | undefined;
 
-  console.log("collections.duplicate:", documentIds);
   await processDocumentIds({
     collection,
     duplicateCollection,
