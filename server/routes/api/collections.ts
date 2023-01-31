@@ -827,13 +827,12 @@ router.post("collections.duplicate", auth(), async (ctx) => {
     method: ["withMembership", user.id],
   }).findByPk(collectionId);
   authorize(user, "read", collection);
+  console.log("collection?.documentStructure:", collection?.documentStructure);
 
-  documentIds = (collection?.documentStructure || [])
-    .map((node) => node.id)
-    .slice(ctx.state.pagination.offset, ctx.state.pagination.limit);
-  where = { ...where, id: documentIds };
+  documentIds = (collection?.documentStructure || []).map((node) => node.id);
 
   console.log("collections.duplicate:", documentIds);
+
   // create new collection
   const collections = await Collection.findAll({
     where: {
