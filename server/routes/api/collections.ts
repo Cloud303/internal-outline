@@ -867,18 +867,10 @@ router.post("collections.duplicate", auth(), async (ctx) => {
     sort,
     index,
   });
-  await Event.create({
-    name: "collections.create",
-    collectionId: duplicateCollection.id,
-    teamId: duplicateCollection.teamId,
-    actorId: user.id,
-    data: {
-      name,
-    },
-    ip: ctx.request.ip,
-  });
 
   const editorVersion = ctx.headers["x-editor-version"] as string | undefined;
+
+  console.log("collections.duplicate:", documentIds);
   await processDocumentIds({
     collection,
     duplicateCollection,
@@ -890,6 +882,17 @@ router.post("collections.duplicate", auth(), async (ctx) => {
       publish: true,
       editorVersion,
     },
+  });
+
+  await Event.create({
+    name: "collections.create",
+    collectionId: duplicateCollection.id,
+    teamId: duplicateCollection.teamId,
+    actorId: user.id,
+    data: {
+      name,
+    },
+    ip: ctx.request.ip,
   });
 
   // we must reload the collection to get memberships for policy presenter
@@ -924,11 +927,13 @@ async function processDocumentIds({
     editorVersion: string | undefined;
   };
 }) {
-  // create duplicate documents in the collection
+  console.log("processDocumentIds:", documentIds);
+
   let templateDocument: Document | null | undefined;
   authorize(user, "createDocument", user.team);
 
-  for await (const documentId of documentIds || []) {
+  // create duplicate documents in the collection
+  for (const documentId of documentIds || []) {
     console.log("documentId", documentId);
     const document: Document | null = await Document.findByPk(documentId, {
       userId: user.id,
