@@ -878,11 +878,58 @@ router.post("collections.duplicate", auth(), async (ctx) => {
     ip: ctx.request.ip,
   });
 
+  const editorVersion = ctx.headers["x-editor-version"] as string | undefined;
+  await processDocumentIds({
+    collection,
+    duplicateCollection,
+    documentIds,
+    user,
+    request: ctx.request,
+    body: {
+      index: undefined,
+      publish: true,
+      editorVersion,
+    },
+  });
+
+  // we must reload the collection to get memberships for policy presenter
+  const reloaded = await Collection.scope({
+    method: ["withMembership", user.id],
+  }).findByPk(duplicateCollection.id);
+  invariant(reloaded, "collection not found");
+
+  ctx.body = {
+    data: presentCollection(reloaded),
+    policies: presentPolicies(user, [reloaded]),
+  };
+});
+
+// Process documentId
+async function processDocumentIds({
+  collection,
+  duplicateCollection,
+  documentIds,
+  user,
+  request,
+  body,
+}: {
+  collection: Collection;
+  duplicateCollection: Collection;
+  documentIds: string[];
+  user: User;
+  request: Request;
+  body: {
+    index: number | undefined;
+    publish: boolean | undefined;
+    editorVersion: string | undefined;
+  };
+}) {
   // create duplicate documents in the collection
   let templateDocument: Document | null | undefined;
-  const editorVersion = ctx.headers["x-editor-version"] as string | undefined;
   authorize(user, "createDocument", user.team);
+
   for await (const documentId of documentIds || []) {
+    console.log("documentId", documentId);
     const document: Document | null = await Document.findByPk(documentId, {
       userId: user.id,
     });
@@ -898,8 +945,8 @@ router.post("collections.duplicate", auth(), async (ctx) => {
           template: undefined,
           index: undefined,
           user,
-          editorVersion,
-          ip: ctx.request.ip,
+          editorVersion: body.editorVersion,
+          ip: request.ip,
           transaction,
         });
       }
@@ -918,29 +965,18 @@ router.post("collections.duplicate", auth(), async (ctx) => {
       await createChildDuplicates({
         collection,
         user,
-        request: ctx.request,
+        request,
         body: {
           index: undefined,
           publish: true,
-          editorVersion,
+          editorVersion: body.editorVersion,
         },
         parentDocumentId: duplicateDocument.id,
         childs: documentTree?.children,
       });
     }
   }
-
-  // we must reload the collection to get memberships for policy presenter
-  const reloaded = await Collection.scope({
-    method: ["withMembership", user.id],
-  }).findByPk(duplicateCollection.id);
-  invariant(reloaded, "collection not found");
-
-  ctx.body = {
-    data: presentCollection(reloaded),
-    policies: presentPolicies(user, [reloaded]),
-  };
-});
+}
 
 // Recursive function to loop through nested documents
 async function createChildDuplicates({
