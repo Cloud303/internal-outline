@@ -934,6 +934,10 @@ async function processDocumentIds({
     const document: Document | null = await Document.findByPk(documentId, {
       userId: user.id,
     });
+
+    authorize(user, "read", document, {
+      collection,
+    });
     const duplicateDocument = await sequelize.transaction(
       async (transaction) => {
         return documentCreator({
@@ -952,19 +956,18 @@ async function processDocumentIds({
         });
       }
     );
+    authorize(user, "read", duplicateDocument, {
+      duplicateCollection,
+    });
+
     const documentTree: NavigationNode | null = collection.getDocumentTree(
       documentId
     );
     if (documentTree?.children?.length) {
       // Create duplicates of nested docs
-      authorize(user, "read", document, {
-        collection,
-      });
-      authorize(user, "read", duplicateDocument, {
-        collection,
-      });
       await createChildDuplicates({
         collection,
+        duplicateCollection,
         user,
         request,
         body: {
@@ -982,6 +985,7 @@ async function processDocumentIds({
 // Recursive function to loop through nested documents
 async function createChildDuplicates({
   collection,
+  duplicateCollection,
   user,
   request,
   body,
@@ -989,6 +993,7 @@ async function createChildDuplicates({
   childs,
 }: {
   collection: Collection;
+  duplicateCollection: Collection;
   user: User;
   request: Request;
   body: {
@@ -1014,11 +1019,11 @@ async function createChildDuplicates({
     parentDocument = await Document.findOne({
       where: {
         id: parentDocumentId,
-        collectionId: collection.id,
+        collectionId: duplicateCollection.id,
       },
     });
     authorize(user, "read", parentDocument, {
-      collection,
+      duplicateCollection,
     });
   }
   for (const child of childs || []) {
@@ -1038,7 +1043,7 @@ async function createChildDuplicates({
       title: `${childDoc?.title}`,
       text: `${childDoc?.text}`,
       publish: body.publish,
-      collectionId: `${childDoc?.collectionId}`,
+      collectionId: `${duplicateCollection.id}`,
       parentDocumentId,
       templateDocument,
       template: childDoc?.template,
@@ -1051,6 +1056,7 @@ async function createChildDuplicates({
     if (child.children.length > 0) {
       await createChildDuplicates({
         collection,
+        duplicateCollection,
         user,
         request,
         body,
