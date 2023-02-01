@@ -1,6 +1,6 @@
 import invariant from "invariant";
 import { UniqueConstraintError } from "sequelize";
-import WelcomeEmail from "@server/emails/templates/WelcomeEmail";
+// import WelcomeEmail from "@server/emails/templates/WelcomeEmail";
 import {
   AuthenticationError,
   InvalidAuthenticationError,
@@ -147,12 +147,12 @@ async function accountProvisioner({
     });
     const { isNewUser, user } = result;
 
-    if (isNewUser) {
-      await WelcomeEmail.schedule({
-        to: user.email,
-        teamUrl: team.url,
-      });
-    }
+    // if (isNewUser) {
+    //   await WelcomeEmail.schedule({
+    //     to: user.email,
+    //     teamUrl: team.url,
+    //   });
+    // }
 
     if (isNewUser || isNewTeam) {
       let provision = isNewTeam;

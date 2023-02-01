@@ -72,16 +72,16 @@ export default class NotificationsProcessor extends BaseProcessor {
       const notify = await this.shouldNotify(document, recipient.user);
 
       if (notify) {
-        await DocumentNotificationEmail.schedule({
-          to: recipient.user.email,
-          eventName:
-            event.name === "documents.publish" ? "published" : "updated",
-          documentId: document.id,
-          teamUrl: team.url,
-          actorName: document.updatedBy.name,
-          collectionName: collection.name,
-          unsubscribeUrl: recipient.unsubscribeUrl,
-        });
+        // await DocumentNotificationEmail.schedule({
+        //   to: recipient.user.email,
+        //   eventName:
+        //     event.name === "documents.publish" ? "published" : "updated",
+        //   documentId: document.id,
+        //   teamUrl: team.url,
+        //   actorName: document.updatedBy.name,
+        //   collectionName: collection.name,
+        //   unsubscribeUrl: recipient.unsubscribeUrl,
+        // });
       }
     }
   }
@@ -106,12 +106,12 @@ export default class NotificationsProcessor extends BaseProcessor {
         continue;
       }
 
-      await CollectionNotificationEmail.schedule({
-        to: recipient.user.email,
-        eventName: "created",
-        collectionId: collection.id,
-        unsubscribeUrl: recipient.unsubscribeUrl,
-      });
+      // await CollectionNotificationEmail.schedule({
+      //   to: recipient.user.email,
+      //   eventName: "created",
+      //   collectionId: collection.id,
+      //   unsubscribeUrl: recipient.unsubscribeUrl,
+      // });
     }
   }
 
