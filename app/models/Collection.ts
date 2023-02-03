@@ -210,6 +210,10 @@ export default class Collection extends ParanoidModel {
     return this.store.star(this);
   };
 
+  duplicate = () => {
+    return this.store.duplicate(this);
+  };
+
   @action
   unstar = async () => {
     return this.store.unstar(this);

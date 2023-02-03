@@ -2,6 +2,7 @@ import invariant from "invariant";
 import { concat, find, last } from "lodash";
 import { computed, action } from "mobx";
 import { CollectionPermission } from "@shared/types";
+import { CollectionValidation } from "@shared/validations";
 import Collection from "~/models/Collection";
 import { NavigationNode } from "~/types";
 import { client } from "~/utils/ApiClient";
@@ -213,6 +214,28 @@ export default class CollectionsStore extends BaseStore<Collection> {
     await super.delete(collection);
     this.rootStore.documents.fetchRecentlyUpdated();
     this.rootStore.documents.fetchRecentlyViewed();
+  };
+
+  @action
+  duplicate = async (collection: Collection): Promise<Collection> => {
+    const append = " (duplicate)";
+    const res = await client.post("/collections.duplicate", {
+      collectionId: collection.id,
+      description: collection.description,
+      permission: collection.permission,
+      sharing: collection.sharing,
+      name: `${document.title.slice(
+        0,
+        CollectionValidation.maxNameLength - append.length
+      )}${append}`,
+    });
+    invariant(res?.data, "Data should be available");
+    // const collection = this.getCollectionForDocument(document);
+    if (collection) {
+      collection.refresh();
+    }
+    this.addPolicies(res.policies);
+    return this.add(res.data);
   };
 
   export = () => {

@@ -4,6 +4,7 @@ import {
   PlusIcon,
   StarredIcon,
   UnstarredIcon,
+  DuplicateIcon,
 } from "outline-icons";
 import * as React from "react";
 import stores from "~/stores";
@@ -129,9 +130,35 @@ export const unstarCollection = createAction({
   },
 });
 
+export const duplicateCollection = createAction({
+  name: ({ t, isContextMenu }) =>
+    isContextMenu ? t("Duplicate") : t("Duplicate document"),
+  section: CollectionSection,
+  icon: <DuplicateIcon />,
+  keywords: "copy",
+  visible: ({ activeCollectionId, stores }) =>
+    !!activeCollectionId &&
+    stores.policies.abilities(activeCollectionId).update,
+  perform: async ({ activeCollectionId, t, stores }) => {
+    if (!activeCollectionId) {
+      return;
+    }
+
+    const collection = stores.collections.get(activeCollectionId);
+    // invariant(collection, "Collection must exist");
+    const duped = await collection?.duplicate();
+    // when duplicating, go straight to the duplicated document content
+    history.push(`${duped?.url}`);
+    stores.toasts.showToast(t("Collection duplicated"), {
+      type: "success",
+    });
+  },
+});
+
 export const rootCollectionActions = [
   openCollection,
   createCollection,
   starCollection,
   unstarCollection,
+  duplicateCollection,
 ];

@@ -10,6 +10,7 @@ import {
   ManualSortIcon,
   UnstarredIcon,
   StarredIcon,
+  DuplicateIcon,
 } from "outline-icons";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
@@ -25,6 +26,9 @@ import CollectionDeleteDialog from "~/components/CollectionDeleteDialog";
 import ContextMenu, { Placement } from "~/components/ContextMenu";
 import OverflowMenuButton from "~/components/ContextMenu/OverflowMenuButton";
 import Template from "~/components/ContextMenu/Template";
+import { actionToMenuItem } from "~/actions";
+import { duplicateCollection } from "~/actions/definitions/collections";
+import useActionContext from "~/hooks/useActionContext";
 import useCurrentTeam from "~/hooks/useCurrentTeam";
 import usePolicy from "~/hooks/usePolicy";
 import useStores from "~/hooks/useStores";
@@ -59,6 +63,10 @@ function CollectionMenu({
   const { t } = useTranslation();
   const history = useHistory();
   const file = React.useRef<HTMLInputElement>(null);
+  const context = useActionContext({
+    isContextMenu: true,
+    activeCollectionId: collection.id,
+  });
 
   const handlePermissions = React.useCallback(() => {
     dialogs.openModal({
@@ -222,6 +230,7 @@ function CollectionMenu({
         onClick: handleImportDocument,
         icon: <ImportIcon />,
       },
+      actionToMenuItem(duplicateCollection, context),
       {
         type: "separator",
       },
