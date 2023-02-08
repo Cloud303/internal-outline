@@ -30,7 +30,7 @@ if (env.GOOGLE_ANALYTICS_ID) {
 }
 
 if (env.CHATWOOT_BASE_URL) {
-  scriptSrc.push("chat.dev.c303.io");
+  scriptSrc.push(env.CHATWOOT_BASE_URL.replace("https://", ""));
 }
 
 if (env.CDN_URL) {
