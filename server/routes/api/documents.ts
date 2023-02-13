@@ -1216,6 +1216,7 @@ router.post("documents.duplicate", auth(), async (ctx) => {
 
   const { user } = ctx.state;
 
+  let parentDocument: Document | null;
   if (parentDocumentId) {
     assertUuid(parentDocumentId, "parentDocumentId must be an uuid");
   }
@@ -1229,6 +1230,18 @@ router.post("documents.duplicate", auth(), async (ctx) => {
     },
   });
   authorize(user, "publish", collection);
+
+  if (parentDocumentId) {
+    parentDocument = await Document.findOne({
+      where: {
+        id: parentDocumentId,
+        collectionId: collection.id,
+      },
+    });
+    authorize(user, "read", parentDocument, {
+      collection,
+    });
+  }
 
   let templateDocument: Document | null | undefined;
   const document: Document | null = await Document.findByPk(documentId, {
