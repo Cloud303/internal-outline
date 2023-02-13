@@ -1210,11 +1210,15 @@ router.post("documents.create", auth(), async (ctx) => {
 });
 
 router.post("documents.duplicate", auth(), async (ctx) => {
-  const { title = "", collectionId, documentId } = ctx.body;
+  const { title = "", collectionId, documentId, parentDocumentId } = ctx.body;
   const editorVersion = ctx.headers["x-editor-version"] as string | undefined;
   assertUuid(collectionId, "collectionId must be an uuid");
 
   const { user } = ctx.state;
+
+  if (parentDocumentId) {
+    assertUuid(parentDocumentId, "parentDocumentId must be an uuid");
+  }
 
   const collection = await Collection.scope({
     method: ["withMembership", user.id],
@@ -1240,7 +1244,7 @@ router.post("documents.duplicate", auth(), async (ctx) => {
       text: `${document?.text}`,
       publish: true,
       collectionId,
-      parentDocumentId: undefined,
+      parentDocumentId,
       templateDocument,
       template: undefined,
       index: undefined,
