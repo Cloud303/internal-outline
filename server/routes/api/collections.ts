@@ -965,7 +965,7 @@ async function processDocumentIds({
     );
     if (documentTree?.children?.length) {
       // Create duplicates of nested docs
-      await createChildDuplicates({
+      createChildDuplicates({
         collection,
         duplicateCollection,
         user,
