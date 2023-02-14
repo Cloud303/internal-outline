@@ -1279,7 +1279,7 @@ router.post("documents.duplicate", auth(), async (ctx) => {
     );
     if (documentTree?.children?.length) {
       // Create duplicates of nested docs
-      await createChildDuplicates({
+      createChildDuplicates({
         collection,
         user,
         request: ctx.request,
