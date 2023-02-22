@@ -20,6 +20,7 @@ import { Event, User, Team } from "@server/models";
 import { UserFlag, UserRole } from "@server/models/User";
 import { can, authorize } from "@server/policies";
 import { presentUser, presentPolicies } from "@server/presenters";
+import user from "@server/presenters/user";
 import {
   assertIn,
   assertSort,
@@ -135,6 +136,13 @@ router.post("users.list", auth(), pagination(), async (ctx) => {
     }),
   ]);
 
+  if (actor.isViewer) {
+    ctx.body = {
+      pagination: { ...ctx.state.pagination, total },
+      data: [],
+      policies: presentPolicies(actor, users),
+    };
+  }
   ctx.body = {
     pagination: { ...ctx.state.pagination, total },
     data: users.map((user) =>

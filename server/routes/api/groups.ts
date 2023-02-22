@@ -24,6 +24,7 @@ router.post("groups.list", auth(), pagination(), async (ctx) => {
 
   assertSort(sort, Group);
   const { user } = ctx.state;
+
   const groups = await Group.findAll({
     where: {
       teamId: user.teamId,
@@ -32,7 +33,16 @@ router.post("groups.list", auth(), pagination(), async (ctx) => {
     offset: ctx.state.pagination.offset,
     limit: ctx.state.pagination.limit,
   });
-
+  if (user.isViewer) {
+    ctx.body = {
+      pagination: ctx.state.pagination,
+      data: {
+        groups: [],
+        groupMemberships: [],
+      },
+      policies: presentPolicies(user, groups),
+    };
+  }
   ctx.body = {
     pagination: ctx.state.pagination,
     data: {
