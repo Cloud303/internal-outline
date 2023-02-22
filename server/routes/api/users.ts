@@ -142,6 +142,7 @@ router.post("users.list", auth(), pagination(), async (ctx) => {
       data: [],
       policies: presentPolicies(actor, users),
     };
+    return;
   }
   ctx.body = {
     pagination: { ...ctx.state.pagination, total },

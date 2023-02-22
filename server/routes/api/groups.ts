@@ -42,6 +42,7 @@ router.post("groups.list", auth(), pagination(), async (ctx) => {
       },
       policies: presentPolicies(user, groups),
     };
+    return;
   }
   ctx.body = {
     pagination: ctx.state.pagination,
