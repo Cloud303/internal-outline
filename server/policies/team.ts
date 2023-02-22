@@ -2,10 +2,10 @@ import { Team, User } from "@server/models";
 import { allow } from "./cancan";
 
 allow(User, "read", Team, (user, team) => {
-  if (user.isViewer || user.teamId !== team?.id) {
-    return false;
+  if (user.teamId === team?.id && !user.isViewer) {
+    return true;
   }
-  return true;
+  return false;
 });
 
 allow(User, "share", Team, (user, team) => {
