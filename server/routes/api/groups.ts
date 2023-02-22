@@ -34,15 +34,14 @@ router.post("groups.list", auth(), pagination(), async (ctx) => {
     limit: ctx.state.pagination.limit,
   });
   if (user.isViewer) {
-    ctx.body = {
+    return (ctx.body = {
       pagination: ctx.state.pagination,
       data: {
         groups: [],
         groupMemberships: [],
       },
       policies: presentPolicies(user, groups),
-    };
-    return;
+    });
   }
   ctx.body = {
     pagination: ctx.state.pagination,
