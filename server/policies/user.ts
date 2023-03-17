@@ -2,12 +2,18 @@ import { User, Team } from "@server/models";
 import { AdminRequiredError } from "../errors";
 import { allow } from "./cancan";
 
-allow(User, "read", User, (actor, user) => {
-  if (user && user.teamId === actor.teamId && !user.isViewer) {
-    return true;
-  }
-  return false;
-});
+// allow(User, "read", User, (actor, user) => {
+//   if (user && user.teamId === actor.teamId && !user.isViewer) {
+//     return true;
+//   }
+//   return false;
+// });
+allow(
+  User,
+  "read",
+  User,
+  (actor, user) => user && user.teamId === actor.teamId
+);
 
 allow(User, "inviteUser", Team, (actor, team) => {
   if (!team || actor.teamId !== team.id) {
