@@ -39,7 +39,7 @@ class CollectionNew extends React.Component<Props> {
   sharing = true;
 
   @observable
-  permission = CollectionPermission.ReadWrite;
+  permission = CollectionPermission.NoAccess;
 
   @observable
   isSaving: boolean;
