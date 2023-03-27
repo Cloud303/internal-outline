@@ -36,7 +36,7 @@ class CollectionNew extends React.Component<Props> {
   color = randomElement(colorPalette);
 
   @observable
-  sharing = true;
+  sharing = false;
 
   @observable
   permission = CollectionPermission.NoAccess;
@@ -49,13 +49,14 @@ class CollectionNew extends React.Component<Props> {
   handleSubmit = async (ev: React.SyntheticEvent) => {
     ev.preventDefault();
     this.isSaving = true;
+
     const collection = new Collection(
       {
         name: this.name,
         sharing: this.sharing,
         icon: this.icon,
         color: this.color,
-        permission: this.permission,
+        permission: this.permission === "no_access" ? "" : this.permission,
       },
       this.props.collections
     );
