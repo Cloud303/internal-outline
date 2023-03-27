@@ -35,6 +35,7 @@ export enum IntegrationType {
 export enum CollectionPermission {
   Read = "read",
   ReadWrite = "read_write",
+  NoAccess = "no_access",
 }
 
 export type IntegrationSettings<T> = T extends IntegrationType.Embed
