@@ -203,6 +203,9 @@ export const DocumentsUpdateSchema = BaseSchema.extend({
 
     /** Version of the API to be used */
     apiVersion: z.number().optional(),
+
+    /** Cover img url */
+    coverImg: z.string().optional(),
   }),
 }).refine((req) => !(req.body.append && !req.body.text), {
   message: "text is required while appending",

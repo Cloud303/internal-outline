@@ -455,6 +455,7 @@ class DocumentScene extends React.Component<Props> {
         const attachment = await uploadFile(file, {
           name: file.name,
           // public: true,
+          documentId: document.id,
           preset: AttachmentPreset.CoverImg,
         });
         document.coverImg = attachment?.url;
