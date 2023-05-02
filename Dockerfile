@@ -1,11 +1,12 @@
 ARG APP_PATH=/opt/outline
 
 ARG APP_PATH=/opt/outline
-FROM public.ecr.aws/docker/library/node:18-alpine AS deps
+FROM public.ecr.aws/docker/library/node:18-alpine3.17 AS deps
 
 ARG APP_PATH
 WORKDIR $APP_PATH
 COPY ./package.json ./yarn.lock ./
+COPY ./patches ./patches
 
 RUN yarn install --no-optional --frozen-lockfile --network-timeout 1000000 && \
   yarn cache clean
@@ -25,7 +26,7 @@ ARG APP_PATH
 WORKDIR $APP_PATH
 
 # ---
-FROM node:18-alpine AS runner
+FROM public.ecr.aws/docker/library/node:18-alpine3.17 AS runner
 
 ARG APP_PATH
 WORKDIR $APP_PATH
