@@ -6,11 +6,8 @@ import {
   DocumentEvent,
   CommentEvent,
 } from "@server/types";
-import CollectionCreatedNotificationsTask from "../tasks/CollectionCreatedNotificationsTask";
 import CommentCreatedNotificationsTask from "../tasks/CommentCreatedNotificationsTask";
 import CommentUpdatedNotificationsTask from "../tasks/CommentUpdatedNotificationsTask";
-import DocumentPublishedNotificationsTask from "../tasks/DocumentPublishedNotificationsTask";
-import RevisionCreatedNotificationsTask from "../tasks/RevisionCreatedNotificationsTask";
 import BaseProcessor from "./BaseProcessor";
 
 export default class NotificationsProcessor extends BaseProcessor {
