@@ -1,7 +1,7 @@
 ARG APP_PATH=/opt/outline
 
 ARG APP_PATH=/opt/outline
-FROM public.ecr.aws/docker/library/node:16.14.2-alpine3.15 AS deps
+FROM public.ecr.aws/docker/library/node:18-alpine AS deps
 
 ARG APP_PATH
 WORKDIR $APP_PATH
