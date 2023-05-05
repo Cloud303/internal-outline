@@ -1320,24 +1320,6 @@ router.post(
       authorize(user, "read", templateDocument);
     }
 
-    if (documentId) {
-      // Check document tree for child/nested docs
-      const documentTree: NavigationNode | null = collection.getDocumentTree(
-        documentId
-      );
-      if (documentTree?.children?.length) {
-        // Create duplicates of nested docs
-        createChildDuplicates({
-          collection,
-          user,
-          request: ctx.request,
-          body: ctx.body,
-          parentDocumentId,
-          childs: documentTree?.children,
-        });
-      }
-    }
-
     const document = await sequelize.transaction(async (transaction) =>
       documentCreator({
         title,
@@ -1353,6 +1335,24 @@ router.post(
         transaction,
       })
     );
+
+    if (documentId) {
+      // Check document tree for child/nested docs
+      const documentTree: NavigationNode | null = collection.getDocumentTree(
+        documentId
+      );
+      if (documentTree?.children?.length) {
+        // Create duplicates of nested docs
+        createChildDuplicates({
+          collection,
+          user,
+          request: ctx.request,
+          body: ctx.input.body,
+          parentDocumentId: parentDocumentId ? parentDocumentId : document.id,
+          childs: documentTree?.children,
+        });
+      }
+    }
 
     document.collection = collection;
 

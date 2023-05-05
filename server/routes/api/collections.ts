@@ -15,7 +15,7 @@ import collectionExporter from "@server/commands/collectionExporter";
 import documentCreator from "@server/commands/documentCreator";
 import teamUpdater from "@server/commands/teamUpdater";
 import { sequelize } from "@server/database/sequelize";
-import { AuthorizationError, ValidationError } from "@server/errors";
+import { ValidationError } from "@server/errors";
 import auth from "@server/middlewares/authentication";
 import { rateLimiter } from "@server/middlewares/rateLimiter";
 import { transaction } from "@server/middlewares/transaction";
@@ -410,10 +410,6 @@ router.post(
       transaction,
       lock: transaction.LOCK.UPDATE,
     });
-
-    if (userId === actor.id) {
-      throw AuthorizationError("You cannot add yourself to a collection");
-    }
 
     if (permission) {
       assertCollectionPermission(permission);
