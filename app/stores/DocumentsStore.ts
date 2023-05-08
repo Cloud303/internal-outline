@@ -558,8 +558,8 @@ export default class DocumentsStore extends BaseStore<Document> {
   duplicate = async (document: Document): Promise<Document> => {
     const append = " (duplicate)";
     const res = await client.post("/documents.create", {
-      publish: document.isTemplate,
-      parentDocumentId: null,
+      publish: true,
+      parentDocumentId: document?.parentDocumentId,
       collectionId: document.collectionId,
       template: document.isTemplate,
       title: `${document.title.slice(
