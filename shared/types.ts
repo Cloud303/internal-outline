@@ -125,6 +125,12 @@ export type CustomTheme = {
   accentText: string;
 };
 
+export type PublicTeam = {
+  avatarUrl: string;
+  name: string;
+  customTheme: Partial<CustomTheme>;
+};
+
 export enum TeamPreference {
   /** Whether documents have a separate edit mode instead of seamless editing. */
   SeamlessEdit = "seamlessEdit",
@@ -171,6 +177,7 @@ export type CollectionSort = {
 export enum NotificationEventType {
   PublishDocument = "documents.publish",
   UpdateDocument = "documents.update",
+  CreateRevision = "revisions.create",
   CreateCollection = "collections.create",
   CreateComment = "comments.create",
   MentionedInDocument = "documents.mentioned",

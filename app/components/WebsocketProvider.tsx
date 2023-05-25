@@ -10,6 +10,7 @@ import Comment from "~/models/Comment";
 import Document from "~/models/Document";
 import FileOperation from "~/models/FileOperation";
 import Group from "~/models/Group";
+import Notification from "~/models/Notification";
 import Pin from "~/models/Pin";
 import Star from "~/models/Star";
 import Subscription from "~/models/Subscription";
@@ -84,11 +85,10 @@ class WebsocketProvider extends React.Component<Props> {
       stars,
       memberships,
       policies,
-      presence,
       comments,
-      views,
       subscriptions,
       fileOperations,
+      notifications,
     } = this.props;
     if (!auth.token) {
       return;
@@ -101,12 +101,6 @@ class WebsocketProvider extends React.Component<Props> {
       this.socket?.emit("authentication", {
         token: auth.token,
       });
-    });
-
-    this.socket.on("disconnect", () => {
-      // when the socket is disconnected we need to clear all presence state as
-      // it's no longer reliable.
-      presence.clear();
     });
 
     // on reconnection, reset the transports option, as the Websocket
@@ -323,6 +317,20 @@ class WebsocketProvider extends React.Component<Props> {
       auth.team?.updateFromJson(event);
     });
 
+    this.socket.on(
+      "notifications.create",
+      (event: PartialWithId<Notification>) => {
+        notifications.add(event);
+      }
+    );
+
+    this.socket.on(
+      "notifications.update",
+      (event: PartialWithId<Notification>) => {
+        notifications.add(event);
+      }
+    );
+
     this.socket.on("pins.create", (event: PartialWithId<Pin>) => {
       pins.add(event);
     });
@@ -451,33 +459,6 @@ class WebsocketProvider extends React.Component<Props> {
     // to leave a specific room. Forward that to the ws server.
     this.socket.on("leave", (event: any) => {
       this.socket?.emit("leave", event);
-    });
-
-    // received whenever we join a document room, the payload includes
-    // userIds that are present/viewing and those that are editing.
-    this.socket.on("document.presence", (event: any) => {
-      presence.init(event.documentId, event.userIds, event.editingIds);
-    });
-
-    // received whenever a new user joins a document room, aka they
-    // navigate to / start viewing a document
-    this.socket.on("user.join", (event: any) => {
-      presence.touch(event.documentId, event.userId, event.isEditing);
-      views.touch(event.documentId, event.userId);
-    });
-
-    // received whenever a new user leaves a document room, aka they
-    // navigate away / stop viewing a document
-    this.socket.on("user.leave", (event: any) => {
-      presence.leave(event.documentId, event.userId);
-      views.touch(event.documentId, event.userId);
-    });
-
-    // received when another client in a document room wants to change
-    // or update it's presence. Currently the only property is whether
-    // the client is in editing state or not.
-    this.socket.on("user.presence", (event: any) => {
-      presence.touch(event.documentId, event.userId, event.isEditing);
     });
   };
 
