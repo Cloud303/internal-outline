@@ -75,7 +75,7 @@ export default class ColorToolbar extends React.Component<Props> {
 
     return (
       <FloatingToolbar ref={this.menuRef} active={active} {...rest}>
-        {active && (
+        {/* {active && (
           <ColorEditor
             key={`${selection.from}-${selection.to}`}
             from={selection.from}
@@ -84,7 +84,7 @@ export default class ColorToolbar extends React.Component<Props> {
             onClose={this.props.onClose}
             {...rest}
           />
-        )}
+        )} */}
       </FloatingToolbar>
     );
   }

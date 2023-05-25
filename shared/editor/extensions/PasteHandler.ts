@@ -1,7 +1,6 @@
 import { toggleMark } from "prosemirror-commands";
 import { Slice } from "prosemirror-model";
 import { Plugin } from "prosemirror-state";
-import { isInTable } from "prosemirror-tables";
 import { isUrl } from "../../utils/urls";
 import Extension from "../lib/Extension";
 import isMarkdown from "../lib/isMarkdown";
@@ -89,7 +88,6 @@ export default class PasteHandler extends Extension {
               if (
                 embeds &&
                 this.editor.commands.embed &&
-                !isInTable(state) &&
                 !isInCode(state) &&
                 !isInList(state)
               ) {
@@ -167,6 +165,10 @@ export default class PasteHandler extends Extension {
               const paste = this.editor.pasteParser.parse(
                 normalizePastedMarkdown(text)
               );
+              if (!paste) {
+                return false;
+              }
+
               const slice = paste.slice(0);
               const tr = view.state.tr;
               let currentPos = view.state.selection.from;

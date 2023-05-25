@@ -51,10 +51,10 @@ const StyledButton = styled.button`
     Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji",
     "Segoe UI Symbol";
   padding: 0.4rem 1rem;
-  color: #dad1d1;
+  color: #0366b9;
 
   &:hover {
-    background-color: #80808099;
+    background-color: #cccccc;
   }
 `;
 

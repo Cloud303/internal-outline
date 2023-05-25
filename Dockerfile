@@ -28,6 +28,10 @@ WORKDIR $APP_PATH
 # ---
 FROM public.ecr.aws/docker/library/node:18-alpine3.17 AS runner
 
+RUN apk update && apk add --no-cache curl && apk add --no-cache ca-certificates
+
+LABEL org.opencontainers.image.source="https://github.com/outline/outline"
+
 ARG APP_PATH
 WORKDIR $APP_PATH
 ENV NODE_ENV production

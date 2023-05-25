@@ -1023,7 +1023,8 @@ mark {
   &:after {
     content: attr(data-line-numbers);
     position: absolute;
-    left: 1em;
+    padding-left: 1em;
+    left: 0;
     top: calc(1px + 0.75em);
     width: calc(var(--line-number-gutter-width,0) * 1em + .25em);
     word-break: break-all;
@@ -1032,6 +1033,7 @@ mark {
     font-size: 13px;
     line-height: 1.4em;
     color: ${props.theme.textTertiary};
+    background: ${props.theme.codeBackground};
     text-align: right;
     font-variant-numeric: tabular-nums;
     user-select: none;
@@ -1222,6 +1224,10 @@ table {
     min-width: 100px;
   }
 
+  td .component-embed {
+    padding: 4px 0;
+  }
+
   .selectedCell {
     background: ${
       props.readOnly ? "inherit" : props.theme.tableSelectedBackground
@@ -1239,7 +1245,7 @@ table {
      * https://github.com/ProseMirror/prosemirror/issues/947 */
     &::after {
       content: "";
-      cursor: pointer;
+      cursor: var(--pointer);
       position: absolute;
       top: -16px;
       ${props.rtl ? "right" : "left"}: 0;
@@ -1267,7 +1273,7 @@ table {
   .grip-row {
     &::after {
       content: "";
-      cursor: pointer;
+      cursor: var(--pointer);
       position: absolute;
       ${props.rtl ? "right" : "left"}: -16px;
       top: 0;
@@ -1296,7 +1302,7 @@ table {
   .grip-table {
     &::after {
       content: "";
-      cursor: pointer;
+      cursor: var(--pointer);
       background: ${props.theme.tableDivider};
       width: 13px;
       height: 13px;

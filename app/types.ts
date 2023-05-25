@@ -210,3 +210,7 @@ export type WebsocketEvent =
   | WebsocketCollectionUpdateIndexEvent
   | WebsocketEntityDeletedEvent
   | WebsocketEntitiesEvent;
+
+export type AwarenessChangeEvent = {
+  states: { user?: { id: string }; cursor: any; scrollY: number | undefined }[];
+};

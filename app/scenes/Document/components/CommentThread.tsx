@@ -19,6 +19,7 @@ import useCurrentUser from "~/hooks/useCurrentUser";
 import useOnClickOutside from "~/hooks/useOnClickOutside";
 import usePolicy from "~/hooks/usePolicy";
 import useStores from "~/hooks/useStores";
+import { hover } from "~/styles";
 import { sidebarAppearDuration } from "~/styles/animations";
 import CommentForm from "./CommentForm";
 import CommentThreadItem from "./CommentThreadItem";
@@ -143,7 +144,7 @@ function CommentThread({
       $focused={focused}
       $recessed={recessed}
       $dir={document.dir}
-      onPointerUp={handleClickThread}
+      onClick={handleClickThread}
     >
       {commentsInThread.map((comment, index) => {
         const firstOfAuthor =
@@ -192,7 +193,7 @@ function CommentThread({
         )}
       </ResizingHeightContainer>
       {!focused && !recessed && can.comment && (
-        <Reply onPointerDown={() => setAutoFocus(true)}>{t("Reply")}…</Reply>
+        <Reply onClick={() => setAutoFocus(true)}>{t("Reply")}…</Reply>
       )}
     </Thread>
   );
@@ -230,7 +231,7 @@ const Thread = styled.div<{
   position: relative;
   transition: opacity 100ms ease-out;
 
-  &:hover {
+  &: ${hover} {
     ${Reply} {
       opacity: 1;
     }
