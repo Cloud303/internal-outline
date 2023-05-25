@@ -1348,7 +1348,7 @@ router.post(
           user,
           request: ctx.request,
           body: ctx.input.body,
-          parentDocumentId: parentDocumentId ? parentDocumentId : document.id,
+          parentDocumentId: document.id,
           childs: documentTree?.children,
         });
       }

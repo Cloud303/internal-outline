@@ -285,7 +285,7 @@ export default function SelectionToolbar(props: Props) {
           onSelectLink={handleOnSelectLink}
         />
       )}
-      {color && rangeColor && (
+      {/* {color && rangeColor && (
         <ColorEditor
           key={`${rangeColor.from}-${rangeColor.to}`}
           dictionary={dictionary}
@@ -295,7 +295,7 @@ export default function SelectionToolbar(props: Props) {
           onSelectColor={handleOnSelectColor}
           {...rest}
         />
-      )}
+      )} */}
       <ToolbarMenu items={items} {...rest} />
     </FloatingToolbar>
   );

@@ -144,7 +144,7 @@ const ColorEditor = (props: Props) => {
 
   return (
     <Wrapper>
-      <Items>
+      {/* <Items>
         {Colors?.colors?.map((color, index: number) => (
           <ColorItem
             color={color.color}
@@ -156,7 +156,7 @@ const ColorEditor = (props: Props) => {
             }}
           />
         ))}
-      </Items>
+      </Items> */}
     </Wrapper>
   );
 };

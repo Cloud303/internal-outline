@@ -166,7 +166,7 @@ const StyledInput = styled.input`
   border: none;
   font-size: 20px;
   font-weight: 500;
-  width: auto;
+  width: 100%;
   outline: none;
   margin-left: 5px;
   /* margin-bottom: -20px !important; */
