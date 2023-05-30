@@ -30,6 +30,7 @@ const extensions = withComments(richExtensions);
 type Props = Omit<EditorProps, "extensions" | "editorStyle"> & {
   onChangeTitle: (text: string) => void;
   coverImg?: string | null | void | unknown;
+  editCover: any;
   id: string;
   document: Document;
   isDraft: boolean;
@@ -65,6 +66,7 @@ function DocumentEditor(props: Props, ref: React.RefObject<any>) {
     readOnly,
     children,
     multiplayer,
+    editCover,
     ...rest
   } = props;
   const can = usePolicy(document.id);
@@ -160,6 +162,7 @@ function DocumentEditor(props: Props, ref: React.RefObject<any>) {
         value={coverImg}
         readOnly={readOnly}
         document={document}
+        editCover={editCover}
       />
       <EditableTitle
         ref={titleRef}
