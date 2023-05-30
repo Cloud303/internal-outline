@@ -1006,21 +1006,18 @@ router.post(
       }
     }
 
-    const {
-      documents,
-      collections,
-      collectionChanged,
-    } = await sequelize.transaction(async (transaction) =>
-      documentMover({
-        user,
-        document,
-        collectionId,
-        parentDocumentId,
-        index,
-        ip: ctx.request.ip,
-        transaction,
-      })
-    );
+    const { documents, collections, collectionChanged } =
+      await sequelize.transaction(async (transaction) =>
+        documentMover({
+          user,
+          document,
+          collectionId,
+          parentDocumentId,
+          index,
+          ip: ctx.request.ip,
+          transaction,
+        })
+      );
 
     ctx.body = {
       data: {
@@ -1338,9 +1335,8 @@ router.post(
 
     if (documentId) {
       // Check document tree for child/nested docs
-      const documentTree: NavigationNode | null = collection.getDocumentTree(
-        documentId
-      );
+      const documentTree: NavigationNode | null =
+        collection.getDocumentTree(documentId);
       if (documentTree?.children?.length) {
         // Create duplicates of nested docs
         createChildDuplicates({
@@ -1363,102 +1359,102 @@ router.post(
   }
 );
 
-router.post("documents.duplicate", auth(), async (ctx) => {
-  const {
-    title = "",
-    collectionId,
-    documentId,
-    parentDocumentId,
-  } = ctx.input.body;
-  const editorVersion = ctx.headers["x-editor-version"] as string | undefined;
-  // assertUuid(collectionId, "collectionId must be an uuid");
+router.post(
+  "documents.duplicate",
+  auth(),
+  validate(T.DocumentsDuplicateSchema),
+  async (ctx: APIContext<T.DocumentsDuplicateReq>) => {
+    const {
+      title = "",
+      collectionId,
+      documentId,
+      parentDocumentId,
+    } = ctx.input.body;
+    const editorVersion = ctx.headers["x-editor-version"] as string | undefined;
 
-  const { user } = ctx.state.auth;
+    const { user } = ctx.state.auth;
 
-  let parentDocument: Document | null;
-  if (parentDocumentId) {
-    assertUuid(parentDocumentId, "parentDocumentId must be an uuid");
-  }
+    let parentDocument: Document | null;
 
-  const collection = await Collection.scope({
-    method: ["withMembership", user.id],
-  }).findOne({
-    where: {
-      id: collectionId,
-      teamId: user.teamId,
-    },
-  });
-  authorize(user, "publish", collection);
-
-  if (parentDocumentId) {
-    parentDocument = await Document.findOne({
+    const collection = await Collection.scope({
+      method: ["withMembership", user.id],
+    }).findOne({
       where: {
-        id: parentDocumentId,
-        collectionId: collection.id,
+        id: collectionId,
+        teamId: user.teamId,
       },
     });
-    authorize(user, "read", parentDocument, {
-      collection,
-    });
-  }
+    authorize(user, "createDocument", collection);
 
-  let templateDocument: Document | null | undefined;
-  const document: Document | null = await Document.findByPk(documentId, {
-    userId: user.id,
-  });
-  authorize(user, "read", document, {
-    collection,
-  });
-
-  const duplicateDocument = await sequelize.transaction(async (transaction) =>
-    documentCreator({
-      title,
-      text: `${document?.text}`,
-      publish: true,
-      collectionId,
-      parentDocumentId,
-      templateDocument,
-      template: undefined,
-      // index: undefined,
-      user,
-      editorVersion,
-      ip: ctx.request.ip,
-      transaction,
-    })
-  );
-
-  authorize(user, "read", duplicateDocument, {
-    collection,
-  });
-
-  if (documentId) {
-    // Check document tree for child/nested docs
-    const documentTree: NavigationNode | null = collection.getDocumentTree(
-      documentId
-    );
-    if (documentTree?.children?.length) {
-      // Create duplicates of nested docs
-      createChildDuplicates({
-        collection,
-        user,
-        request: ctx.request,
-        body: {
-          index: undefined,
-          publish: true,
-          editorVersion,
+    if (parentDocumentId) {
+      parentDocument = await Document.findOne({
+        where: {
+          id: parentDocumentId,
+          collectionId: collection.id,
         },
-        parentDocumentId: duplicateDocument.id,
-        childs: documentTree?.children,
+      });
+      authorize(user, "read", parentDocument, {
+        collection,
       });
     }
-  }
-  duplicateDocument.collection = collection;
 
-  return (ctx.body = {
-    data: await presentDocument(duplicateDocument),
-    policies: presentPolicies(user, [duplicateDocument]),
-  });
-});
+    let templateDocument: Document | null | undefined;
+    const document: Document | null = await Document.findByPk(documentId, {
+      userId: user.id,
+    });
+    authorize(user, "read", document, {
+      collection,
+    });
+
+    const duplicateDocument = await sequelize.transaction(async (transaction) =>
+      documentCreator({
+        title,
+        text: `${document?.text}`,
+        publish: true,
+        collectionId,
+        parentDocumentId,
+        templateDocument,
+        template: undefined,
+        // index: undefined,
+        user,
+        editorVersion,
+        ip: ctx.request.ip,
+        transaction,
+      })
+    );
+
+    authorize(user, "read", duplicateDocument, {
+      collection,
+    });
+
+    if (documentId) {
+      // Check document tree for child/nested docs
+      const documentTree: NavigationNode | null =
+        collection.getDocumentTree(documentId);
+      if (documentTree?.children?.length) {
+        // Create duplicates of nested docs
+        createChildDuplicates({
+          collection,
+          user,
+          request: ctx.request,
+          body: {
+            index: undefined,
+            publish: true,
+            editorVersion,
+          },
+          parentDocumentId: duplicateDocument.id,
+          childs: documentTree?.children,
+        });
+      }
+    }
+    duplicateDocument.collection = collection;
+
+    return (ctx.body = {
+      data: await presentDocument(duplicateDocument),
+      policies: presentPolicies(user, [duplicateDocument]),
+    });
+  }
+);
 
 // Recursive function to loop through nested documents
 async function createChildDuplicates({
