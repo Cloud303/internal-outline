@@ -106,6 +106,9 @@ class DocumentScene extends React.Component<Props> {
   coverImg: string | void | null | unknown = null;
 
   @observable
+  editCover = false;
+
+  @observable
   title: string = this.props.document.title;
 
   @observable
@@ -422,16 +425,8 @@ class DocumentScene extends React.Component<Props> {
   }
 
   render() {
-    const {
-      document,
-      revision,
-      readOnly,
-      abilities,
-      auth,
-      ui,
-      shareId,
-      t,
-    } = this.props;
+    const { document, revision, readOnly, abilities, auth, ui, shareId, t } =
+      this.props;
     const team = auth.team;
     const isShare = !!shareId;
     const embedsDisabled =
@@ -476,6 +471,10 @@ class DocumentScene extends React.Component<Props> {
 
       this.updateIsDirty();
       this.autosave();
+    };
+
+    const handleEditCover = (done: boolean) => {
+      this.editCover = done;
     };
 
     // console.log(document);
@@ -549,6 +548,8 @@ class DocumentScene extends React.Component<Props> {
               onSave={this.onSave}
               headings={this.headings}
               handleCoverImg={handleFileUpload}
+              editCover={this.editCover}
+              handleEditCover={handleEditCover}
               handleRemoveCoverImg={handleRemoveCoverImg}
             />
             {/* <div
@@ -590,6 +591,7 @@ class DocumentScene extends React.Component<Props> {
                         coverImg={
                           this.coverImg ? this.coverImg : document.coverImg
                         }
+                        editCover={this.editCover}
                         document={document}
                         value={readOnly ? document.text : undefined}
                         defaultValue={document.text}

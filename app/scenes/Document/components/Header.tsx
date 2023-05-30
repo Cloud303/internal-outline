@@ -61,6 +61,8 @@ type Props = {
     level: number;
     id: string;
   }[];
+  editCover: any;
+  handleEditCover: any;
   handleCoverImg: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleRemoveCoverImg: (e: React.ChangeEvent<HTMLInputElement>) => void;
 };
@@ -80,6 +82,8 @@ function DocumentHeader({
   onSelectTemplate,
   onSave,
   headings,
+  editCover,
+  handleEditCover,
   handleCoverImg,
   handleRemoveCoverImg,
 }: Props) {
@@ -283,12 +287,22 @@ function DocumentHeader({
             {canEdit && can.createChildDocument && !isMobile && (
               <>
                 <Button
-                  icon={<PlusIcon />}
-                  onClick={() => inputRef && inputRef.click()}
+                  icon={document.coverImg ? <EditIcon /> : <PlusIcon />}
+                  onClick={() => {
+                    if (document.coverImg && !editCover) {
+                      handleEditCover(!editCover);
+                    } else {
+                      inputRef && inputRef.click();
+                    }
+                  }}
                   style={{ marginLeft: 12 }}
                   neutral
                 >
-                  {t("Upload cover")}
+                  {editCover
+                    ? "Upload new image"
+                    : document.coverImg
+                    ? "Edit cover"
+                    : t("Upload cover")}
                 </Button>
                 <input
                   type="file"
@@ -297,6 +311,16 @@ function DocumentHeader({
                   ref={(refParam) => (inputRef = refParam)}
                 />
               </>
+            )}
+            {editCover && (
+              <Button
+                // icon={<TrashIcon />}
+                onClick={() => handleEditCover(false)}
+                style={{ marginLeft: 12 }}
+                // danger
+              >
+                Save cover
+              </Button>
             )}
             {canEdit &&
               can.createChildDocument &&
