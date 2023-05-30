@@ -101,34 +101,115 @@
 // export default observer(EditableImg);
 
 import { observer } from "mobx-react";
-import * as React from "react";
+import React, { useRef, useState } from "react";
+import styled from "styled-components";
 import Document from "~/models/Document";
 
 type Props = {
   value?: string | null | void | unknown;
   document: Document;
   readOnly?: boolean;
+  editCover: boolean;
 };
 
-const EditableImg = React.forwardRef(({ value }: Props) => (
-  <>
-    {value ? (
-      <div style={{ paddingBottom: "20rem" }}>
+const StyledCon = styled.div`
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+  scrollbar-width: none; /* Firefox */
+
+  &::-webkit-scrollbar {
+    display: none; /* Safari and Chrome */
+  }
+`;
+
+const EditableImg = React.forwardRef(({ value, editCover }: Props) => {
+  const [dragging, setDragging] = useState(false);
+  const [scrollPosition, setScrollPosition] = useState({ left: 0, top: 0 });
+  const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
+  const scrollContainerRef = useRef(null);
+  const initialMousePositionRef = useRef({ x: 0, y: 0 });
+  const initialScrollPositionRef = useRef({ left: 0, top: 0 });
+
+  const handleMouseDown = (event: any) => {
+    event.preventDefault();
+    setDragging(true);
+    initialMousePositionRef.current = { x: event.clientX, y: event.clientY };
+    initialScrollPositionRef.current = { ...scrollPosition };
+  };
+
+  const handleMouseUp = () => {
+    setDragging(false);
+  };
+
+  const handleMouseMove = (event: any) => {
+    if (!dragging && !scrollContainerRef?.current) {
+      return;
+    }
+
+    const { clientX, clientY } = event;
+    const deltaX = clientX - initialMousePositionRef.current.x;
+    const deltaY = clientY - initialMousePositionRef.current.y;
+
+    (scrollContainerRef.current as any).scrollLeft =
+      initialScrollPositionRef.current.left - deltaX;
+    (scrollContainerRef.current as any).scrollTop =
+      initialScrollPositionRef.current.top - deltaY;
+
+    setScrollPosition({
+      left: (scrollContainerRef.current as any).scrollLeft,
+      top: (scrollContainerRef.current as any).scrollTop,
+    });
+
+    setDragPosition({ x: deltaX > 0 ? 0 : deltaX, y: deltaY > 0 ? 0 : deltaY });
+  };
+
+  return (
+    <>
+      {value ? (
         <div
           style={{
-            backgroundImage: `url(${value})`,
-            backgroundSize: "cover",
+            paddingBottom: "20rem",
             width: "100%",
-            height: "20rem",
-            position: "absolute",
-            left: 0,
           }}
-        />
-      </div>
-    ) : (
-      <div />
-    )}
-  </>
-));
+          onMouseLeave={() => editCover && handleMouseUp()}
+        >
+          <div
+            style={{
+              position: "absolute",
+              width: "100%",
+              left: 0,
+            }}
+          >
+            <StyledCon
+              ref={scrollContainerRef}
+              style={{
+                position: "relative",
+                height: "20rem",
+                width: "100%",
+                overflow: "scroll",
+                cursor: !editCover ? "default" : dragging ? "grabbing" : "grab",
+              }}
+              onMouseDown={(e) => editCover && handleMouseDown(e)}
+              onMouseUp={() => editCover && handleMouseUp}
+              onMouseMove={(e) => editCover && handleMouseMove(e)}
+              className="editable-image-scroll"
+            >
+              <img
+                src={value as string}
+                style={{
+                  position: "absolute",
+                  left: dragPosition.x,
+                  top: dragPosition.y,
+                }}
+                draggable="false"
+              />
+            </StyledCon>
+          </div>
+        </div>
+      ) : (
+        <div />
+      )}
+    </>
+  );
+});
 
 export default observer(EditableImg);
