@@ -9,6 +9,8 @@ type Props = {
   document: Document;
   /** The new cover image content */
   coverImg?: string;
+  coverImgPositionX?: string;
+  coverImgPositionY?: string;
   /** The new title */
   title?: string;
   /** The new text content */
@@ -51,6 +53,8 @@ export default async function documentUpdater({
   collectionId,
   transaction,
   coverImg,
+  coverImgPositionX,
+  coverImgPositionY,
   ip,
 }: Props): Promise<Document> {
   const previousTitle = document.title;
@@ -60,6 +64,12 @@ export default async function documentUpdater({
   }
   if (coverImg || coverImg === "") {
     document.coverImg = coverImg;
+  }
+  if (coverImgPositionX || coverImgPositionX === "") {
+    document.coverImgPositionX = coverImgPositionX;
+  }
+  if (coverImgPositionY || coverImgPositionY === "") {
+    document.coverImgPositionY = coverImgPositionY;
   }
   if (editorVersion) {
     document.editorVersion = editorVersion;

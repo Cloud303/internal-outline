@@ -106,6 +106,12 @@ class DocumentScene extends React.Component<Props> {
   coverImg: string | void | null | unknown = null;
 
   @observable
+  coverImgPositionX: string | void | null | unknown = null;
+
+  @observable
+  coverImgPositionY: string | void | null | unknown = null;
+
+  @observable
   editCover = false;
 
   @observable
