@@ -305,7 +305,26 @@ export const DocumentsCreateSchema = BaseSchema.extend({
     message: "collectionId is required to publish",
   });
 
+export const DocumentsDuplicateSchema = BaseSchema.extend({
+  body: z.object({
+    /** Doc title */
+    title: z.string().default(""),
+
+    /** Create Doc under this collection */
+    collectionId: z.string().uuid().nullish(),
+
+    /** Create Doc under this parent */
+    parentDocumentId: z.string().uuid().nullish(),
+
+    documentId: z.string().uuid().optional(),
+  }),
+}).refine((req) => !(req.body.parentDocumentId && !req.body.collectionId), {
+  message: "collectionId is required to create a nested document",
+});
+
 export type DocumentsCreateReq = z.infer<typeof DocumentsCreateSchema>;
+
+export type DocumentsDuplicateReq = z.infer<typeof DocumentsDuplicateSchema>;
 
 export const DocumentsUsersSchema = BaseSchema.extend({
   body: BaseIdSchema.extend({
