@@ -909,6 +909,8 @@ router.post(
       append,
       apiVersion,
       coverImg,
+      coverImgPositionX,
+      coverImgPositionY,
     } = ctx.input.body;
     const editorVersion = ctx.headers["x-editor-version"] as string | undefined;
     const { user } = ctx.state.auth;
@@ -948,6 +950,8 @@ router.post(
         editorVersion,
         transaction,
         coverImg,
+        coverImgPositionX,
+        coverImgPositionY,
         ip: ctx.request.ip,
       });
 

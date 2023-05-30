@@ -141,7 +141,7 @@ const EditableImg = React.forwardRef(({ value, editCover }: Props) => {
   };
 
   const handleMouseMove = (event: any) => {
-    if (!dragging && !scrollContainerRef?.current) {
+    if (!dragging) {
       return;
     }
 
@@ -189,7 +189,7 @@ const EditableImg = React.forwardRef(({ value, editCover }: Props) => {
                 cursor: !editCover ? "default" : dragging ? "grabbing" : "grab",
               }}
               onMouseDown={(e) => editCover && handleMouseDown(e)}
-              onMouseUp={() => editCover && handleMouseUp}
+              onMouseUp={() => editCover && handleMouseUp()}
               onMouseMove={(e) => editCover && handleMouseMove(e)}
               className="editable-image-scroll"
             >
