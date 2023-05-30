@@ -9,8 +9,8 @@ type Props = {
   document: Document;
   /** The new cover image content */
   coverImg?: string;
-  coverImgPositionX?: string;
-  coverImgPositionY?: string;
+  coverImgPositionX?: number;
+  coverImgPositionY?: number;
   /** The new title */
   title?: string;
   /** The new text content */

@@ -1,11 +1,11 @@
 module.exports = {
   up: async (queryInterface, Sequelize) => {
     await queryInterface.addColumn("documents", "coverImgPositionX", {
-      type: "TEXT",
+      type: "DOUBLE",
       allowNull: true,
     });
     await queryInterface.addColumn("documents", "coverImgPositionY", {
-      type: "TEXT",
+      type: "DOUBLE",
       allowNull: true,
     });
   },

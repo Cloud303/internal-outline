@@ -31,6 +31,9 @@ type Props = Omit<EditorProps, "extensions" | "editorStyle"> & {
   onChangeTitle: (text: string) => void;
   coverImg?: string | null | void | unknown;
   editCover: any;
+  positionY: any;
+  positionX: any;
+  handleUpdatePostion: any;
   id: string;
   document: Document;
   isDraft: boolean;
@@ -60,6 +63,8 @@ function DocumentEditor(props: Props, ref: React.RefObject<any>) {
   const {
     document,
     coverImg,
+    positionY,
+    positionX,
     onChangeTitle,
     isDraft,
     shareId,
@@ -67,6 +72,7 @@ function DocumentEditor(props: Props, ref: React.RefObject<any>) {
     children,
     multiplayer,
     editCover,
+    handleUpdatePostion,
     ...rest
   } = props;
   const can = usePolicy(document.id);
@@ -163,6 +169,9 @@ function DocumentEditor(props: Props, ref: React.RefObject<any>) {
         readOnly={readOnly}
         document={document}
         editCover={editCover}
+        positionX={positionX}
+        positionY={positionY}
+        handleUpdatePostion={handleUpdatePostion}
       />
       <EditableTitle
         ref={titleRef}
