@@ -28,6 +28,8 @@ async function presentDocument(
     urlId: document.urlId,
     title: document.title,
     coverImg: document.coverImg,
+    coverImgPositionX: document.coverImgPositionX,
+    coverImgPositionY: document.coverImgPositionY,
     text,
     tasks: document.tasks,
     createdAt: document.createdAt,

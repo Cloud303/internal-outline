@@ -188,6 +188,14 @@ class Document extends ParanoidModel {
   @Column
   coverImg: string | null;
 
+  @AllowNull
+  @Column
+  coverImgPositionX: string | null;
+
+  @AllowNull
+  @Column
+  coverImgPositionY: string | null;
+
   @Column(DataType.ARRAY(DataType.STRING))
   previousTitles: string[] = [];
 
@@ -532,8 +540,9 @@ class Document extends ParanoidModel {
     const getChildDocumentIds = async (
       ...parentDocumentId: string[]
     ): Promise<string[]> => {
-      const childDocuments = await (this
-        .constructor as typeof Document).findAll({
+      const childDocuments = await (
+        this.constructor as typeof Document
+      ).findAll({
         attributes: ["id"],
         where: {
           parentDocumentId,
@@ -565,8 +574,9 @@ class Document extends ParanoidModel {
 
     // Helper to archive all child documents for a document
     const archiveChildren = async (parentDocumentId: string) => {
-      const childDocuments = await (this
-        .constructor as typeof Document).findAll({
+      const childDocuments = await (
+        this.constructor as typeof Document
+      ).findAll({
         where: {
           parentDocumentId,
         },
