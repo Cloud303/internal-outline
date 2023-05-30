@@ -106,10 +106,10 @@ class DocumentScene extends React.Component<Props> {
   coverImg: string | void | null | unknown = null;
 
   @observable
-  coverImgPositionX: string | void | null | unknown = null;
+  coverImgPositionX: number | void | null | unknown = null;
 
   @observable
-  coverImgPositionY: string | void | null | unknown = null;
+  coverImgPositionY: number | void | null | unknown = null;
 
   @observable
   editCover = false;
@@ -479,6 +479,24 @@ class DocumentScene extends React.Component<Props> {
       this.autosave();
     };
 
+    const handleUpdatePostion = (
+      positionX: number | string,
+      positionY: number | string
+    ) => {
+      this.coverImgPositionX = positionX;
+      this.coverImgPositionY = positionY;
+    };
+
+    const handleCoverPosition = (
+      positionY: number | string,
+      positionX: number | string
+    ) => {
+      document.coverImgPositionX = positionX;
+      document.coverImgPositionY = positionY;
+
+      this.updateIsDirty();
+      this.autosave();
+    };
     const handleEditCover = (done: boolean) => {
       this.editCover = done;
     };
@@ -557,6 +575,9 @@ class DocumentScene extends React.Component<Props> {
               editCover={this.editCover}
               handleEditCover={handleEditCover}
               handleRemoveCoverImg={handleRemoveCoverImg}
+              handleCoverPosition={handleCoverPosition}
+              positionX={this.coverImgPositionX}
+              positionY={this.coverImgPositionY}
             />
             {/* <div
               style={{
@@ -597,6 +618,9 @@ class DocumentScene extends React.Component<Props> {
                         coverImg={
                           this.coverImg ? this.coverImg : document.coverImg
                         }
+                        positionY={document.coverImgPositionY}
+                        positionX={document.coverImgPositionX}
+                        handleUpdatePostion={handleUpdatePostion}
                         editCover={this.editCover}
                         document={document}
                         value={readOnly ? document.text : undefined}

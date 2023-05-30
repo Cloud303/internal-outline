@@ -190,7 +190,7 @@ class Document extends ParanoidModel {
 
   @AllowNull
   @Column
-  coverImgPositionX: string | null;
+  coverImgPositionX: number | null;
 
   @AllowNull
   @Column
