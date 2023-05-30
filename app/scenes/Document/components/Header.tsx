@@ -62,9 +62,12 @@ type Props = {
     id: string;
   }[];
   editCover: any;
+  positionX: any;
+  positionY: any;
   handleEditCover: any;
   handleCoverImg: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleRemoveCoverImg: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleCoverPosition: any;
 };
 
 function DocumentHeader({
@@ -86,6 +89,9 @@ function DocumentHeader({
   handleEditCover,
   handleCoverImg,
   handleRemoveCoverImg,
+  handleCoverPosition,
+  positionX,
+  positionY,
 }: Props) {
   const { t } = useTranslation();
   const { ui, auth } = useStores();
@@ -315,7 +321,10 @@ function DocumentHeader({
             {editCover && (
               <Button
                 // icon={<TrashIcon />}
-                onClick={() => handleEditCover(false)}
+                onClick={() => {
+                  handleEditCover(false);
+                  handleCoverPosition(positionX, positionY);
+                }}
                 style={{ marginLeft: 12 }}
                 // danger
               >

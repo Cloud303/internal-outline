@@ -61,11 +61,11 @@ export default class Document extends ParanoidModel {
 
   @Field
   @observable
-  coverImgPositionX: string | null | void | unknown;
+  coverImgPositionX: number | null | void | unknown;
 
   @Field
   @observable
-  coverImgPositionY: string | null | void | unknown;
+  coverImgPositionY: number | null | void | unknown;
 
   @Field
   @observable
