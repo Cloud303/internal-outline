@@ -441,7 +441,7 @@ class DocumentScene extends React.Component<Props> {
       (team && team.documentEmbeds === false) || document.embedsDisabled;
 
     const hasHeadings = this.headings.length > 0;
-    const showContents = ui.tocVisible && readOnly && hasHeadings; // || !readOnly
+    const showContents = ui.tocVisible;
     const multiplayerEditor =
       !document.isArchived && !document.isDeleted && !revision && !isShare;
 
