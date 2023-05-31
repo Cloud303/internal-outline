@@ -194,7 +194,7 @@ class Document extends ParanoidModel {
 
   @AllowNull
   @Column
-  coverImgPositionY: string | null;
+  coverImgPositionY: number | null;
 
   @Column(DataType.ARRAY(DataType.STRING))
   previousTitles: string[] = [];

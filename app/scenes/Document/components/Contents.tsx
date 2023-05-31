@@ -99,7 +99,7 @@ const Wrapper = styled.div<{ isFullWidth: boolean }>`
 
 const Sticky = styled.div`
   position: sticky;
-  top: 80px;
+  top: 50%;
   max-height: calc(100vh - 80px);
 
   background: ${s("background")};

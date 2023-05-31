@@ -37,6 +37,8 @@ export default class AttachmentHelper {
     switch (preset) {
       case AttachmentPreset.Avatar:
         return "public-read";
+      case AttachmentPreset.CoverImg:
+        return "public-read";
       default:
         return env.AWS_S3_ACL;
     }

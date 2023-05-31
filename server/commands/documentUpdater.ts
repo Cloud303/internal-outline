@@ -66,10 +66,10 @@ export default async function documentUpdater({
     document.coverImg = coverImg;
   }
   if (coverImgPositionX || coverImgPositionX === "") {
-    document.coverImgPositionX = coverImgPositionX;
+    document.coverImgPositionX = Number(coverImgPositionX);
   }
   if (coverImgPositionY || coverImgPositionY === "") {
-    document.coverImgPositionY = coverImgPositionY;
+    document.coverImgPositionY = Number(coverImgPositionY);
   }
   if (editorVersion) {
     document.editorVersion = editorVersion;

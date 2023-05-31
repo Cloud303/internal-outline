@@ -306,6 +306,8 @@ class DocumentScene extends React.Component<Props> {
     }
 
     document.text = text;
+    document.coverImgPositionX = Number(document.coverImgPositionX);
+    document.coverImgPositionY = Number(document.coverImgPositionY);
     document.tasks = getTasks(document.text);
 
     // prevent autosave if nothing has changed
@@ -473,24 +475,20 @@ class DocumentScene extends React.Component<Props> {
 
     const handleRemoveCoverImg = () => {
       this.coverImg = "";
+      this.coverImgPositionX = 0;
+      this.coverImgPositionY = 0;
       document.coverImg = "";
 
       this.updateIsDirty();
       this.autosave();
     };
 
-    const handleUpdatePostion = (
-      positionX: number | string,
-      positionY: number | string
-    ) => {
+    const handleUpdatePostion = (positionX: number, positionY: number) => {
       this.coverImgPositionX = positionX;
       this.coverImgPositionY = positionY;
     };
 
-    const handleCoverPosition = (
-      positionY: number | string,
-      positionX: number | string
-    ) => {
+    const handleCoverPosition = (positionY: number, positionX: number) => {
       document.coverImgPositionX = positionX;
       document.coverImgPositionY = positionY;
 
@@ -576,8 +574,8 @@ class DocumentScene extends React.Component<Props> {
               handleEditCover={handleEditCover}
               handleRemoveCoverImg={handleRemoveCoverImg}
               handleCoverPosition={handleCoverPosition}
-              positionX={this.coverImgPositionX}
-              positionY={this.coverImgPositionY}
+              positionX={Number(this.coverImgPositionX)}
+              positionY={Number(this.coverImgPositionY)}
             />
             {/* <div
               style={{
@@ -618,8 +616,8 @@ class DocumentScene extends React.Component<Props> {
                         coverImg={
                           this.coverImg ? this.coverImg : document.coverImg
                         }
-                        positionY={document.coverImgPositionY}
-                        positionX={document.coverImgPositionX}
+                        positionY={Number(document.coverImgPositionY)}
+                        positionX={Number(document.coverImgPositionX)}
                         handleUpdatePostion={handleUpdatePostion}
                         editCover={this.editCover}
                         document={document}

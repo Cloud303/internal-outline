@@ -31,8 +31,8 @@ type Props = Omit<EditorProps, "extensions" | "editorStyle"> & {
   onChangeTitle: (text: string) => void;
   coverImg?: string | null | void | unknown;
   editCover: any;
-  positionY: any;
-  positionX: any;
+  positionY: number;
+  positionX: number;
   handleUpdatePostion: any;
   id: string;
   document: Document;
@@ -160,7 +160,6 @@ function DocumentEditor(props: Props, ref: React.RefObject<any>) {
   const { setEditor } = useDocumentContext();
   const handleRefChanged = React.useCallback(setEditor, [setEditor]);
   const EditorComponent = multiplayer ? MultiplayerEditor : Editor;
-
   return (
     <Flex auto column>
       <EditableImg

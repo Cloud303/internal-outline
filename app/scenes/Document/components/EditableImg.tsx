@@ -9,8 +9,8 @@ type Props = {
   document: Document;
   readOnly?: boolean;
   editCover: boolean;
-  positionX: any;
-  positionY: any;
+  positionX: number;
+  positionY: number;
   handleUpdatePostion: any;
 };
 
@@ -41,7 +41,7 @@ const EditableImg = ({
     }
   }, [positionY, positionX]);
 
-  const handleStop = (e: any, data: { x: any; y: any }) => {
+  const handleStop = (e: any, data: { x: number; y: number }) => {
     setDragPosition({
       x: data.x,
       y: data.y,
