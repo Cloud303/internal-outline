@@ -433,24 +433,15 @@ class DocumentScene extends React.Component<Props> {
   }
 
   render() {
-    const {
-      document,
-      revision,
-      readOnly,
-      abilities,
-      auth,
-      ui,
-      shareId,
-      t,
-    } = this.props;
+    const { document, revision, readOnly, abilities, auth, ui, shareId, t } =
+      this.props;
     const team = auth.team;
     const isShare = !!shareId;
     const embedsDisabled =
       (team && team.documentEmbeds === false) || document.embedsDisabled;
 
     const hasHeadings = this.headings.length > 0;
-    const showContents =
-      ui.tocVisible && ((readOnly && hasHeadings) || !readOnly);
+    const showContents = ui.tocVisible && readOnly && hasHeadings; // || !readOnly
     const multiplayerEditor =
       !document.isArchived && !document.isDeleted && !revision && !isShare;
 
