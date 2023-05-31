@@ -72,7 +72,6 @@ class UiStore {
   constructor() {
     // Rehydrate
     const data: Partial<UiStore> = Storage.get(UI_STORE) || {};
-
     // system theme listeners
     if (window.matchMedia) {
       const colorSchemeQueryList = window.matchMedia(
@@ -89,14 +88,14 @@ class UiStore {
         colorSchemeQueryList.addListener(setSystemTheme);
       }
     }
-
     // persisted keys
     this.languagePromptDismissed = data.languagePromptDismissed;
     this.sidebarCollapsed = !!data.sidebarCollapsed;
     this.sidebarWidth = data.sidebarWidth || defaultTheme.sidebarWidth;
     this.sidebarRightWidth =
       data.sidebarRightWidth || defaultTheme.sidebarRightWidth;
-    this.tocVisible = !!data.tocVisible;
+    this.tocVisible =
+      data.tocVisible !== undefined ? !!data.tocVisible : this.tocVisible;
     this.commentsExpanded = data.commentsExpanded || [];
     this.theme = data.theme || Theme.System;
 
