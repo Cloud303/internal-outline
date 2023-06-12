@@ -578,6 +578,7 @@ h6 {
   border-radius: 2px;
 
   &:hover {
+    ${props.readOnly ? "cursor: var(--pointer);" : ""}
     background: ${transparentize(0.5, props.theme.brand.marine)};
   }
 }
@@ -740,7 +741,7 @@ a:hover {
 ul,
 ol {
   margin: ${props.rtl ? "0 -26px 0 0.1em" : "0 0.1em 0 -26px"};
-  padding: ${props.rtl ? "0 44px 0 0" : "0 0 0 44px"};
+  padding: ${props.rtl ? "0 48px 0 0" : "0 0 0 48px"};
 }
 
 ol ol {

@@ -554,8 +554,8 @@ class DocumentScene extends React.Component<Props> {
             <Header
               document={document}
               documentHasHeadings={hasHeadings}
+              revision={revision}
               shareId={shareId}
-              isRevision={!!revision}
               isDraft={document.isDraft}
               isEditing={!readOnly && !team?.seamlessEditing}
               isSaving={this.isSaving}
@@ -635,7 +635,8 @@ class DocumentScene extends React.Component<Props> {
                         onPublish={this.onPublish}
                         onCancel={this.goBack}
                         readOnly={readOnly}
-                        readOnlyWriteCheckboxes={readOnly && abilities.update}
+                        canUpdate={abilities.update}
+                        canComment={abilities.comment}
                       >
                         {shareId && (
                           <ReferencesWrapper isOnlyTitle={document.isOnlyTitle}>
