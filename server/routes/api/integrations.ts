@@ -110,7 +110,9 @@ router.post(
 
     if (integration.type === IntegrationType.Post) {
       integration.events = events.filter((event: string) =>
-        ["documents.update", "documents.publish"].includes(event)
+        ["documents.update", "documents.publish", "documents.move"].includes(
+          event
+        )
       );
     }
 
