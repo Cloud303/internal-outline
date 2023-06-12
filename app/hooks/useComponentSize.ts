@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
 
-export default function useComponentSize(
-  ref: React.RefObject<HTMLElement>
-): {
+export default function useComponentSize(ref: React.RefObject<HTMLElement>): {
   width: number;
   height: number;
 } {

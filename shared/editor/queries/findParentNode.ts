@@ -10,9 +10,10 @@ type ContentNodeWithPos = {
   node: Node;
 };
 
-export const findParentNode = (predicate: Predicate) => ({
-  $from,
-}: Selection) => findParentNodeClosestToPos($from, predicate);
+export const findParentNode =
+  (predicate: Predicate) =>
+  ({ $from }: Selection) =>
+    findParentNodeClosestToPos($from, predicate);
 
 /**
  * Iterates over parent nodes starting from the given `$pos`, returning the
