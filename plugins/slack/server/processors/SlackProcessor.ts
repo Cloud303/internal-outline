@@ -17,6 +17,8 @@ import presentMessageAttachment from "../presenters/messageAttachment";
 export default class SlackProcessor extends BaseProcessor {
   static applicableEvents: Event["name"][] = [
     "documents.publish",
+    "documents.move",
+    "documents.update",
     "revisions.create",
     "integrations.create",
   ];
@@ -25,6 +27,9 @@ export default class SlackProcessor extends BaseProcessor {
     switch (event.name) {
       case "documents.publish":
       case "revisions.create":
+        return this.documentUpdated(event);
+      case "documents.move":
+      case "documents.update":
         return this.documentUpdated(event);
 
       case "integrations.create":
@@ -126,6 +131,9 @@ export default class SlackProcessor extends BaseProcessor {
 
     if (event.name === "documents.publish") {
       text = `${document.createdBy.name} published a new document`;
+    }
+    if (event.name === "documents.move") {
+      text = `${document.createdBy.name} moved a document`;
     }
 
     await fetch(integration.settings.url, {
