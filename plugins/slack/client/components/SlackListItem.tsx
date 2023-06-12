@@ -46,6 +46,7 @@ function SlackListItem({ integration, collection }: Props) {
   const mapping = {
     "documents.publish": t("document published"),
     "documents.update": t("document updated"),
+    "documents.move": t("document moved"),
   };
 
   const popover = usePopoverState({
@@ -96,6 +97,12 @@ function SlackListItem({ integration, collection }: Props) {
                 label={t("Document updated")}
                 name="documents.update"
                 checked={integration.events.includes("documents.update")}
+                onChange={handleChange}
+              />
+              <Switch
+                label={t("Document Moved")}
+                name="documents.move"
+                checked={integration.events.includes("documents.move")}
                 onChange={handleChange}
               />
             </Events>
