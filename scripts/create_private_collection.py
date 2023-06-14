@@ -86,8 +86,13 @@ def main():
         if user['isSuspended'] is False
     ]
 
+    response = c.list_collections()
+    collections = {c['name'] for c in response}
+
     for user in users:
         name = user['name']
+        if name in collections:
+            continue
         response = c.create_collections(
             name=name,
             description=f'Private collection for {name}',
