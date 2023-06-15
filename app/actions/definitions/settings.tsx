@@ -47,7 +47,8 @@ export const changeTheme = createAction({
     stores.ui.resolvedTheme === "light" ? <SunIcon /> : <MoonIcon />,
   keywords: "appearance display",
   section: SettingsSection,
-  children: [changeToLightTheme, changeToDarkTheme, changeToSystemTheme],
+  children: [changeToLightTheme],
+  // children: [changeToLightTheme, changeToDarkTheme, changeToSystemTheme],
 });
 
 export const rootSettingsActions = [changeTheme];
