@@ -90,11 +90,12 @@ def main():
 
     for user in users:
         name = user['name']
-        if name in collections:
+        collection_name = f'Private - {name}'
+        if collection_name in collections:
             continue
 
         response = c.create_collections(
-            name=name,
+            name=collection_name,
             description=f'Private collection for {name}',
             private=True,
         )
