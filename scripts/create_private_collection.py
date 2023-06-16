@@ -76,7 +76,7 @@ def main():
     )
 
     args = parser.parse_args()
-    c = Client(api_url=args.api_url)
+    c = Client(**{k: v for k,v in vars(args).items() if v is not None})
 
     response = c.list_users()
     users = [
