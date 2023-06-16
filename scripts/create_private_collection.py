@@ -78,20 +78,27 @@ def main():
     args = parser.parse_args()
     c = Client(**{k: v for k,v in vars(args).items() if v is not None})
 
-    response = c.list_users()
+    response = c.list_users(
+        limit=100,
+    )
     users = [
         {k: user[k] for k in {'id', 'name'}}
         for user in response
         if user['isSuspended'] is False
     ]
+    print(f'Found {len(users)} users')
 
-    response = c.list_collections()
-    collections = {c['name'] for c in response}
+    response = c.list_collections(
+        limit=100,
+    )
+    prefix = 'Private - '
+    collections = {c['name'] for c in response if prefix in c['name']}
 
     for user in users:
         name = user['name']
-        collection_name = f'Private - {name}'
+        collection_name = prefix + name
         if collection_name in collections:
+            print(f'Skipping creation of collection for {name}')
             continue
 
         response = c.create_collections(
@@ -100,12 +107,14 @@ def main():
             private=True,
         )
         collection = response['id']
+        print(f'Created collection {collection} for {name}')
 
         response = c.add_user_to_collection(
             id=collection,
             userId=user['id'],
             permission='read_write',
         )
+        print(f'User {name} ({user["id"]}) added with read_write to {collection}')
 
 if __name__ == '__main__':
     main()
