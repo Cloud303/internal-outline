@@ -12,11 +12,11 @@ from getpass import getpass
 @dataclass
 class Client():
     api_key: str = field(
-        default=os.environ.get('API_KEY'),
+        default_factory=lambda: os.environ.get('API_KEY'),
         metadata={'display_name': 'Outline API Key'},
     )
     api_url: str = field(
-        default=os.environ.get('API_URL'),
+        default_factory=lambda: os.environ.get('API_URL'),
         metadata={'display_name': 'Outline URL'},
     )
 
