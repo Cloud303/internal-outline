@@ -7,7 +7,6 @@ import requests
 from dataclasses import dataclass
 from dataclasses import field
 from getpass import getpass
-from pprint import pprint
 
 
 @dataclass
@@ -93,18 +92,19 @@ def main():
         name = user['name']
         if name in collections:
             continue
+
         response = c.create_collections(
             name=name,
             description=f'Private collection for {name}',
             private=True,
         )
+        collection = response['id']
 
         response = c.add_user_to_collection(
-            id=response[0]['id'],
+            id=collection,
             userId=user['id'],
+            permission='read_write',
         )
-        pprint(response)
-
 
 if __name__ == '__main__':
     main()
