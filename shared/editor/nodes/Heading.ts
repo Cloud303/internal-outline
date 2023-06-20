@@ -27,7 +27,7 @@ export default class Heading extends Node {
   get defaultOptions() {
     return {
       levels: [1, 2, 3, 4],
-      collapsed: undefined,
+      collapsed: Storage.get("AUTH_STORE")?.user ? false : true,
     };
   }
 
@@ -38,7 +38,7 @@ export default class Heading extends Node {
           default: 1,
         },
         collapsed: {
-          default: undefined,
+          default: Storage.get("AUTH_STORE")?.user ? false : true,
         },
       },
       content: "inline*",

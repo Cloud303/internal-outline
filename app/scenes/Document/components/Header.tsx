@@ -200,7 +200,7 @@ function DocumentHeader({
         }
         actions={
           <>
-            {appearanceAction}
+            {/* {appearanceAction} */}
             {canEdit ? editAction : <div />}
           </>
         }
