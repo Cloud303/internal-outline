@@ -150,17 +150,19 @@ export default class SlackProcessor extends BaseProcessor {
       Collection ID: ${parentCollection?.id}
       parentDocument ID: ${parentDocument?.id}
       parentDocument title: ${parentDocument?.title}
+      Document ID: ${document?.id}
+      Document title: ${document?.title}
       `;
-      // await fetch(integration.settings.url, {
+      // await fetch("", {
       //   method: "POST",
       //   headers: {
       //     "Content-Type": "application/json",
       //   },
       //   body: JSON.stringify({
-      //     text,
-      //     attachments: [
-      //       presentMessageAttachment(document, team, document.collection),
-      //     ],
+      //     document_id: document.id,
+      //     document_name: document.title,
+      //     parent_id: parentDocument?.id,
+      //     parent_name: parentDocument?.title,
       //   }),
       // });
     }
