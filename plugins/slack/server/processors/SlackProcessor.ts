@@ -134,10 +134,22 @@ export default class SlackProcessor extends BaseProcessor {
       text = `${document.createdBy.name} published a new document`;
     }
     if (event.name === "documents.move") {
-      console.log("document.collection:", document?.collection);
       console.log("document?.collectionId:", document?.collectionId);
-      console.log("document.parentDocument:", document?.parentDocument);
-      console.log("document.parentDocumentId:", document?.parentDocumentId);
+      console.log("document.parentDocument:", document?.parentDocumentId);
+      try {
+        const [parentDocument, parentCollection] = await Promise.all([
+          Document.findByPk(document.parentDocumentId),
+          Collection.findByPk(document.collectionId),
+        ]);
+        console.log("parentDocument object", JSON.stringify(parentDocument));
+        console.log(
+          "parentCollection object",
+          JSON.stringify(parentCollection)
+        );
+      } catch (error) {
+        console.log("parentDocument, parentCollection error", error);
+      }
+
       text = `${document.createdBy.name} moved a document`;
       // await fetch(integration.settings.url, {
       //   method: "POST",
