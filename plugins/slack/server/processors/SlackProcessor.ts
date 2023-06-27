@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { differenceInMilliseconds } from "date-fns";
 import fetch from "fetch-with-proxy";
 import { Op } from "sequelize";
@@ -133,7 +134,23 @@ export default class SlackProcessor extends BaseProcessor {
       text = `${document.createdBy.name} published a new document`;
     }
     if (event.name === "documents.move") {
-      text = `${document.createdBy.name} moved a document`;
+      const documentCollection = document.collection;
+      console.log("documentCollection?.name", documentCollection?.name);
+      const parentDocument = document.parentDocument;
+      console.log("parentDocument?.title", parentDocument?.title);
+      text = `${document.createdBy.name} moved a document to collection: ${documentCollection?.name} under document: ${parentDocument?.title}`;
+      // await fetch(integration.settings.url, {
+      //   method: "POST",
+      //   headers: {
+      //     "Content-Type": "application/json",
+      //   },
+      //   body: JSON.stringify({
+      //     text,
+      //     attachments: [
+      //       presentMessageAttachment(document, team, document.collection),
+      //     ],
+      //   }),
+      // });
     }
 
     await fetch(integration.settings.url, {
