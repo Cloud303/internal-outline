@@ -12,3 +12,4 @@ fakes3/*
 *.pem
 *.key
 *.cert
+.envrc
