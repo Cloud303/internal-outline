@@ -220,7 +220,7 @@ function MultiplayerEditor({ onSynced, ...props }: Props, ref: any) {
 
   React.useEffect(() => {
     if (isLocalSynced && isRemoteSynced) {
-      onSynced?.();
+      void onSynced?.();
     }
   }, [onSynced, isLocalSynced, isRemoteSynced]);
 
@@ -236,14 +236,14 @@ function MultiplayerEditor({ onSynced, ...props }: Props, ref: any) {
       !isVisible &&
       remoteProvider.status === WebSocketStatus.Connected
     ) {
-      remoteProvider.disconnect();
+      void remoteProvider.disconnect();
     }
 
     if (
       (!isIdle || isVisible) &&
       remoteProvider.status === WebSocketStatus.Disconnected
     ) {
-      remoteProvider.connect();
+      void remoteProvider.connect();
     }
   }, [remoteProvider, isIdle, isVisible]);
 
@@ -284,6 +284,7 @@ function MultiplayerEditor({ onSynced, ...props }: Props, ref: any) {
           embedsDisabled={props.embedsDisabled}
           defaultValue={props.defaultValue}
           extensions={props.extensions}
+          scrollTo={props.scrollTo}
           readOnly
           ref={ref}
         />

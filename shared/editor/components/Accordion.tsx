@@ -36,13 +36,12 @@ const AccordionEditor = ({
 
   const setAttributes = () => {
     // console.log(headingElement);
+    const { top, left } = headingElement.target.getBoundingClientRect();
+    const result = view.posAtCoords({ top, left });
     if (
       headingElement.target.localName === "input" &&
       values.heading !== heading
     ) {
-      const { top, left } = headingElement?.target?.getBoundingClientRect();
-      const result = view.posAtCoords({ top, left });
-
       if (result) {
         const transaction = tr.setNodeMarkup(result.inside, undefined, {
           heading: headingElement.target.value,
@@ -54,9 +53,6 @@ const AccordionEditor = ({
       headingElement.target.localName === "textarea" &&
       values.desc !== desc
     ) {
-      const { top, left } = headingElement?.target?.getBoundingClientRect();
-      const result = view.posAtCoords({ top, left });
-
       if (result) {
         const transaction = tr.setNodeMarkup(result.inside, undefined, {
           heading,

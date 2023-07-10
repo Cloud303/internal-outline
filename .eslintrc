@@ -3,6 +3,7 @@
   "parserOptions": {
     "sourceType": "module",
     "extraFileExtensions": [".json"],
+    "project": "./tsconfig.json",
     "ecmaFeatures": {
       "jsx": true
     }

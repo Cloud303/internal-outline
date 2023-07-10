@@ -22,6 +22,7 @@ import {
   ValidationError,
   IncorrectEditionError,
 } from "@server/errors";
+import Logger from "@server/logging/Logger";
 import auth from "@server/middlewares/authentication";
 import { rateLimiter } from "@server/middlewares/rateLimiter";
 import validate from "@server/middlewares/validate";
@@ -824,13 +825,15 @@ router.post(
     // When requesting subsequent pages of search results we don't want to record
     // duplicate search query records
     if (offset === 0) {
-      SearchQuery.create({
+      void SearchQuery.create({
         userId: user?.id,
         teamId,
         shareId,
         source: ctx.state.auth.type || "app", // we'll consider anything that isn't "api" to be "app"
         query,
         results: totalCount,
+      }).catch((err) => {
+        Logger.error("Failed to create search query", err);
       });
     }
 
@@ -911,6 +914,7 @@ router.post(
       coverImg,
       coverImgPositionX,
       coverImgPositionY,
+      done,
     } = ctx.input.body;
     const editorVersion = ctx.headers["x-editor-version"] as string | undefined;
     const { user } = ctx.state.auth;
@@ -952,6 +956,7 @@ router.post(
         coverImg,
         coverImgPositionX,
         coverImgPositionY,
+        done,
         ip: ctx.request.ip,
       });
 
@@ -1234,7 +1239,7 @@ router.post(
 
     const content = await fs.readFile(file.filepath);
     const document = await sequelize.transaction(async (transaction) => {
-      const { text, title } = await documentImporter({
+      const { text, state, title } = await documentImporter({
         user,
         fileName: file.originalFilename ?? file.newFilename,
         mimeType: file.mimetype ?? "",
@@ -1247,6 +1252,7 @@ router.post(
         source: "import",
         title,
         text,
+        state,
         publish,
         collectionId,
         parentDocumentId,

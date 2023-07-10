@@ -233,7 +233,7 @@ export class Editor extends React.PureComponent<
     window.addEventListener("theme-changed", this.dispatchThemeChanged);
 
     if (this.props.scrollTo) {
-      this.scrollToAnchor(this.props.scrollTo);
+      void this.scrollToAnchor(this.props.scrollTo);
     }
 
     this.calculateDir();
@@ -263,7 +263,7 @@ export class Editor extends React.PureComponent<
     }
 
     if (this.props.scrollTo && this.props.scrollTo !== prevProps.scrollTo) {
-      this.scrollToAnchor(this.props.scrollTo);
+      void this.scrollToAnchor(this.props.scrollTo);
     }
 
     // Focus at the end of the document if switching from readOnly and autoFocus
@@ -512,9 +512,13 @@ export class Editor extends React.PureComponent<
 
     try {
       this.mutationObserver?.disconnect();
-      this.mutationObserver = observe(hash, (element) => {
-        element.scrollIntoView({ behavior: "smooth" });
-      });
+      this.mutationObserver = observe(
+        hash,
+        (element) => {
+          element.scrollIntoView();
+        },
+        this.elementRef.current || undefined
+      );
     } catch (err) {
       // querySelector will throw an error if the hash begins with a number
       // or contains a period. This is protected against now by safeSlugify
@@ -879,7 +883,13 @@ const observe = (
       callback(match as HTMLElement);
     }
   });
-  observer.observe(targetNode, { childList: true, subtree: true });
+
+  if (targetNode.querySelector(selector)) {
+    callback(targetNode.querySelector(selector) as HTMLElement);
+  } else {
+    observer.observe(targetNode, { childList: true, subtree: true });
+  }
+
   return observer;
 };
 

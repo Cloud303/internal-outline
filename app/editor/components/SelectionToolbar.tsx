@@ -161,7 +161,7 @@ export default function SelectionToolbar(props: Props) {
         .addMark(from, to, markType.create({ href }))
     );
 
-    createAndInsertLink(view, title, href, {
+    return createAndInsertLink(view, title, href, {
       onCreateLink,
       onShowToast,
       dictionary,

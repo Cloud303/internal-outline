@@ -210,6 +210,8 @@ export const DocumentsUpdateSchema = BaseSchema.extend({
     coverImgPositionX: z.number().optional().nullish(),
     /** Cover img position Y */
     coverImgPositionY: z.number().optional().nullish(),
+    /** Whether the editing session is complete */
+    done: z.boolean().optional(),
   }),
 }).refine((req) => !(req.body.append && !req.body.text), {
   message: "text is required while appending",
