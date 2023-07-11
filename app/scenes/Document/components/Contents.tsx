@@ -56,26 +56,28 @@ export default function Contents({ headings, isFullWidth }: Props) {
   return (
     <Wrapper isFullWidth={isFullWidth}>
       <Sticky>
-        <Heading>{t("Contents")}</Heading>
-        {headings.length ? (
-          <List>
-            {headings
-              .filter((heading) => heading.level < 4)
-              .map((heading) => (
-                <ListItem
-                  key={heading.id}
-                  level={heading.level - headingAdjustment}
-                  active={activeSlug === heading.id}
-                >
-                  <Link href={`#${heading.id}`}>{heading.title}</Link>
-                </ListItem>
-              ))}
-          </List>
-        ) : (
-          <Empty>
-            {t("Headings you add to the document will appear here")}
-          </Empty>
-        )}
+        <Container>
+          <Heading>{t("Contents")}</Heading>
+          {headings.length ? (
+            <List>
+              {headings
+                .filter((heading) => heading.level < 4)
+                .map((heading) => (
+                  <ListItem
+                    key={heading.id}
+                    level={heading.level - headingAdjustment}
+                    active={activeSlug === heading.id}
+                  >
+                    <Link href={`#${heading.id}`}>{heading.title}</Link>
+                  </ListItem>
+                ))}
+            </List>
+          ) : (
+            <Empty>
+              {t("Headings you add to the document will appear here")}
+            </Empty>
+          )}
+        </Container>
       </Sticky>
     </Wrapper>
   );
@@ -84,6 +86,8 @@ export default function Contents({ headings, isFullWidth }: Props) {
 const Wrapper = styled.div<{ isFullWidth: boolean }>`
   width: 256px;
   display: none;
+  position: relative;
+  top: 8%;
 
   ${breakpoint("tablet")`
     display: block;
@@ -97,15 +101,16 @@ const Wrapper = styled.div<{ isFullWidth: boolean }>`
     `}
 `;
 
+const Container = styled.div`
+  padding-top: 4rem;
+`;
 const Sticky = styled.div`
   position: sticky;
-  top: 45%;
-  max-height: calc(100vh - 80px);
+  top: 0;
 
   background: ${s("background")};
   transition: ${s("backgroundTransition")};
 
-  margin-top: 72px;
   margin-right: 52px;
   min-width: 204px;
   width: 228px;
