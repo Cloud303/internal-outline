@@ -54,7 +54,7 @@ export default function Contents({ headings, isFullWidth }: Props) {
   const { t } = useTranslation();
 
   return (
-    <Wrapper isFullWidth={isFullWidth}>
+    <Wrapper isFullWidth={isFullWidth} headings={headings.length}>
       <Sticky>
         <Container>
           <Heading>{t("Contents")}</Heading>
@@ -83,11 +83,11 @@ export default function Contents({ headings, isFullWidth }: Props) {
   );
 }
 
-const Wrapper = styled.div<{ isFullWidth: boolean }>`
+const Wrapper = styled.div<{ isFullWidth: boolean; headings: number }>`
   width: 256px;
   display: none;
   position: relative;
-  top: 8%;
+  top: 40vh;
 
   ${breakpoint("tablet")`
     display: block;
@@ -96,13 +96,24 @@ const Wrapper = styled.div<{ isFullWidth: boolean }>`
   ${(props) =>
     !props.isFullWidth &&
     breakpoint("desktopLarge")`
+    top: 20vh;
     transform: translateX(-256px);
     width: 0;
     `}
 `;
 
+// ${(props) => props.headings >= 25 && `top: 12%;`}
+
+// ${(props) => props.headings <= 15 && ` top: 10%;`}
+
+// ${(props) => props.headings <= 10 && ` top: 15%;`}
+
+// ${(props) => props.headings <= 5 && ` top: 20%;`}
+
+// ${(props) => props.headings <= 1 && ` top: 35%;`}
+
 const Container = styled.div`
-  padding-top: 4rem;
+  padding-top: 5vh;
 `;
 const Sticky = styled.div`
   position: sticky;
