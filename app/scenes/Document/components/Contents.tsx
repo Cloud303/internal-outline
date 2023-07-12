@@ -10,6 +10,7 @@ import useWindowScrollPosition from "~/hooks/useWindowScrollPosition";
 const HEADING_OFFSET = 20;
 
 type Props = {
+  coverImg: string | void | null | unknown;
   isFullWidth: boolean;
   headings: {
     title: string;
@@ -18,7 +19,7 @@ type Props = {
   }[];
 };
 
-export default function Contents({ headings, isFullWidth }: Props) {
+export default function Contents({ coverImg, headings, isFullWidth }: Props) {
   const [activeSlug, setActiveSlug] = React.useState<string>();
   const position = useWindowScrollPosition({
     throttle: 100,
@@ -54,7 +55,12 @@ export default function Contents({ headings, isFullWidth }: Props) {
   const { t } = useTranslation();
 
   return (
-    <Wrapper isFullWidth={isFullWidth} headings={headings.length}>
+    <Wrapper
+      isFullWidth={isFullWidth}
+      headings={headings.length}
+      coverImg={coverImg}
+    >
+      {console.log("cover", coverImg)}
       <Sticky>
         <Container>
           <Heading>{t("Contents")}</Heading>
@@ -83,7 +89,11 @@ export default function Contents({ headings, isFullWidth }: Props) {
   );
 }
 
-const Wrapper = styled.div<{ isFullWidth: boolean; headings: number }>`
+const Wrapper = styled.div<{
+  isFullWidth: boolean;
+  headings: number;
+  coverImg: string | void | null | unknown;
+}>`
   width: 256px;
   display: none;
   position: relative;
@@ -100,6 +110,8 @@ const Wrapper = styled.div<{ isFullWidth: boolean; headings: number }>`
     transform: translateX(-256px);
     width: 0;
     `}
+
+  ${(props) => !props.coverImg && ` top: 0vh;`}
 `;
 
 // ${(props) => props.headings >= 25 && `top: 12%;`}

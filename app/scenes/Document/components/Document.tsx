@@ -664,6 +664,9 @@ class DocumentScene extends React.Component<Props> {
                         <Contents
                           headings={this.headings}
                           isFullWidth={document.fullWidth}
+                          coverImg={
+                            this.coverImg ? this.coverImg : document.coverImg
+                          }
                         />
                       )}
                     </>
