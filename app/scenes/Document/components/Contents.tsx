@@ -10,6 +10,7 @@ import useWindowScrollPosition from "~/hooks/useWindowScrollPosition";
 const HEADING_OFFSET = 20;
 
 type Props = {
+  coverImg: string | void | null | unknown;
   isFullWidth: boolean;
   headings: {
     title: string;
@@ -18,7 +19,7 @@ type Props = {
   }[];
 };
 
-export default function Contents({ headings, isFullWidth }: Props) {
+export default function Contents({ coverImg, headings, isFullWidth }: Props) {
   const [activeSlug, setActiveSlug] = React.useState<string>();
   const position = useWindowScrollPosition({
     throttle: 100,
@@ -54,36 +55,49 @@ export default function Contents({ headings, isFullWidth }: Props) {
   const { t } = useTranslation();
 
   return (
-    <Wrapper isFullWidth={isFullWidth}>
+    <Wrapper
+      isFullWidth={isFullWidth}
+      headings={headings.length}
+      coverImg={coverImg}
+    >
+      {console.log("cover", coverImg)}
       <Sticky>
-        <Heading>{t("Contents")}</Heading>
-        {headings.length ? (
-          <List>
-            {headings
-              .filter((heading) => heading.level < 4)
-              .map((heading) => (
-                <ListItem
-                  key={heading.id}
-                  level={heading.level - headingAdjustment}
-                  active={activeSlug === heading.id}
-                >
-                  <Link href={`#${heading.id}`}>{heading.title}</Link>
-                </ListItem>
-              ))}
-          </List>
-        ) : (
-          <Empty>
-            {t("Headings you add to the document will appear here")}
-          </Empty>
-        )}
+        <Container>
+          <Heading>{t("Contents")}</Heading>
+          {headings.length ? (
+            <List>
+              {headings
+                .filter((heading) => heading.level < 4)
+                .map((heading) => (
+                  <ListItem
+                    key={heading.id}
+                    level={heading.level - headingAdjustment}
+                    active={activeSlug === heading.id}
+                  >
+                    <Link href={`#${heading.id}`}>{heading.title}</Link>
+                  </ListItem>
+                ))}
+            </List>
+          ) : (
+            <Empty>
+              {t("Headings you add to the document will appear here")}
+            </Empty>
+          )}
+        </Container>
       </Sticky>
     </Wrapper>
   );
 }
 
-const Wrapper = styled.div<{ isFullWidth: boolean }>`
+const Wrapper = styled.div<{
+  isFullWidth: boolean;
+  headings: number;
+  coverImg: string | void | null | unknown;
+}>`
   width: 256px;
   display: none;
+  position: relative;
+  top: 40vh;
 
   ${breakpoint("tablet")`
     display: block;
@@ -92,20 +106,34 @@ const Wrapper = styled.div<{ isFullWidth: boolean }>`
   ${(props) =>
     !props.isFullWidth &&
     breakpoint("desktopLarge")`
+    top: 20vh;
     transform: translateX(-256px);
     width: 0;
     `}
+
+  ${(props) => !props.coverImg && ` top: 0vh;`}
 `;
 
+// ${(props) => props.headings >= 25 && `top: 12%;`}
+
+// ${(props) => props.headings <= 15 && ` top: 10%;`}
+
+// ${(props) => props.headings <= 10 && ` top: 15%;`}
+
+// ${(props) => props.headings <= 5 && ` top: 20%;`}
+
+// ${(props) => props.headings <= 1 && ` top: 35%;`}
+
+const Container = styled.div`
+  padding-top: 5vh;
+`;
 const Sticky = styled.div`
   position: sticky;
-  top: 45%;
-  max-height: calc(100vh - 80px);
+  top: 0;
 
   background: ${s("background")};
   transition: ${s("backgroundTransition")};
 
-  margin-top: 72px;
   margin-right: 52px;
   min-width: 204px;
   width: 228px;
