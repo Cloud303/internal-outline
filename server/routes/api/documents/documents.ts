@@ -1279,7 +1279,7 @@ router.post(
     const {
       title = "",
       text = "",
-      publish,
+      publish = true,
       collectionId,
       parentDocumentId,
       templateId,
