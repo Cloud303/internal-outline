@@ -2,7 +2,8 @@
 import path from "path";
 import { glob } from "glob";
 import Router from "koa-router";
-import { find, sortBy } from "lodash";
+import find from "lodash/find";
+import sortBy from "lodash/sortBy";
 import env from "@server/env";
 import Team from "@server/models/Team";
 
@@ -73,7 +74,7 @@ export default class AuthenticationHelper {
    * @returns A list of authentication providers
    */
   public static providersForTeam(team?: Team) {
-    const isCloudHosted = env.isCloudHosted();
+    const isCloudHosted = env.isCloudHosted;
 
     return AuthenticationHelper.providers
       .sort((config) => (config.id === "email" ? 1 : -1))

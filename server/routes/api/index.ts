@@ -32,6 +32,7 @@ import shares from "./shares";
 import stars from "./stars";
 import subscriptions from "./subscriptions";
 import teams from "./teams";
+import urls from "./urls";
 import users from "./users";
 import views from "./views";
 
@@ -59,8 +60,11 @@ glob
   .forEach((filePath: string) => {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const pkg: Router = require(path.join(process.cwd(), filePath)).default;
-    router.use("/", pkg.routes());
-    Logger.debug("lifecycle", `Registered API routes for ${filePath}`);
+
+    if (pkg && "routes" in pkg) {
+      router.use("/", pkg.routes());
+      Logger.debug("lifecycle", `Registered API routes for ${filePath}`);
+    }
   });
 
 // routes
@@ -86,6 +90,7 @@ router.use("/", attachments.routes());
 router.use("/", cron.routes());
 router.use("/", groups.routes());
 router.use("/", fileOperationsRoute.routes());
+router.use("/", urls.routes());
 
 if (env.ENVIRONMENT === "development") {
   router.use("/", developer.routes());

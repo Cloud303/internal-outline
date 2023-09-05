@@ -1,4 +1,5 @@
-import { isNil, isNull } from "lodash";
+import isNil from "lodash/isNil";
+import isNull from "lodash/isNull";
 import { v4 as uuidv4 } from "uuid";
 import {
   CollectionPermission,
@@ -376,6 +377,7 @@ export async function buildDocument(
       publishedAt: isNull(overrides.collectionId) ? null : new Date(),
       lastModifiedById: overrides.userId,
       createdById: overrides.userId,
+      editorVersion: 2,
       ...overrides,
     },
     {

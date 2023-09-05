@@ -1,6 +1,5 @@
 /* eslint-disable no-console */
 import { differenceInMilliseconds } from "date-fns";
-import fetch from "fetch-with-proxy";
 import { Op } from "sequelize";
 import { IntegrationService, IntegrationType } from "@shared/types";
 import { Minute } from "@shared/utils/time";
@@ -13,6 +12,7 @@ import {
   RevisionEvent,
   Event,
 } from "@server/types";
+import fetch from "@server/utils/fetch";
 import presentMessageAttachment from "../presenters/messageAttachment";
 
 export default class SlackProcessor extends BaseProcessor {
@@ -128,10 +128,10 @@ export default class SlackProcessor extends BaseProcessor {
     if (!integration) {
       return;
     }
-    let text = `${document.updatedBy.name} updated a document`;
+    let text = `${document.updatedBy.name} updated "${document.title}"`;
 
     if (event.name === "documents.publish") {
-      text = `${document.createdBy.name} published a new document`;
+      text = `${document.createdBy.name} published "${document.title}"`;
     }
     if (event.name === "documents.move") {
       const [parentDocument, parentCollection] = await Promise.all([

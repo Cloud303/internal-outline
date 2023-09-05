@@ -1,6 +1,7 @@
 import { EditorState } from "prosemirror-state";
 import * as React from "react";
 import styled from "styled-components";
+import { Primitive } from "utility-types";
 import { IntegrationType } from "../../types";
 import type { IntegrationSettings } from "../../types";
 import { urlRegex } from "../../utils/urls";
@@ -26,6 +27,7 @@ import GoogleDrawings from "./GoogleDrawings";
 import GoogleDrive from "./GoogleDrive";
 import GoogleForms from "./GoogleForms";
 import GoogleLookerStudio from "./GoogleLookerStudio";
+import GoogleMaps from "./GoogleMaps";
 import GoogleSheets from "./GoogleSheets";
 import GoogleSlides from "./GoogleSlides";
 import Grist from "./Grist";
@@ -45,6 +47,7 @@ import Spotify from "./Spotify";
 import Tldraw from "./Tldraw";
 import Trello from "./Trello";
 import Typeform from "./Typeform";
+import Valtown from "./Valtown";
 import Vimeo from "./Vimeo";
 import Whimsical from "./Whimsical";
 import YouTube from "./YouTube";
@@ -76,7 +79,7 @@ export class EmbedDescriptor {
   keywords?: string;
   tooltip?: string;
   defaultHidden?: boolean;
-  attrs?: Record<string, any>;
+  attrs?: Record<string, Primitive>;
   visible?: boolean;
   active?: (state: EditorState) => boolean;
   component: typeof React.Component | React.FC<any>;
@@ -219,6 +222,13 @@ const embeds: EmbedDescriptor[] = [
     component: Diagrams,
   }),
   new EmbedDescriptor({
+    title: "Google Maps",
+    keywords: "maps",
+    icon: <Img src="/images/google-maps.png" alt="Google Maps" />,
+    component: GoogleMaps,
+    visible: true,
+  }),
+  new EmbedDescriptor({
     title: "Google Drawings",
     keywords: "drawings",
     icon: <Img src="/images/google-drawings.png" alt="Google Drawings" />,
@@ -358,9 +368,9 @@ const embeds: EmbedDescriptor[] = [
     component: Spotify,
   }),
   new EmbedDescriptor({
-    title: "Tldraw (beta)",
+    title: "Tldraw",
     keywords: "draw schematics diagrams",
-    icon: <Img src="/images/tldraw.png" alt="Tldraw (beta)" />,
+    icon: <Img src="/images/tldraw.png" alt="Tldraw" />,
     component: Tldraw,
   }),
   new EmbedDescriptor({
@@ -374,6 +384,12 @@ const embeds: EmbedDescriptor[] = [
     keywords: "form survey",
     icon: <Img src="/images/typeform.png" alt="Typeform" />,
     component: Typeform,
+  }),
+  new EmbedDescriptor({
+    title: "Valtown",
+    keywords: "code",
+    icon: <Img src="/images/valtown.png" alt="Valtown" />,
+    component: Valtown,
   }),
   new EmbedDescriptor({
     title: "Vimeo",

@@ -12,9 +12,10 @@ type Props = {
   collectionId?: string | null;
   parentDocumentId?: string | null;
   importId?: string;
-  templateDocument?: Document | null;
   publishedAt?: Date;
   template?: boolean;
+  templateDocument?: Document | null;
+  fullWidth?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
   user: User;
@@ -33,12 +34,13 @@ export default async function documentCreator({
   publish,
   collectionId,
   parentDocumentId,
+  template,
   templateDocument,
+  fullWidth,
   importId,
   createdAt,
   // allows override for import
   updatedAt,
-  template,
   user,
   editorVersion,
   publishedAt,
@@ -76,12 +78,21 @@ export default async function documentCreator({
       createdById: user.id,
       template,
       templateId,
+      fullWidth,
       publishedAt,
       importId,
       title: templateDocument
         ? DocumentHelper.replaceTemplateVariables(templateDocument.title, user)
         : title,
-      text: templateDocument ? templateDocument.text : text,
+      text: await DocumentHelper.replaceImagesWithAttachments(
+        DocumentHelper.replaceTemplateVariables(
+          templateDocument ? templateDocument.text : text,
+          user
+        ),
+        user,
+        ip,
+        transaction
+      ),
       state,
     },
     {
@@ -109,7 +120,11 @@ export default async function documentCreator({
   );
 
   if (publish) {
-    await document.publish(user.id, collectionId!, { transaction });
+    if (!collectionId) {
+      throw new Error("Collection ID is required to publish");
+    }
+
+    await document.publish(user.id, collectionId, { transaction });
     await Event.create(
       {
         name: "documents.publish",

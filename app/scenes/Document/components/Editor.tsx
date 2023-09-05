@@ -22,8 +22,9 @@ import {
 import { useDocumentContext } from "../../../components/DocumentContext";
 import MultiplayerEditor from "./AsyncMultiplayerEditor";
 import DocumentMeta from "./DocumentMeta";
+import DocumentTitle from "./DocumentTitle";
 import EditableImg from "./EditableImg";
-import EditableTitle from "./EditableTitle";
+// import EditableTitle from "./EditableTitle";
 
 const extensions = withComments(richExtensions);
 
@@ -34,6 +35,7 @@ type Props = Omit<EditorProps, "extensions" | "editorStyle"> & {
   positionY: number;
   positionX: number;
   handleUpdatePostion: any;
+  onChangeEmoji: (emoji: string | null) => void;
   id: string;
   document: Document;
   isDraft: boolean;
@@ -66,6 +68,7 @@ function DocumentEditor(props: Props, ref: React.RefObject<any>) {
     positionY,
     positionX,
     onChangeTitle,
+    onChangeEmoji,
     isDraft,
     shareId,
     readOnly,
@@ -172,14 +175,21 @@ function DocumentEditor(props: Props, ref: React.RefObject<any>) {
         positionY={positionY}
         handleUpdatePostion={handleUpdatePostion}
       />
-      <EditableTitle
+
+      <DocumentTitle
         ref={titleRef}
         readOnly={readOnly}
-        document={document}
+        documentId={document.id}
+        title={
+          !document.title && readOnly
+            ? document.titleWithDefault
+            : document.title
+        }
+        emoji={document.emoji}
+        onChangeTitle={onChangeTitle}
+        onChangeEmoji={onChangeEmoji}
         onGoToNextInput={handleGoToNextInput}
-        onChange={onChangeTitle}
         onBlur={handleBlur}
-        starrable={!shareId}
         placeholder={t("Untitled")}
       />
       {!shareId && (

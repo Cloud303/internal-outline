@@ -141,6 +141,11 @@ export type FetchOptions = {
   force?: boolean;
 };
 
+export type CollectionSort = {
+  field: string;
+  direction: "asc" | "desc";
+};
+
 // Pagination response in an API call
 export type Pagination = {
   limit: number;
@@ -197,6 +202,7 @@ export type WebsocketCollectionUpdateIndexEvent = {
 export type NavigationNode = {
   id: string;
   title: string;
+  emoji?: string | null;
   url: string;
   children: NavigationNode[];
   isDraft?: boolean;

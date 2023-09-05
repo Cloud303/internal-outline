@@ -1,7 +1,6 @@
-import { has } from "lodash";
+import has from "lodash/has";
 import { Transaction } from "sequelize";
 import { TeamPreference } from "@shared/types";
-import { sequelize } from "@server/database/sequelize";
 import env from "@server/env";
 import { Event, Team, TeamDomain, User } from "@server/models";
 
@@ -10,9 +9,16 @@ type TeamUpdaterProps = {
   ip?: string;
   user: User;
   team: Team;
+  transaction: Transaction;
 };
 
-const teamUpdater = async ({ params, user, team, ip }: TeamUpdaterProps) => {
+const teamUpdater = async ({
+  params,
+  user,
+  team,
+  ip,
+  transaction,
+}: TeamUpdaterProps) => {
   const {
     name,
     avatarUrl,
@@ -28,9 +34,7 @@ const teamUpdater = async ({ params, user, team, ip }: TeamUpdaterProps) => {
     preferences,
   } = params;
 
-  const transaction: Transaction = await sequelize.transaction();
-
-  if (subdomain !== undefined && env.SUBDOMAINS_ENABLED) {
+  if (subdomain !== undefined && env.isCloudHosted) {
     team.subdomain = subdomain === "" ? null : subdomain;
   }
 
@@ -110,35 +114,31 @@ const teamUpdater = async ({ params, user, team, ip }: TeamUpdaterProps) => {
 
   const changes = team.changed();
 
-  try {
-    const savedTeam = await team.save({
-      transaction,
-    });
-    if (changes) {
-      const data = changes.reduce(
-        (acc, curr) => ({ ...acc, [curr]: team[curr] }),
-        {}
-      );
+  const savedTeam = await team.save({
+    transaction,
+  });
 
-      await Event.create(
-        {
-          name: "teams.update",
-          actorId: user.id,
-          teamId: user.teamId,
-          data,
-          ip,
-        },
-        {
-          transaction,
-        }
-      );
-    }
-    await transaction.commit();
-    return savedTeam;
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
+  if (changes) {
+    const data = changes.reduce(
+      (acc, curr) => ({ ...acc, [curr]: team[curr] }),
+      {}
+    );
+
+    await Event.create(
+      {
+        name: "teams.update",
+        actorId: user.id,
+        teamId: user.teamId,
+        data,
+        ip,
+      },
+      {
+        transaction,
+      }
+    );
   }
+
+  return savedTeam;
 };
 
 export default teamUpdater;

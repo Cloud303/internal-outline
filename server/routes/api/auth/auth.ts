@@ -1,8 +1,8 @@
-import { subHours } from "date-fns";
+import { subHours, subMinutes } from "date-fns";
 import Router from "koa-router";
-import { uniqBy } from "lodash";
+import uniqBy from "lodash/uniqBy";
 import { TeamPreference } from "@shared/types";
-import { parseDomain } from "@shared/utils/domains";
+import { getCookieDomain, parseDomain } from "@shared/utils/domains";
 import env from "@server/env";
 import auth from "@server/middlewares/authentication";
 import { transaction } from "@server/middlewares/transaction";
@@ -26,7 +26,7 @@ router.post("auth.config", async (ctx: APIContext<T.AuthConfigReq>) => {
   // If self hosted AND there is only one team then that team becomes the
   // brand for the knowledge base and it's guest signin option is used for the
   // root login page.
-  if (!env.isCloudHosted()) {
+  if (!env.isCloudHosted) {
     const team = await Team.scope("withAuthenticationProviders").findOne();
 
     if (team) {
@@ -75,7 +75,7 @@ router.post("auth.config", async (ctx: APIContext<T.AuthConfigReq>) => {
 
   // If subdomain signin page then we return minimal team details to allow
   // for a custom screen showing only relevant signin options for that team.
-  else if (env.SUBDOMAINS_ENABLED && domain.teamSubdomain) {
+  else if (env.isCloudHosted && domain.teamSubdomain) {
     const team = await Team.scope("withAuthenticationProviders").findOne({
       where: {
         subdomain: domain.teamSubdomain,
@@ -139,6 +139,7 @@ router.post("auth.info", auth(), async (ctx: APIContext<T.AuthInfoReq>) => {
         includeDetails: true,
       }),
       team: presentTeam(team),
+      collaborationToken: user.getCollaborationToken(),
       availableTeams: uniqBy([...signedInTeams, ...availableTeams], "id").map(
         (team) =>
           presentAvailableTeam(
@@ -175,6 +176,11 @@ router.post(
         transaction,
       }
     );
+
+    ctx.cookies.set("accessToken", "", {
+      expires: subMinutes(new Date(), 1),
+      domain: getCookieDomain(ctx.hostname, env.isCloudHosted),
+    });
 
     ctx.body = {
       success: true,

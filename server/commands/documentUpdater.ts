@@ -13,6 +13,8 @@ type Props = {
   coverImgPositionY?: number;
   /** The new title */
   title?: string;
+  /** The document emoji */
+  emoji?: string | null;
   /** The new text content */
   text?: string;
   /** Whether the editing session is complete */
@@ -23,6 +25,8 @@ type Props = {
   templateId?: string | null;
   /** If the document should be displayed full-width on the screen */
   fullWidth?: boolean;
+  /** Whether insights should be visible on the document */
+  insightsEnabled?: boolean;
   /** Whether the text be appended to the end instead of replace */
   append?: boolean;
   /** Whether the document should be published to the collection */
@@ -46,10 +50,12 @@ export default async function documentUpdater({
   user,
   document,
   title,
+  emoji,
   text,
   editorVersion,
   templateId,
   fullWidth,
+  insightsEnabled,
   append,
   publish,
   collectionId,
@@ -75,6 +81,9 @@ export default async function documentUpdater({
   if (coverImgPositionY || coverImgPositionY === "") {
     document.coverImgPositionY = Number(coverImgPositionY);
   }
+  if (emoji !== undefined) {
+    document.emoji = emoji;
+  }
   if (editorVersion) {
     document.editorVersion = editorVersion;
   }
@@ -83,6 +92,9 @@ export default async function documentUpdater({
   }
   if (fullWidth !== undefined) {
     document.fullWidth = fullWidth;
+  }
+  if (insightsEnabled !== undefined) {
+    document.insightsEnabled = insightsEnabled;
   }
   if (text !== undefined) {
     document = DocumentHelper.applyMarkdownToDocument(document, text, append);
@@ -97,6 +109,7 @@ export default async function documentUpdater({
     teamId: document.teamId,
     actorId: user.id,
     data: {
+      done,
       title: document.title,
     },
     ip,

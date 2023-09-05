@@ -1,10 +1,12 @@
 import TestServer from "fetch-test-server";
 import { v4 as uuidv4 } from "uuid";
+import sharedEnv from "@shared/env";
 import { CollectionPermission } from "@shared/types";
-import { sequelize } from "@server/database/sequelize";
+import env from "@server/env";
 import { User, Document, Collection, Team } from "@server/models";
 import onerror from "@server/onerror";
 import webService from "@server/services/web";
+import { sequelize } from "@server/storage/database";
 
 export const seed = async () =>
   sequelize.transaction(async (transaction) => {
@@ -136,4 +138,18 @@ export function setupTestDatabase() {
 
   afterAll(disconnect);
   beforeEach(flush);
+}
+
+/**
+ * Set the environment to be cloud hosted
+ */
+export function setCloudHosted() {
+  return (env.URL = sharedEnv.URL = "https://app.outline.dev");
+}
+
+/**
+ * Set the environment to be self hosted
+ */
+export function setSelfHosted() {
+  return (env.URL = sharedEnv.URL = "https://wiki.example.com");
 }

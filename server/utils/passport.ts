@@ -1,6 +1,5 @@
 import crypto from "crypto";
 import { addMinutes, subMinutes } from "date-fns";
-import fetch from "fetch-with-proxy";
 import type { Context } from "koa";
 import {
   StateStoreStoreCallback,
@@ -11,6 +10,7 @@ import { getCookieDomain, parseDomain } from "@shared/utils/domains";
 import env from "@server/env";
 import { Team } from "@server/models";
 import { OAuthStateMismatchError } from "../errors";
+import fetch from "./fetch";
 
 export class StateStore {
   key = "state";
@@ -27,9 +27,8 @@ export class StateStore {
     const state = buildState(host, token, client);
 
     ctx.cookies.set(this.key, state, {
-      httpOnly: false,
       expires: addMinutes(new Date(), 10),
-      domain: getCookieDomain(ctx.hostname),
+      domain: getCookieDomain(ctx.hostname, env.isCloudHosted),
     });
 
     callback(null, token);
@@ -54,9 +53,8 @@ export class StateStore {
 
     // Destroy the one-time pad token and ensure it matches
     ctx.cookies.set(this.key, "", {
-      httpOnly: false,
       expires: subMinutes(new Date(), 1),
-      domain: getCookieDomain(ctx.hostname),
+      domain: getCookieDomain(ctx.hostname, env.isCloudHosted),
     });
 
     if (!token || token !== providedToken) {
@@ -102,11 +100,11 @@ export async function getTeamFromContext(ctx: Context) {
   const domain = parseDomain(host);
 
   let team;
-  if (!env.isCloudHosted()) {
+  if (!env.isCloudHosted) {
     team = await Team.findOne();
   } else if (domain.custom) {
     team = await Team.findOne({ where: { domain: domain.host } });
-  } else if (env.SUBDOMAINS_ENABLED && domain.teamSubdomain) {
+  } else if (domain.teamSubdomain) {
     team = await Team.findOne({
       where: { subdomain: domain.teamSubdomain },
     });

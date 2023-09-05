@@ -1,4 +1,4 @@
-import styled from "styled-components";
+import styled, { css } from "styled-components";
 
 type Props = {
   type?: "secondary" | "tertiary" | "danger";
@@ -14,7 +14,7 @@ type Props = {
  */
 const Text = styled.p<Props>`
   margin-top: 0;
-  text-align: ${(props) => (props.dir ? props.dir : "auto")};
+  text-align: ${(props) => (props.dir ? props.dir : "inherit")};
   color: ${(props) =>
     props.type === "secondary"
       ? props.theme.textSecondary
@@ -31,12 +31,17 @@ const Text = styled.p<Props>`
       : props.size === "xsmall"
       ? "13px"
       : "inherit"};
-  font-weight: ${(props) =>
-    props.weight === "bold"
-      ? 500
-      : props.weight === "normal"
-      ? "normal"
-      : "inherit"};
+
+  ${(props) =>
+    props.weight &&
+    css`
+      font-weight: ${props.weight === "bold"
+        ? 500
+        : props.weight === "normal"
+        ? 400
+        : "inherit"};
+    `}
+
   white-space: normal;
   user-select: ${(props) => (props.selectable ? "text" : "none")};
 `;
