@@ -87,13 +87,13 @@ function Login({ children }: Props) {
 
   React.useEffect(() => {
     // console.log(isCustomAuth);
-    if (isCustomAuth && isCustomAuth[0]?.id) {
+    if (isCustomAuth && isCustomAuth[0]?.id && !auth.loggedOut) {
       const href = needsRedirect
         ? `${env.URL}${isCustomAuth[0]?.authUrl}?host=${encodeURI(host)}`
         : isCustomAuth[0]?.authUrl;
       window.location.href = href;
     }
-  }, [isCustomAuth]);
+  }, [isCustomAuth, auth]);
   const handleGoSubdomain = React.useCallback(async (event) => {
     event.preventDefault();
     const data = Object.fromEntries(new FormData(event.target));

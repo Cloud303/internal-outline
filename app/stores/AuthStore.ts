@@ -77,6 +77,9 @@ export default class AuthStore {
   @observable
   lastSignedIn?: string | null;
 
+  @observable
+  loggedOut = false;
+
   /* Whether the user is currently saving their profile or team settings. */
   @observable
   isSaving = false;
@@ -143,6 +146,7 @@ export default class AuthStore {
     this.collaborationToken = data.collaborationToken;
     this.lastSignedIn = getCookie("lastSignedIn");
     this.addPolicies(data.policies);
+    this.loggedOut = false;
   }
 
   addPolicies(policies?: Policy[]) {
@@ -345,7 +349,9 @@ export default class AuthStore {
      * Whether the auth token should attempt to be revoked, this should be disabled
      * with requests from ApiClient to prevent infinite loops.
      */
-    tryRevokingToken = true
+    tryRevokingToken = true,
+
+    forcedLogout = false
   ) => {
     // if this logout was forced from an authenticated route then
     // save the current path so we can go back there once signed in
@@ -383,7 +389,9 @@ export default class AuthStore {
     this.collaborationToken = null;
     this.policies = [];
 
-    if (env.OIDC_LOGOUT_URL) {
+    if (env.OIDC_LOGOUT_URL && forcedLogout) {
+      console.log("OIDC_LOGOUT_URL");
+      this.loggedOut = true;
       window.location.href = env.OIDC_LOGOUT_URL;
     }
 
