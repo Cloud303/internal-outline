@@ -1,4 +1,4 @@
-import { throttle } from "lodash";
+import throttle from "lodash/throttle";
 import { observer } from "mobx-react";
 import { MenuIcon } from "outline-icons";
 import { transparentize } from "polished";
@@ -6,6 +6,7 @@ import * as React from "react";
 import styled from "styled-components";
 import breakpoint from "styled-components-breakpoint";
 import { depths, s } from "@shared/styles";
+import { supportsPassiveListener } from "@shared/utils/browser";
 import Button from "~/components/Button";
 import Fade from "~/components/Fade";
 import Flex from "~/components/Flex";
@@ -14,16 +15,16 @@ import useMobile from "~/hooks/useMobile";
 import useStores from "~/hooks/useStores";
 import { draggableOnDesktop, fadeOnDesktopBackgrounded } from "~/styles";
 import Desktop from "~/utils/Desktop";
-import { supportsPassiveListener } from "~/utils/browser";
 
 type Props = {
   left?: React.ReactNode;
   title: React.ReactNode;
   actions?: React.ReactNode;
   hasSidebar?: boolean;
+  className?: string;
 };
 
-function Header({ left, title, actions, hasSidebar }: Props) {
+function Header({ left, title, actions, hasSidebar, className }: Props) {
   const { ui } = useStores();
   const isMobile = useMobile();
   const hasMobileSidebar = hasSidebar && isMobile;
@@ -54,6 +55,7 @@ function Header({ left, title, actions, hasSidebar }: Props) {
     <Wrapper
       align="center"
       shrink={false}
+      className={className}
       $passThrough={passThrough}
       $insetTitleAdjust={ui.sidebarIsClosed && Desktop.hasInsetTitlebar()}
     >

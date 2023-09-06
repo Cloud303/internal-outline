@@ -1,4 +1,5 @@
 import path from "path";
+import { QueryTypes } from "sequelize";
 import {
   BeforeDestroy,
   BelongsTo,
@@ -10,13 +11,7 @@ import {
   DataType,
   IsNumeric,
 } from "sequelize-typescript";
-import {
-  publicS3Endpoint,
-  deleteFromS3,
-  getFileStream,
-  getSignedUrl,
-  getFileBuffer,
-} from "@server/utils/s3";
+import FileStorage from "@server/storage/files";
 import Document from "./Document";
 import Team from "./Team";
 import User from "./User";
@@ -76,14 +71,14 @@ class Attachment extends IdModel {
    * Get the contents of this attachment as a readable stream.
    */
   get stream() {
-    return getFileStream(this.key);
+    return FileStorage.getFileStream(this.key);
   }
 
   /**
    * Get the contents of this attachment as a buffer.
    */
   get buffer() {
-    return getFileBuffer(this.key);
+    return FileStorage.getFileBuffer(this.key);
   }
 
   /**
@@ -105,21 +100,45 @@ class Attachment extends IdModel {
    * a signed URL must be used.
    */
   get canonicalUrl() {
-    return encodeURI(`${publicS3Endpoint()}/${this.key}`);
+    return encodeURI(`${FileStorage.getPublicEndpoint()}/${this.key}`);
   }
 
   /**
    * Get a signed URL with the default expirt to download the attachment from storage.
    */
   get signedUrl() {
-    return getSignedUrl(this.key);
+    return FileStorage.getSignedUrl(this.key);
   }
 
   // hooks
 
   @BeforeDestroy
   static async deleteAttachmentFromS3(model: Attachment) {
-    await deleteFromS3(model.key);
+    await FileStorage.deleteFile(model.key);
+  }
+
+  // static methods
+
+  /**
+   * Get the total size of all attachments for a given team.
+   *
+   * @param teamId - The ID of the team to get the total size for.
+   * @returns A promise resolving to the total size of all attachments for the given team in bytes.
+   */
+  static async getTotalSizeForTeam(teamId: string): Promise<number> {
+    const result = await this.sequelize!.query<{ total: string }>(
+      `
+      SELECT SUM(size) as total
+      FROM attachments
+      WHERE "teamId" = :teamId
+    `,
+      {
+        replacements: { teamId },
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    return parseInt(result?.[0]?.total ?? "0", 10);
   }
 
   // associations

@@ -1,5 +1,9 @@
 import invariant from "invariant";
-import { find, orderBy, filter, compact, omitBy } from "lodash";
+import compact from "lodash/compact";
+import filter from "lodash/filter";
+import find from "lodash/find";
+import omitBy from "lodash/omitBy";
+import orderBy from "lodash/orderBy";
 import { observable, action, computed, runInAction } from "mobx";
 import { DateFilter, NavigationNode, PublicTeam } from "@shared/types";
 import { subtractDate } from "@shared/utils/date";
@@ -658,7 +662,8 @@ export default class DocumentsStore extends BaseStore<Document> {
   async update(
     params: {
       id: string;
-      title: string;
+      title?: string;
+      emoji?: string | null;
       text?: string;
       fullWidth?: boolean;
       templateId?: string;

@@ -23,7 +23,7 @@ const router = new Router();
 koa.use<BaseContext, UserAgentContext>(userAgent);
 
 // serve public assets
-router.use(["/images/*", "/email/*"], async (ctx, next) => {
+router.use(["/images/*", "/email/*", "/fonts/*"], async (ctx, next) => {
   let done;
 
   if (ctx.method === "HEAD" || ctx.method === "GET") {
@@ -156,10 +156,12 @@ koa.use(async (ctx, next) => {
   ctx.set("Timing-Allow-Origin", timingOrigins.join(", "));
   await next();
 });
+
 koa.use(apexRedirect());
 if (env.ENVIRONMENT === "test") {
   koa.use(errors.routes());
 }
+
 koa.use(router.routes());
 
 export default koa;

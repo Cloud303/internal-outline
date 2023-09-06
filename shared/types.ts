@@ -1,4 +1,8 @@
-export type Role = "admin" | "viewer" | "member";
+export enum UserRole {
+  Admin = "admin",
+  Member = "member",
+  Viewer = "viewer",
+}
 
 export type DateFilter = "day" | "week" | "month" | "year";
 
@@ -47,7 +51,6 @@ export type PublicEnv = {
   COLLABORATION_URL: string;
   AWS_S3_UPLOAD_BUCKET_URL: string;
   AWS_S3_ACCELERATE_URL: string;
-  DEPLOYMENT: string | undefined;
   ENVIRONMENT: string;
   SENTRY_DSN: string | undefined;
   SENTRY_TUNNEL: string | undefined;
@@ -55,7 +58,6 @@ export type PublicEnv = {
   OIDC_LOGOUT_URL: string | undefined;
   SLACK_APP_ID: string | undefined;
   MAXIMUM_IMPORT_SIZE: number;
-  SUBDOMAINS_ENABLED: boolean;
   EMAIL_ENABLED: boolean;
   PDF_EXPORT_ENABLED: boolean;
   DEFAULT_LANGUAGE: string;
@@ -84,6 +86,7 @@ export enum IntegrationType {
 
 export enum IntegrationService {
   Diagrams = "diagrams",
+  Grist = "grist",
   Slack = "slack",
   GoogleAnalytics = "google-analytics",
 }
@@ -101,13 +104,14 @@ export type IntegrationSettings<T> = T extends IntegrationType.Embed
   ? { measurementId: string }
   : T extends IntegrationType.Post
   ? { url: string; channel: string; channelId: string }
-  : T extends IntegrationType.Post
+  : T extends IntegrationType.Command
   ? { serviceTeamId: string }
   :
       | { url: string }
       | { url: string; channel: string; channelId: string }
       | { serviceTeamId: string }
-      | { measurementId: string };
+      | { measurementId: string }
+      | undefined;
 
 export enum UserPreference {
   /** Whether reopening the app should redirect to the last viewed document. */
@@ -116,6 +120,8 @@ export enum UserPreference {
   UseCursorPointer = "useCursorPointer",
   /** Whether code blocks should show line numbers. */
   CodeBlockLineNumers = "codeBlockLineNumbers",
+  /** Whether documents have a separate edit mode instead of always editing. */
+  SeamlessEdit = "seamlessEdit",
 }
 
 export type UserPreferences = { [key in UserPreference]?: boolean };
@@ -132,7 +138,7 @@ export type PublicTeam = {
 };
 
 export enum TeamPreference {
-  /** Whether documents have a separate edit mode instead of seamless editing. */
+  /** Whether documents have a separate edit mode instead of always editing. */
   SeamlessEdit = "seamlessEdit",
   /** Whether to use team logo across the app for branding. */
   PublicBranding = "publicBranding",
@@ -161,6 +167,7 @@ export type NavigationNode = {
   id: string;
   title: string;
   url: string;
+  emoji?: string;
   children: NavigationNode[];
   isDraft?: boolean;
   collectionId?: string;
@@ -213,6 +220,26 @@ export const NotificationEventDefaults = {
   [NotificationEventType.Onboarding]: true,
   [NotificationEventType.Features]: true,
   [NotificationEventType.ExportCompleted]: true,
+};
+
+export enum UnfurlType {
+  Mention = "mention",
+  Document = "document",
+}
+
+export enum QueryNotices {
+  UnsubscribeDocument = "unsubscribe-document",
+}
+
+export type OEmbedType = "photo" | "video" | "rich";
+
+export type Unfurl<T = OEmbedType> = {
+  url?: string;
+  type: T;
+  title: string;
+  description?: string;
+  thumbnailUrl?: string | null;
+  meta?: Record<string, string>;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

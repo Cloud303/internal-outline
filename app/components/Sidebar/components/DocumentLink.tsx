@@ -69,7 +69,7 @@ function InnerDocumentLink(
     if (isActiveDocument && hasChildDocuments) {
       void fetchChildDocuments(node.id);
     }
-  }, [fetchChildDocuments, node, hasChildDocuments, isActiveDocument]);
+  }, [fetchChildDocuments, node.id, hasChildDocuments, isActiveDocument]);
 
   const pathToNode = React.useMemo(
     () => collection?.pathToDocument(node.id).map((entry) => entry.id),
@@ -324,6 +324,7 @@ function InnerDocumentLink(
                     starred: inStarredSection,
                   },
                 }}
+                emoji={document?.emoji || node.emoji}
                 label={
                   <EditableTitle
                     title={title}

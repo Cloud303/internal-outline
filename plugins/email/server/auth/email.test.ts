@@ -1,14 +1,14 @@
-import sharedEnv from "@shared/env";
 import SigninEmail from "@server/emails/templates/SigninEmail";
 import WelcomeEmail from "@server/emails/templates/WelcomeEmail";
-import env from "@server/env";
 import { AuthenticationProvider } from "@server/models";
 import { buildUser, buildGuestUser, buildTeam } from "@server/test/factories";
-import { getTestServer } from "@server/test/support";
+import { getTestServer, setCloudHosted } from "@server/test/support";
 
 const server = getTestServer();
 
 describe("email", () => {
+  beforeEach(setCloudHosted);
+
   it("should require email param", async () => {
     const res = await server.post("/auth/email", {
       body: {},
@@ -21,10 +21,18 @@ describe("email", () => {
 
   it("should respond with redirect location when user is SSO enabled", async () => {
     const spy = jest.spyOn(WelcomeEmail.prototype, "schedule");
-    const user = await buildUser();
+    const team = await buildTeam({
+      subdomain: "example",
+    });
+    const user = await buildUser({
+      teamId: team.id,
+    });
     const res = await server.post("/auth/email", {
       body: {
         email: user.email,
+      },
+      headers: {
+        host: "example.outline.dev",
       },
     });
     const body = await res.json();
@@ -60,7 +68,7 @@ describe("email", () => {
         email: user.email,
       },
       headers: {
-        host: "example.localoutline.com",
+        host: "example.outline.dev",
       },
     });
     const body = await res.json();
@@ -71,10 +79,6 @@ describe("email", () => {
   });
 
   it("should not send email when user is on another subdomain but respond with success", async () => {
-    env.URL = sharedEnv.URL = "http://localoutline.com";
-    env.SUBDOMAINS_ENABLED = sharedEnv.SUBDOMAINS_ENABLED = true;
-    env.DEPLOYMENT = "hosted";
-
     const user = await buildUser();
     const spy = jest.spyOn(WelcomeEmail.prototype, "schedule");
     await buildTeam({
@@ -85,7 +89,7 @@ describe("email", () => {
         email: user.email,
       },
       headers: {
-        host: "example.localoutline.com",
+        host: "example.outline.dev",
       },
     });
 
@@ -109,7 +113,7 @@ describe("email", () => {
         email: user.email,
       },
       headers: {
-        host: "example.localoutline.com",
+        host: "example.outline.dev",
       },
     });
     const body = await res.json();
@@ -129,7 +133,7 @@ describe("email", () => {
         email: "user@example.com",
       },
       headers: {
-        host: "example.localoutline.com",
+        host: "example.outline.dev",
       },
     });
     const body = await res.json();
@@ -138,11 +142,10 @@ describe("email", () => {
     expect(spy).not.toHaveBeenCalled();
     spy.mockRestore();
   });
+
   describe("with multiple users matching email", () => {
     it("should default to current subdomain with SSO", async () => {
       const spy = jest.spyOn(SigninEmail.prototype, "schedule");
-      env.URL = sharedEnv.URL = "http://localoutline.com";
-      env.SUBDOMAINS_ENABLED = sharedEnv.SUBDOMAINS_ENABLED = true;
       const email = "sso-user@example.org";
       const team = await buildTeam({
         subdomain: "example",
@@ -159,7 +162,7 @@ describe("email", () => {
           email,
         },
         headers: {
-          host: "example.localoutline.com",
+          host: "example.outline.dev",
         },
       });
       const body = await res.json();
@@ -171,8 +174,6 @@ describe("email", () => {
 
     it("should default to current subdomain with guest email", async () => {
       const spy = jest.spyOn(SigninEmail.prototype, "schedule");
-      env.URL = sharedEnv.URL = "http://localoutline.com";
-      env.SUBDOMAINS_ENABLED = sharedEnv.SUBDOMAINS_ENABLED = true;
       const email = "guest-user@example.org";
       const team = await buildTeam({
         subdomain: "example",
@@ -189,7 +190,7 @@ describe("email", () => {
           email,
         },
         headers: {
-          host: "example.localoutline.com",
+          host: "example.outline.dev",
         },
       });
       const body = await res.json();

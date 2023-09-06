@@ -1,4 +1,4 @@
-import { debounce } from "lodash";
+import debounce from "lodash/debounce";
 import { action, observable } from "mobx";
 import { observer } from "mobx-react";
 import { AllSelection } from "prosemirror-state";
@@ -320,7 +320,7 @@ class DocumentScene extends React.Component<Props> {
     this.isPublishing = !!options.publish;
 
     try {
-      const savedDocument = await document.save(options);
+      const savedDocument = await document.save(undefined, options);
       this.isEditorDirty = false;
 
       if (options.done) {
@@ -369,7 +369,7 @@ class DocumentScene extends React.Component<Props> {
     this.isUploading = false;
   };
 
-  onChange = (getEditorText: () => string) => {
+  handleChange = (getEditorText: () => string) => {
     const { document } = this.props;
     this.getEditorText = getEditorText;
 
@@ -384,9 +384,15 @@ class DocumentScene extends React.Component<Props> {
     this.headings = headings;
   };
 
-  onChangeTitle = action((value: string) => {
+  handleChangeTitle = action((value: string) => {
     this.title = value;
     this.props.document.title = value;
+    this.updateIsDirty();
+    void this.autosave();
+  });
+
+  handleChangeEmoji = action((value: string) => {
+    this.props.document.emoji = value;
     this.updateIsDirty();
     void this.autosave();
   });
@@ -438,7 +444,7 @@ class DocumentScene extends React.Component<Props> {
   render() {
     const { document, revision, readOnly, abilities, auth, ui, shareId, t } =
       this.props;
-    const team = auth.team;
+    const { team, user } = auth;
     const isShare = !!shareId;
     const embedsDisabled =
       (team && team.documentEmbeds === false) || document.embedsDisabled;
@@ -560,7 +566,7 @@ class DocumentScene extends React.Component<Props> {
               revision={revision}
               shareId={shareId}
               isDraft={document.isDraft}
-              isEditing={!readOnly && !team?.seamlessEditing}
+              isEditing={!readOnly && !!user?.separateEditMode}
               isSaving={this.isSaving}
               isPublishing={this.isPublishing}
               publishingIsDisabled={
@@ -600,7 +606,6 @@ class DocumentScene extends React.Component<Props> {
                 <Flex auto={!readOnly} reverse>
                   {revision ? (
                     <RevisionViewer
-                      isDraft={document.isDraft}
                       document={document}
                       revision={revision}
                       id={revision.id}
@@ -631,8 +636,9 @@ class DocumentScene extends React.Component<Props> {
                         onFileUploadStop={this.onFileUploadStop}
                         onSearchLink={this.props.onSearchLink}
                         onCreateLink={this.props.onCreateLink}
-                        onChangeTitle={this.onChangeTitle}
-                        onChange={this.onChange}
+                        onChangeTitle={this.handleChangeTitle}
+                        onChangeEmoji={this.handleChangeEmoji}
+                        onChange={this.handleChange}
                         onHeadingsChange={this.onHeadingsChange}
                         onSave={this.onSave}
                         onPublish={this.onPublish}

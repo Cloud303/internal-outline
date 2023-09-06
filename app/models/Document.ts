@@ -1,10 +1,9 @@
 import { addDays, differenceInDays } from "date-fns";
-import { floor } from "lodash";
+import floor from "lodash/floor";
 import { action, autorun, computed, observable, set } from "mobx";
 import { ExportContentType } from "@shared/types";
 import type { NavigationNode } from "@shared/types";
 import Storage from "@shared/utils/Storage";
-import parseTitle from "@shared/utils/parseTitle";
 import { isRTL } from "@shared/utils/rtl";
 import DocumentsStore from "~/stores/DocumentsStore";
 import User from "~/models/User";
@@ -46,15 +45,24 @@ export default class Document extends ParanoidModel {
 
   @Field
   @observable
-  collectionId?: string | null;
-
-  @Field
-  @observable
   id: string;
 
+  /**
+   * The id of the collection that this document belongs to, if any.
+   */
+  @Field
+  @observable
+  collectionId?: string | null;
+
+  /**
+   * The text content of the document as Markdown.
+   */
   @observable
   text: string;
 
+  /**
+   * The title of the document.
+   */
   @Field
   @observable
   coverImg: string | null | void | unknown;
@@ -71,29 +79,59 @@ export default class Document extends ParanoidModel {
   @observable
   title: string;
 
+  /**
+   * An emoji to use as the document icon.
+   */
+  @Field
+  @observable
+  emoji: string | undefined | null;
+
+  /**
+   * Whether this is a template.
+   */
   @observable
   template: boolean;
 
+  /**
+   * Whether the document layout is displayed full page width.
+   */
   @Field
   @observable
   fullWidth: boolean;
 
+  /**
+   * Whether team members can see who has viewed this document.
+   */
+  @observable
+  insightsEnabled: boolean;
+
+  /**
+   * A reference to the template that this document was created from.
+   */
   @Field
   @observable
   templateId: string | undefined;
 
+  /**
+   * The id of the parent document that this is a child of, if any.
+   */
   @Field
   @observable
   parentDocumentId: string | undefined;
 
+  @observable
   collaboratorIds: string[];
 
+  @observable
   createdBy: User;
 
+  @observable
   updatedBy: User;
 
+  @observable
   publishedAt: string | undefined;
 
+  @observable
   archivedAt: string;
 
   url: string;
@@ -106,12 +144,6 @@ export default class Document extends ParanoidModel {
   };
 
   revision: number;
-
-  @computed
-  get emoji() {
-    const { emoji } = parseTitle(this.title);
-    return emoji;
-  }
 
   /**
    * Returns the direction of the document text, either "rtl" or "ltr"
@@ -331,12 +363,18 @@ export default class Document extends ParanoidModel {
   templatize = () => this.store.templatize(this.id);
 
   @action
-  save = async (options?: SaveOptions | undefined) => {
-    const params = this.toAPI();
+  save = async (
+    fields?: Partial<Document> | undefined,
+    options?: SaveOptions | undefined
+  ) => {
+    const params = fields ?? this.toAPI();
     this.isSaving = true;
 
     try {
-      const model = await this.store.save({ ...params, id: this.id }, options);
+      const model = await this.store.save(
+        { ...params, ...fields, id: this.id },
+        options
+      );
 
       // if saving is successful set the new values on the model itself
       set(this, { ...params, ...model });

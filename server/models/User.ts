@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { addMinutes, subMinutes } from "date-fns";
+import { addHours, addMinutes, subMinutes } from "date-fns";
 import JWT from "jsonwebtoken";
 import { Context } from "koa";
 import { Transaction, QueryTypes, SaveOptions, Op } from "sequelize";
@@ -31,6 +31,7 @@ import {
   UserPreferences,
   NotificationEventType,
   NotificationEventDefaults,
+  UserRole,
 } from "@shared/types";
 import { stringToColor } from "@shared/utils/color";
 import env from "@server/env";
@@ -63,11 +64,6 @@ export enum UserFlag {
   Desktop = "desktop",
   DesktopWeb = "desktopWeb",
   MobileWeb = "mobileWeb",
-}
-
-export enum UserRole {
-  Member = "member",
-  Viewer = "viewer",
 }
 
 @Scopes(() => ({
@@ -454,6 +450,22 @@ class User extends ParanoidModel {
     );
 
   /**
+   * Returns a session token that is used to make collaboration requests and is
+   * stored in the client memory.
+   *
+   * @returns The session token
+   */
+  getCollaborationToken = () =>
+    JWT.sign(
+      {
+        id: this.id,
+        expiresAt: addHours(new Date(), 24).toISOString(),
+        type: "collaboration",
+      },
+      this.jwtSecret
+    );
+
+  /**
    * Returns a temporary token that is only used for transferring a session
    * between subdomains or domains. It has a short expiry and can only be used
    * once.
@@ -516,7 +528,7 @@ class User extends ParanoidModel {
     });
 
     if (res.count >= 1) {
-      if (to === "member") {
+      if (to === UserRole.Member) {
         await this.update(
           {
             isAdmin: false,
@@ -524,7 +536,7 @@ class User extends ParanoidModel {
           },
           options
         );
-      } else if (to === "viewer") {
+      } else if (to === UserRole.Viewer) {
         await this.update(
           {
             isAdmin: false,

@@ -1,5 +1,6 @@
 import Router from "koa-router";
-import { isNull, isUndefined } from "lodash";
+import isNull from "lodash/isNull";
+import isUndefined from "lodash/isUndefined";
 import { WhereOptions, Op } from "sequelize";
 import { NotificationEventType } from "@shared/types";
 import notificationUpdater from "@server/commands/notificationUpdater";
@@ -32,11 +33,8 @@ const handleUnsubscribe = async (
   const userId = (ctx.input.body.userId ?? ctx.input.query.userId) as string;
   const token = (ctx.input.body.token ?? ctx.input.query.token) as string;
 
-  const user = await User.scope("withTeam").findByPk(userId, {
-    rejectOnEmpty: true,
-  });
   const unsubscribeToken = NotificationSettingsHelper.unsubscribeToken(
-    user,
+    userId,
     eventType
   );
 
@@ -44,6 +42,10 @@ const handleUnsubscribe = async (
     ctx.redirect(`${env.URL}?notice=invalid-auth`);
     return;
   }
+
+  const user = await User.scope("withTeam").findByPk(userId, {
+    rejectOnEmpty: true,
+  });
 
   user.setNotificationEventType(eventType, false);
   await user.save();
@@ -120,21 +122,24 @@ router.post(
 
 router.get(
   "notifications.pixel",
+  validate(T.NotificationsPixelSchema),
   transaction(),
   async (ctx: APIContext<T.NotificationsPixelReq>) => {
     const { id, token } = ctx.input.query;
-    const notification = await Notification.findByPk(id);
+    const notification = await Notification.unscoped().findByPk(id);
 
     if (!notification || !safeEqual(token, notification.pixelToken)) {
       throw AuthenticationError();
     }
 
-    await notificationUpdater({
-      notification,
-      viewedAt: new Date(),
-      ip: ctx.request.ip,
-      transaction: ctx.state.transaction,
-    });
+    if (!notification.viewedAt) {
+      await notificationUpdater({
+        notification,
+        viewedAt: new Date(),
+        ip: ctx.request.ip,
+        transaction: ctx.state.transaction,
+      });
+    }
 
     ctx.response.set("Content-Type", "image/gif");
     ctx.body = pixel;
