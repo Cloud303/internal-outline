@@ -440,6 +440,19 @@ export class Environment {
   public CHATWOOT_MODE = this.toBoolean(process.env.CHATWOOT_MODE ?? "false");
 
   /**
+   * Odoo webhook
+   */
+  @IsOptional()
+  public ODOO_WEBHOOK_ENDPOINT = this.toOptionalString(
+    process.env.ODOO_WEBHOOK_ENDPOINT
+  );
+
+  @IsOptional()
+  public ODOO_WEBHOOK_TOKEN = this.toOptionalString(
+    process.env.ODOO_WEBHOOK_TOKEN
+  );
+
+  /**
    * OICD client credentials. To enable authentication with any
    * compatible provider.
    */

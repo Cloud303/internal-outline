@@ -43,6 +43,8 @@ export enum MentionType {
 }
 
 export type PublicEnv = {
+  ODOO_WEBHOOK_ENDPOINT: string | undefined;
+  ODOO_WEBHOOK_TOKEN: string | undefined;
   CHATWOOT_MODE: boolean | undefined;
   CHATWOOT_BASE_URL: string | undefined;
   CHATWOOT_WEBSITE_TOKEN: string | undefined;

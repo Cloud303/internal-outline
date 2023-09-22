@@ -153,18 +153,35 @@ export default class SlackProcessor extends BaseProcessor {
       Document ID: ${document?.id}
       Document title: ${document?.title}
       `;
-      // await fetch("", {
-      //   method: "POST",
-      //   headers: {
-      //     "Content-Type": "application/json",
-      //   },
-      //   body: JSON.stringify({
-      //     document_id: document.id,
-      //     document_name: document.title,
-      //     parent_id: parentDocument?.id,
-      //     parent_name: parentDocument?.title,
-      //   }),
-      // });
+
+      console.log("HERE");
+
+      if (env.ODOO_WEBHOOK_ENDPOINT) {
+        const encoded = btoa(
+          JSON.stringify({
+            id: document.id,
+            outlineType: "document",
+            source: "outline",
+            eventType: "parentChanged",
+            value: {
+              parentDocumentId: parentDocument?.id,
+            },
+          })
+        );
+        const headers = {
+          "Content-Type": "application/json",
+        };
+        if (env.ODOO_WEBHOOK_TOKEN) {
+          // headers["Auth"] = env.ODOO_WEBHOOK_TOKEN;
+        }
+
+        const response = await fetch("", {
+          method: "POST",
+          headers,
+          body: encoded,
+        });
+        console.log("documentUpdated response:", response);
+      }
     }
 
     await fetch(integration.settings.url, {
