@@ -154,9 +154,11 @@ export default class SlackProcessor extends BaseProcessor {
       Document title: ${document?.title}
       `;
 
-      console.log("HERE");
-
       if (env.ODOO_WEBHOOK_ENDPOINT) {
+        console.log(
+          "documentUpdated ODOO_WEBHOOK_ENDPOINT:",
+          env.ODOO_WEBHOOK_ENDPOINT
+        );
         const encoded = btoa(
           JSON.stringify({
             id: document.id,
@@ -168,6 +170,7 @@ export default class SlackProcessor extends BaseProcessor {
             },
           })
         );
+        console.log("documentUpdated encoded:", encoded);
         const headers = {
           "Content-Type": "application/json",
         };
@@ -175,7 +178,9 @@ export default class SlackProcessor extends BaseProcessor {
           // headers["Auth"] = env.ODOO_WEBHOOK_TOKEN;
         }
 
-        const response = await fetch("", {
+        console.log("documentUpdated headers:", headers);
+
+        const response = await fetch(env.ODOO_WEBHOOK_ENDPOINT, {
           method: "POST",
           headers,
           body: encoded,
@@ -183,6 +188,8 @@ export default class SlackProcessor extends BaseProcessor {
         console.log("documentUpdated response:", response);
       }
     }
+
+    console.log("documentUpdated integration:", integration.settings.url);
 
     await fetch(integration.settings.url, {
       method: "POST",
