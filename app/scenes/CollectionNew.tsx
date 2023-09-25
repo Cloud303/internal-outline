@@ -56,7 +56,7 @@ class CollectionNew extends React.Component<Props> {
         sharing: this.sharing,
         icon: this.icon,
         color: this.color,
-        permission: this.permission === "no_access" ? "" : this.permission,
+        permission: this.permission,
         documents: [],
       },
       this.props.collections
