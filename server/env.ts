@@ -448,8 +448,8 @@ export class Environment {
   );
 
   @IsOptional()
-  public ODOO_WEBHOOK_TOKEN = this.toOptionalString(
-    process.env.ODOO_WEBHOOK_TOKEN
+  public ODOO_WEBHOOK_SECRET = this.toOptionalString(
+    process.env.ODOO_WEBHOOK_SECRET
   );
 
   /**

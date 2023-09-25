@@ -1,4 +1,5 @@
 /* eslint-disable no-console */
+import crypto from "crypto";
 import { differenceInMilliseconds } from "date-fns";
 import { Op } from "sequelize";
 import { IntegrationService, IntegrationType } from "@shared/types";
@@ -141,10 +142,6 @@ export default class SlackProcessor extends BaseProcessor {
       console.log("parentDocument object", JSON.stringify(parentDocument));
       console.log("parentCollection object", JSON.stringify(parentCollection));
 
-      // text = `${document.createdBy.name} moved a document ${
-      //   parentCollection.name ? `to Collection: ${parentCollection.name}` : ""
-      // } ${parentDocument ? `under Document: ${parentDocument.title}` : ""}`;
-
       text = `${document.createdBy.name} moved a document
       Collection Name: ${parentCollection?.name}
       Collection ID: ${parentCollection?.id}
@@ -155,30 +152,27 @@ export default class SlackProcessor extends BaseProcessor {
       `;
 
       if (env.ODOO_WEBHOOK_ENDPOINT) {
-        console.log(
-          "documentUpdated ODOO_WEBHOOK_ENDPOINT:",
-          env.ODOO_WEBHOOK_ENDPOINT
-        );
-        const encoded = btoa(
-          JSON.stringify({
-            id: document.id,
-            outlineType: "document",
-            source: "outline",
-            eventType: "parentChanged",
-            value: {
-              parentDocumentId: parentDocument?.id,
-            },
-          })
-        );
-        console.log("documentUpdated encoded:", encoded);
+        const requestPayload = JSON.stringify({
+          id: document.id,
+          outlineType: "document",
+          source: "outline",
+          eventType: "parentChanged",
+          value: {
+            parentDocumentId: parentDocument?.id,
+          },
+        });
+        const encoded = btoa(requestPayload);
         const headers = {
           "Content-Type": "application/json",
         };
-        if (env.ODOO_WEBHOOK_TOKEN) {
-          // headers["Auth"] = env.ODOO_WEBHOOK_TOKEN;
-        }
 
-        console.log("documentUpdated headers:", headers);
+        if (env.ODOO_WEBHOOK_SECRET) {
+          const hash = crypto
+            .createHmac("sha256", env.ODOO_WEBHOOK_SECRET)
+            .update(requestPayload);
+          const TokenHexHash = hash.digest("hex");
+          headers["Authorization"] = `HMAC-SHA256 Signature=${TokenHexHash}`;
+        }
 
         const response = await fetch(env.ODOO_WEBHOOK_ENDPOINT, {
           method: "POST",
@@ -188,8 +182,6 @@ export default class SlackProcessor extends BaseProcessor {
         console.log("documentUpdated response:", response);
       }
     }
-
-    console.log("documentUpdated integration:", integration.settings.url);
 
     await fetch(integration.settings.url, {
       method: "POST",
