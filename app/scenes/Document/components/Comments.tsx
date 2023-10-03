@@ -24,7 +24,14 @@ function Comments() {
   const document = documents.getByUrl(match.params.documentSlug);
   const focusedComment = useFocusedComment();
   const can = usePolicy(document?.id);
+  const [threadOption, setThreadOption] = React.useState("All");
+  const dropDownMenuOptions = ["All", "Open", "Resolved"];
 
+  const handleChange = (event: {
+    target: { value: React.SetStateAction<string> };
+  }) => {
+    setThreadOption(event.target.value);
+  };
   useKeyDown("Escape", () => document && ui.collapseComments(document?.id));
 
   if (!document) {
@@ -48,17 +55,50 @@ function Comments() {
         hiddenScrollbars
         topShadow
       >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            paddingRight: "3vh",
+            paddingBottom: "2vh",
+            width: "100%",
+          }}
+        >
+          <label>
+            Show:
+            <select value={threadOption} onChange={handleChange}>
+              {dropDownMenuOptions.map((el, i) => (
+                <option key={i} value={el}>
+                  {el}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
         <Wrapper $hasComments={hasComments}>
           {hasComments ? (
-            threads.map((thread) => (
-              <CommentThread
-                key={thread.id}
-                comment={thread}
-                document={document}
-                recessed={!!focusedComment && focusedComment.id !== thread.id}
-                focused={focusedComment?.id === thread.id}
-              />
-            ))
+            threads
+              .filter((el) => {
+                if (threadOption === "Resolved" && el.resolvedById !== null) {
+                  return el;
+                }
+                if (threadOption === "All") {
+                  return el;
+                }
+                if (threadOption === "Open" && el.resolvedById === null) {
+                  return el;
+                }
+              })
+              .map((thread) => (
+                <CommentThread
+                  key={thread.id}
+                  comment={thread}
+                  document={document}
+                  recessed={!!focusedComment && focusedComment.id !== thread.id}
+                  focused={focusedComment?.id === thread.id}
+                />
+              ))
           ) : (
             <NoComments align="center" justify="center" auto>
               <PositionedEmpty>{t("No comments yet")}</PositionedEmpty>

@@ -68,10 +68,15 @@ router.post(
       offset: ctx.state.pagination.offset,
       limit: ctx.state.pagination.limit,
     });
+    // console.log("Comments", comments);
+    const data = comments.map(presentComment);
+    // console.log("Comments data", data);
+    // data = data.filter((el) => el.resolvedById === null);
+    // console.log("Comments filter", data);
 
     ctx.body = {
       pagination: ctx.state.pagination,
-      data: comments.map(presentComment),
+      data,
       policies: presentPolicies(user, comments),
     };
   }
@@ -83,7 +88,7 @@ router.post(
   validate(T.CommentsUpdateSchema),
   transaction(),
   async (ctx: APIContext<T.CommentsUpdateReq>) => {
-    const { id, data } = ctx.input.body;
+    const { id, data, resolvedBy } = ctx.input.body;
     const { user } = ctx.state.auth;
     const { transaction } = ctx.state;
 
@@ -105,6 +110,7 @@ router.post(
       user,
       comment,
       data,
+      resolvedBy,
       ip: ctx.request.ip,
       transaction,
     });

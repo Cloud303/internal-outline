@@ -390,7 +390,6 @@ export default class AuthStore {
     this.policies = [];
 
     if (env.OIDC_LOGOUT_URL && forcedLogout) {
-      console.log("OIDC_LOGOUT_URL");
       this.loggedOut = true;
       window.location.href = env.OIDC_LOGOUT_URL;
     }

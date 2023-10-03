@@ -92,7 +92,10 @@ function CommentThreadItem({
   const showAuthor = firstOfAuthor;
   const showTime = useShowTime(comment.createdAt, previousCommentCreatedAt);
   const showEdited =
-    comment.updatedAt && comment.updatedAt !== comment.createdAt;
+    comment.updatedAt &&
+    comment.updatedAt !== comment.createdAt &&
+    comment.resolvedById === null;
+  const showResolved = comment.resolvedById !== null;
   const [isEditing, setEditing, setReadOnly] = useBoolean();
   const formRef = React.useRef<HTMLFormElement>(null);
 
@@ -122,6 +125,14 @@ function CommentThreadItem({
 
   const handleDelete = () => {
     editor?.removeComment(comment.id);
+  };
+
+  const handleResolve = () => {
+    // editor?.removeComment(comment.id);
+  };
+
+  const handleReopen = () => {
+    // editor?.removeComment(comment.id);
   };
 
   const handleCancel = () => {
@@ -172,6 +183,7 @@ function CommentThreadItem({
                 )
               </>
             )}
+            {showResolved && <> ({t("resolved")})</>}
           </Meta>
         )}
         <Body ref={formRef} onSubmit={handleSubmit}>
@@ -199,6 +211,8 @@ function CommentThreadItem({
             comment={comment}
             onEdit={setEditing}
             onDelete={handleDelete}
+            onResolve={handleResolve}
+            onReopen={handleReopen}
             dir={dir}
           />
         )}

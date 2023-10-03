@@ -50,6 +50,8 @@ class Comment extends BaseModel {
 
   resolvedBy: User;
 
+  resolvedById: string;
+
   updatedAt: string;
 
   /**
@@ -62,6 +64,30 @@ class Comment extends BaseModel {
       .map(([userId]) => this.store.rootStore.users.get(userId))
       .filter(Boolean);
   }
+
+  resolve = async (user: User) => {
+    this.isSaving = true;
+    try {
+      return await this.store.resolveComment({
+        id: this.id,
+        resolvedBy: user,
+      });
+    } finally {
+      this.isSaving = false;
+    }
+  };
+
+  reopen = async (user: User) => {
+    this.isSaving = true;
+    try {
+      return await this.store.reopenComment({
+        id: this.id,
+        resolvedBy: user,
+      });
+    } finally {
+      this.isSaving = false;
+    }
+  };
 }
 
 export default Comment;

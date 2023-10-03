@@ -5,6 +5,8 @@ import { useTranslation } from "react-i18next";
 import { useMenuState } from "reakit/Menu";
 import Comment from "~/models/Comment";
 import CommentDeleteDialog from "~/components/CommentDeleteDialog";
+import CommentReOpenDialog from "~/components/CommentReOpenDialog";
+import CommentResolveDialog from "~/components/CommentResolveDialog";
 import ContextMenu from "~/components/ContextMenu";
 import MenuItem from "~/components/ContextMenu/MenuItem";
 import OverflowMenuButton from "~/components/ContextMenu/OverflowMenuButton";
@@ -24,9 +26,20 @@ type Props = {
   onEdit: () => void;
   /** Callback when the comment has been deleted */
   onDelete: () => void;
+  /** Callback when the comment has been resolved */
+  onResolve: () => void;
+  /** Callback when the comment has been re-opend */
+  onReopen: () => void;
 };
 
-function CommentMenu({ comment, onEdit, onDelete, className }: Props) {
+function CommentMenu({
+  comment,
+  onEdit,
+  onDelete,
+  onResolve,
+  onReopen,
+  className,
+}: Props) {
   const menu = useMenuState({
     modal: true,
   });
@@ -35,6 +48,10 @@ function CommentMenu({ comment, onEdit, onDelete, className }: Props) {
   const { t } = useTranslation();
   const can = usePolicy(comment.id);
   const document = documents.get(comment.documentId);
+  const resolvedParentComment =
+    comment.resolvedById !== null && comment.parentCommentId === null;
+  const notResolvedParentComment =
+    comment.resolvedById === null && comment.parentCommentId === null;
 
   const handleDelete = React.useCallback(() => {
     dialogs.openModal({
@@ -43,6 +60,22 @@ function CommentMenu({ comment, onEdit, onDelete, className }: Props) {
       content: <CommentDeleteDialog comment={comment} onSubmit={onDelete} />,
     });
   }, [dialogs, comment, onDelete, t]);
+
+  const handleResolve = React.useCallback(() => {
+    dialogs.openModal({
+      title: t("Resolve comment"),
+      isCentered: true,
+      content: <CommentResolveDialog comment={comment} onSubmit={onResolve} />,
+    });
+  }, [dialogs, comment, onResolve, t]);
+
+  const handleReopen = React.useCallback(() => {
+    dialogs.openModal({
+      title: t("Re-open comment"),
+      isCentered: true,
+      content: <CommentReOpenDialog comment={comment} onSubmit={onReopen} />,
+    });
+  }, [dialogs, comment, onReopen, t]);
 
   const handleCopyLink = React.useCallback(() => {
     if (document) {
@@ -63,9 +96,13 @@ function CommentMenu({ comment, onEdit, onDelete, className }: Props) {
 
       <ContextMenu {...menu} aria-label={t("Comment options")}>
         {can.update && (
-          <MenuItem {...menu} onClick={onEdit}>
-            {t("Edit")}
-          </MenuItem>
+          <>
+            {comment.resolvedById === null && (
+              <MenuItem {...menu} onClick={onEdit}>
+                {t("Edit")}
+              </MenuItem>
+            )}
+          </>
         )}
         <MenuItem {...menu} onClick={handleCopyLink}>
           {t("Copy link")}
@@ -76,6 +113,16 @@ function CommentMenu({ comment, onEdit, onDelete, className }: Props) {
             <MenuItem {...menu} onClick={handleDelete} dangerous>
               {t("Delete")}
             </MenuItem>
+
+            {notResolvedParentComment ? (
+              <MenuItem {...menu} onClick={handleResolve} dangerous>
+                {t("Resolve")}
+              </MenuItem>
+            ) : resolvedParentComment ? (
+              <MenuItem {...menu} onClick={handleReopen} dangerous>
+                {t("Re-open")}
+              </MenuItem>
+            ) : null}
           </>
         )}
       </ContextMenu>

@@ -60,7 +60,6 @@ export default function Contents({ coverImg, headings, isFullWidth }: Props) {
       headings={headings.length}
       coverImg={coverImg}
     >
-      {console.log("cover", coverImg)}
       <Sticky>
         <Container>
           <Heading>{t("Contents")}</Heading>

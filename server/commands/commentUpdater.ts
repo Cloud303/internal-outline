@@ -34,11 +34,36 @@ export default async function commentUpdater({
     ProsemirrorHelper.toProsemirror(comment.data)
   ).map((mention) => mention.id);
 
-  if (resolvedBy !== undefined) {
+  if (resolvedBy !== undefined && data === undefined) {
+    comment.resolvedById = resolvedBy.id;
     comment.resolvedBy = resolvedBy;
+    comment.resolvedAt = new Date();
+    const childComments = await Comment.findAll({
+      where: { parentCommentId: comment.id },
+    });
+    for await (const child of childComments) {
+      child.resolvedById = resolvedBy.id;
+      child.resolvedBy = resolvedBy;
+      child.resolvedAt = new Date();
+      await child.save({ transaction });
+    }
   }
+
   if (data !== undefined) {
-    comment.data = data;
+    if (resolvedBy !== undefined && data?.reopen === true) {
+      comment.resolvedById = null;
+      comment.resolvedBy = resolvedBy;
+      const childComments = await Comment.findAll({
+        where: { parentCommentId: comment.id },
+      });
+      for await (const child of childComments) {
+        child.resolvedById = null;
+        child.resolvedBy = resolvedBy;
+        await child.save({ transaction });
+      }
+    } else {
+      comment.data = data;
+    }
   }
 
   const mentionsAfter = ProsemirrorHelper.parseMentions(

@@ -1,3 +1,4 @@
+import { User } from "@sentry/react";
 import invariant from "invariant";
 import filter from "lodash/filter";
 import orderBy from "lodash/orderBy";
@@ -97,5 +98,57 @@ export default class CommentsStore extends BaseStore<Comment> {
   @computed
   get orderedData(): Comment[] {
     return orderBy(Array.from(this.data.values()), "createdAt", "asc");
+  }
+
+  @action
+  async resolveComment(
+    params: {
+      id: string;
+      resolvedBy: User;
+    },
+    options?: {
+      publish?: boolean;
+      done?: boolean;
+      autosave?: boolean;
+    }
+  ) {
+    try {
+      this.isSaving = true;
+      await client.post(`/${this.apiEndpoint}.update`, {
+        ...params,
+        ...options,
+        apiVersion: 2,
+      });
+      return this.remove(params.id);
+    } finally {
+      this.isSaving = false;
+    }
+  }
+
+  async reopenComment(
+    params: {
+      id: string;
+      resolvedBy: User;
+    },
+    options?: {
+      publish?: boolean;
+      done?: boolean;
+      autosave?: boolean;
+    }
+  ) {
+    try {
+      this.isSaving = true;
+      await client.post(`/${this.apiEndpoint}.update`, {
+        ...params,
+        ...options,
+        apiVersion: 2,
+        data: {
+          reopen: true,
+        },
+      });
+      return this.remove(params.id);
+    } finally {
+      this.isSaving = false;
+    }
   }
 }

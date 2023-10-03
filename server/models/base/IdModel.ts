@@ -21,6 +21,8 @@ class IdModel extends BaseModel {
 
   @UpdatedAt
   updatedAt: Date;
+
+  resolvedAt: Date;
 }
 
 export default IdModel;

@@ -73,6 +73,9 @@ function CommentThread({
   });
   const can = usePolicy(document.id);
 
+  const resolved = thread?.resolvedById !== null;
+  const isNewThread = thread?.isNew;
+
   const commentsInThread = comments
     .inThread(thread.id)
     .filter((comment) => !comment.isNew);
@@ -179,20 +182,22 @@ function CommentThread({
         ))}
 
       <ResizingHeightContainer hideOverflow={false}>
-        {(focused || commentsInThread.length === 0) && can.comment && (
-          <Fade timing={100}>
-            <CommentForm
-              documentId={document.id}
-              thread={thread}
-              onTyping={setIsTyping}
-              standalone={commentsInThread.length === 0}
-              dir={document.dir}
-              autoFocus={autoFocus}
-            />
-          </Fade>
-        )}
+        {(focused || commentsInThread.length === 0) &&
+          can.comment &&
+          (!resolved || isNewThread) && (
+            <Fade timing={100}>
+              <CommentForm
+                documentId={document.id}
+                thread={thread}
+                onTyping={setIsTyping}
+                standalone={commentsInThread.length === 0}
+                dir={document.dir}
+                autoFocus={autoFocus}
+              />
+            </Fade>
+          )}
       </ResizingHeightContainer>
-      {!focused && !recessed && can.comment && (
+      {!focused && !recessed && can.comment && (!resolved || isNewThread) && (
         <Reply onClick={() => setAutoFocus(true)}>{t("Reply")}…</Reply>
       )}
     </Thread>

@@ -40,6 +40,8 @@ export const CommentsUpdateSchema = BaseSchema.extend({
 
     /** Update comment with this data */
     data: z.any(),
+
+    resolvedBy: z.any(),
   }),
 });
 
