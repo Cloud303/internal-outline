@@ -51,14 +51,7 @@ import { RateLimiterStrategy } from "@server/utils/RateLimiter";
 import { getFileFromRequest } from "@server/utils/koa";
 import { getTeamFromContext } from "@server/utils/passport";
 import slugify from "@server/utils/slugify";
-import {
-  assertUuid,
-  assertSort,
-  assertIn,
-  assertPresent,
-  assertPositiveInteger,
-  assertNotEmpty,
-} from "@server/validation";
+import { assertPresent } from "@server/validation";
 import { NavigationNode } from "~/types";
 import pagination from "../middlewares/pagination";
 import * as T from "./schema";
@@ -1372,7 +1365,7 @@ router.post(
           user,
           request: ctx.request,
           body: ctx.input.body,
-          parentDocumentId: document.id,
+          parentDocument: document,
           childs: documentTree?.children,
         });
       }
@@ -1469,7 +1462,7 @@ router.post(
             publish: true,
             editorVersion,
           },
-          parentDocumentId: duplicateDocument.id,
+          parentDocument: duplicateDocument,
           childs: documentTree?.children,
         });
       }
@@ -1489,7 +1482,7 @@ async function createChildDuplicates({
   user,
   request,
   body,
-  parentDocumentId,
+  parentDocument,
   childs,
 }: {
   collection: Collection;
@@ -1500,7 +1493,7 @@ async function createChildDuplicates({
     publish: boolean | undefined;
     editorVersion: string | undefined;
   };
-  parentDocumentId: string | undefined;
+  parentDocument: Document | undefined;
   childs: NavigationNode[] | undefined;
 }) {
   // if (parentDocumentId) {
@@ -1510,21 +1503,27 @@ async function createChildDuplicates({
   // if (body.index) {
   //   assertPositiveInteger(body.index, "index must be an integer (>=0)");
   // }
+
   authorize(user, "createDocument", user.team);
 
-  let parentDocument;
+  // let parentDocument;
 
-  if (parentDocumentId) {
-    parentDocument = await Document.findOne({
-      where: {
-        id: parentDocumentId,
-        collectionId: collection.id,
-      },
-    });
-    authorize(user, "read", parentDocument, {
-      collection,
-    });
-  }
+  // if (parentDocumentId) {
+  //   parentDocument = await Document.findOne({
+  //     where: {
+  //       id: parentDocumentId,
+  //       collectionId: collection.id,
+  //     },
+  //   });
+  //   authorize(user, "read", parentDocument, {
+  //     collection,
+  //   });
+  // }
+
+  authorize(user, "read", parentDocument, {
+    collection,
+  });
+
   for (const child of childs || []) {
     let i = 1;
     const childDoc: Document | null = await Document.findByPk(child.id, {
@@ -1543,7 +1542,7 @@ async function createChildDuplicates({
       text: `${childDoc?.text}`,
       publish: body.publish,
       collectionId: `${childDoc?.collectionId}`,
-      parentDocumentId,
+      parentDocumentId: parentDocument.id,
       templateDocument,
       template: childDoc?.template,
       index: i,
@@ -1551,14 +1550,30 @@ async function createChildDuplicates({
       editorVersion: body.editorVersion,
       ip: request.ip,
     };
-    const childData = await createDoc({ doc: obj });
+    const newDoc = await createDoc({ doc: obj });
+
+    // const document = await documentCreator({
+    //   title,
+    //   text,
+    //   publish,
+    //   collectionId,
+    //   parentDocumentId,
+    //   templateDocument,
+    //   template,
+    //   fullWidth,
+    //   user,
+    //   editorVersion,
+    //   ip: ctx.request.ip,
+    //   transaction,
+    // });
+
     if (child.children.length > 0) {
       await createChildDuplicates({
         collection,
         user,
         request,
         body,
-        parentDocumentId: childData?.id,
+        parentDocument: newDoc,
         childs: child.children,
       });
     }
