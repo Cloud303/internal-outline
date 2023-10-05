@@ -231,7 +231,7 @@ const DocumentTitle = React.forwardRef(function _DocumentTitle(
     [emoji, onChangeEmoji, restoreFocus]
   );
 
-  const dir = ref.current?.getComputedDirection();
+  const dir = ref?.current?.getComputedDirection();
   const emojiIcon = <Emoji size={32}>{emoji}</Emoji>;
 
   return (
