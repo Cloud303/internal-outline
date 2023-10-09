@@ -1424,6 +1424,9 @@ router.post(
     const document: Document | null = await Document.findByPk(documentId, {
       userId: user.id,
     });
+    if (!document) {
+      throw NotFoundError();
+    }
     authorize(user, "read", document, {
       collection,
     });
