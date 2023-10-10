@@ -1,15 +1,18 @@
 import { addDays, differenceInDays } from "date-fns";
+import i18n, { t } from "i18next";
 import floor from "lodash/floor";
 import { action, autorun, computed, observable, set } from "mobx";
 import { ExportContentType } from "@shared/types";
 import type { NavigationNode } from "@shared/types";
 import Storage from "@shared/utils/Storage";
 import { isRTL } from "@shared/utils/rtl";
+import slugify from "@shared/utils/slugify";
 import DocumentsStore from "~/stores/DocumentsStore";
 import User from "~/models/User";
 import { client } from "~/utils/ApiClient";
-import ParanoidModel from "./ParanoidModel";
+import { settingsPath } from "~/utils/routeHelpers";
 import View from "./View";
+import ParanoidModel from "./base/ParanoidModel";
 import Field from "./decorators/Field";
 
 type SaveOptions = {
@@ -134,15 +137,22 @@ export default class Document extends ParanoidModel {
   @observable
   archivedAt: string;
 
+  /**
+   * @deprecated Use path instead
+   */
+  @observable
   url: string;
 
+  @observable
   urlId: string;
 
+  @observable
   tasks: {
     completed: number;
     total: number;
   };
 
+  @observable
   revision: number;
 
   /**
@@ -162,8 +172,20 @@ export default class Document extends ParanoidModel {
   }
 
   @computed
+  get path(): string {
+    const prefix = this.template ? settingsPath("templates") : "/doc";
+
+    if (!this.title) {
+      return `${prefix}/untitled-${this.urlId}`;
+    }
+
+    const slugifiedTitle = slugify(this.title);
+    return `${prefix}/${slugifiedTitle}-${this.urlId}`;
+  }
+
+  @computed
   get noun(): string {
-    return this.template ? "template" : "document";
+    return this.template ? t("template") : t("document");
   }
 
   @computed
@@ -232,11 +254,6 @@ export default class Document extends ParanoidModel {
   }
 
   @computed
-  get titleWithDefault(): string {
-    return this.title || "Untitled";
-  }
-
-  @computed
   get permanentlyDeletedAt(): string | undefined {
     if (!this.deletedAt) {
       return undefined;
@@ -267,6 +284,10 @@ export default class Document extends ParanoidModel {
     }
 
     return floor((this.tasks.completed / this.tasks.total) * 100);
+  }
+
+  get titleWithDefault(): string {
+    return this.title || i18n.t("Untitled");
   }
 
   @action

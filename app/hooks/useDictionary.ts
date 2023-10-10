@@ -86,6 +86,8 @@ export default function useDictionary() {
       tableOfContents: t("Table of Contents"),
       indent: t("Indent"),
       outdent: t("Outdent"),
+      video: t("Video"),
+      untitled: t("Untitled"),
     }),
     [t]
   );

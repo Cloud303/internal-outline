@@ -55,6 +55,7 @@ export type StructuredImportData = {
     id: string;
     urlId?: string;
     title: string;
+    emoji?: string;
     /**
      * The document text. To reference an attachment or image use the special
      * formatting <<attachmentId>>. It will be replaced with a reference to the
@@ -300,6 +301,7 @@ export default abstract class ImportTask extends BaseTask<Props> {
           if (item.urlId) {
             const existing = await Collection.unscoped().findOne({
               attributes: ["id"],
+              paranoid: false,
               transaction,
               where: {
                 urlId: item.urlId,
@@ -412,6 +414,7 @@ export default abstract class ImportTask extends BaseTask<Props> {
           if (item.urlId) {
             const existing = await Document.unscoped().findOne({
               attributes: ["id"],
+              paranoid: false,
               transaction,
               where: {
                 urlId: item.urlId,

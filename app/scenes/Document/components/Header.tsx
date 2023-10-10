@@ -27,6 +27,7 @@ import EmojiIcon from "~/components/Icons/EmojiIcon";
 import Star from "~/components/Star";
 import Tooltip from "~/components/Tooltip";
 import { publishDocument } from "~/actions/definitions/documents";
+import { navigateToTemplateSettings } from "~/actions/definitions/navigation";
 import { restoreRevision } from "~/actions/definitions/revisions";
 import useActionContext from "~/hooks/useActionContext";
 import useMobile from "~/hooks/useMobile";
@@ -37,7 +38,7 @@ import NewChildDocumentMenu from "~/menus/NewChildDocumentMenu";
 import TableOfContentsMenu from "~/menus/TableOfContentsMenu";
 import TemplatesMenu from "~/menus/TemplatesMenu";
 import { metaDisplay } from "~/utils/keyboard";
-import { newDocumentPath, documentEditPath } from "~/utils/routeHelpers";
+import { documentEditPath } from "~/utils/routeHelpers";
 import ObservingBanner from "./ObservingBanner";
 import PublicBreadcrumb from "./PublicBreadcrumb";
 import ShareButton from "./ShareButton";
@@ -259,31 +260,33 @@ function DocumentHeader({
             {!isEditing &&
               !isDeleted &&
               !isRevision &&
-              (!isMobile || !isTemplate) &&
+              !isTemplate &&
+              !isMobile &&
               document.collectionId && (
                 <Action>
                   <ShareButton document={document} />
                 </Action>
               )}
-            {isEditing && (
-              <>
-                <Action>
-                  <Tooltip
-                    tooltip={t("Save")}
-                    shortcut={`${metaDisplay}+enter`}
-                    delay={500}
-                    placement="bottom"
+            {(isEditing || isTemplate) && (
+              <Action>
+                <Tooltip
+                  tooltip={t("Save")}
+                  shortcut={`${metaDisplay}+enter`}
+                  delay={500}
+                  placement="bottom"
+                >
+                  <Button
+                    context={context}
+                    action={isTemplate ? navigateToTemplateSettings : undefined}
+                    onClick={isTemplate ? undefined : handleSave}
+                    disabled={savingIsDisabled}
+                    neutral={isDraft}
+                    hideIcon
                   >
-                    <Button
-                      onClick={handleSave}
-                      disabled={savingIsDisabled}
-                      neutral={isDraft}
-                    >
-                      {isDraft ? t("Save draft") : t("Done editing")}
-                    </Button>
-                  </Tooltip>
-                </Action>
-              </>
+                    {isDraft ? t("Save draft") : t("Done editing")}
+                  </Button>
+                </Tooltip>
+              </Action>
             )}
             {can.update &&
               !isEditing &&
