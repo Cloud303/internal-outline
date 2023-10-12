@@ -24,7 +24,7 @@ function Comments() {
   const document = documents.getByUrl(match.params.documentSlug);
   const focusedComment = useFocusedComment();
   const can = usePolicy(document?.id);
-  const [threadOption, setThreadOption] = React.useState("All");
+  const [threadOption, setThreadOption] = React.useState("Open");
   const dropDownMenuOptions = ["All", "Open", "Resolved"];
 
   const handleChange = (event: {
