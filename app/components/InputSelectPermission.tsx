@@ -17,15 +17,14 @@ export default function InputSelectPermission(
   const { t } = useTranslation();
   const handleChange = React.useCallback(
     (value) => {
-      // if (value === "no_access") {
-      //   value = "no_access";
-      // }
+      if (value === "no_access") {
+        value = null;
+      }
 
       onChange?.(value);
     },
     [onChange]
   );
-
   return (
     <InputSelect
       label={t("Default access")}
@@ -40,7 +39,7 @@ export default function InputSelectPermission(
         },
         {
           label: t("No access"),
-          value: CollectionPermission.NoAccess,
+          value: "no_access",
         },
       ]}
       ariaLabel={t("Default access")}
