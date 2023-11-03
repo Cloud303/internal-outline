@@ -102,6 +102,15 @@ function CommentMenu({
                 {t("Edit")}
               </MenuItem>
             )}
+            {notResolvedParentComment ? (
+              <MenuItem {...menu} onClick={handleResolve} dangerous>
+                {t("Resolve")}
+              </MenuItem>
+            ) : resolvedParentComment ? (
+              <MenuItem {...menu} onClick={handleReopen} dangerous>
+                {t("Re-open")}
+              </MenuItem>
+            ) : null}
           </>
         )}
         <MenuItem {...menu} onClick={handleCopyLink}>
@@ -113,16 +122,6 @@ function CommentMenu({
             <MenuItem {...menu} onClick={handleDelete} dangerous>
               {t("Delete")}
             </MenuItem>
-
-            {notResolvedParentComment ? (
-              <MenuItem {...menu} onClick={handleResolve} dangerous>
-                {t("Resolve")}
-              </MenuItem>
-            ) : resolvedParentComment ? (
-              <MenuItem {...menu} onClick={handleReopen} dangerous>
-                {t("Re-open")}
-              </MenuItem>
-            ) : null}
           </>
         )}
       </ContextMenu>
