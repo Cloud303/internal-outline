@@ -110,6 +110,20 @@ export default class DocumentHelper {
       centered: options?.centered,
     });
 
+    console.log("OUTPUT", output);
+
+    const dom = new JSDOM(output);
+    const doc = dom.window.document;
+
+    // Remove elements with the class ".comment-marker"
+    const commentMarkerElements = doc.querySelectorAll(".comment-marker");
+    console.log("commentMarkerElements", commentMarkerElements);
+    commentMarkerElements.forEach((element) => {
+      element.classList.remove("comment-marker");
+    });
+
+    output = dom.serialize();
+
     if (options?.signedUrls) {
       const teamId =
         document instanceof Document
