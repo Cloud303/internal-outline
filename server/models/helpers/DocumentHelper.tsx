@@ -110,8 +110,6 @@ export default class DocumentHelper {
       centered: options?.centered,
     });
 
-    console.log("OUTPUT", output);
-
     const dom = new JSDOM(output);
     const doc = dom.window.document;
 
