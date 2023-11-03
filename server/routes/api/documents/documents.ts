@@ -1323,7 +1323,7 @@ router.post(
       title,
       text,
       emoji,
-      publish,
+      publish = true,
       collectionId,
       parentDocumentId,
       fullWidth,
