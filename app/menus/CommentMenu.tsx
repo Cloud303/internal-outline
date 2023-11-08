@@ -102,6 +102,11 @@ function CommentMenu({
                 {t("Edit")}
               </MenuItem>
             )}
+          </>
+        )}
+
+        {can.read && (
+          <>
             {notResolvedParentComment ? (
               <MenuItem {...menu} onClick={handleResolve} dangerous>
                 {t("Resolve")}
