@@ -105,7 +105,7 @@ function CommentMenu({
           </>
         )}
 
-        {can.read && (
+        {
           <>
             {notResolvedParentComment ? (
               <MenuItem {...menu} onClick={handleResolve} dangerous>
@@ -117,7 +117,7 @@ function CommentMenu({
               </MenuItem>
             ) : null}
           </>
-        )}
+        }
         <MenuItem {...menu} onClick={handleCopyLink}>
           {t("Copy link")}
         </MenuItem>

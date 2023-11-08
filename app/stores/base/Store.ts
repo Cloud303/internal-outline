@@ -27,6 +27,20 @@ export const DEFAULT_PAGINATION_LIMIT = 25;
 export const PAGINATION_SYMBOL = Symbol.for("pagination");
 
 export default abstract class Store<T extends Model> {
+  reopenComment(arg0: {
+    id: string;
+    resolvedBy: import("../../models/User").default;
+  }) {
+    throw new Error("Method not implemented.");
+  }
+
+  resolveComment(arg0: {
+    id: string;
+    resolvedBy: import("../../models/User").default;
+  }) {
+    throw new Error("Method not implemented.");
+  }
+
   @observable
   data: Map<string, T> = new Map();
 
