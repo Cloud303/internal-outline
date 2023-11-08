@@ -109,8 +109,9 @@ router.post(
     const document = await Document.findByPk(comment.documentId, {
       userId: user.id,
     });
+
     authorize(user, "comment", document);
-    authorize(user, "update", comment);
+    // authorize(user, "update", comment);
 
     await commentUpdater({
       user,

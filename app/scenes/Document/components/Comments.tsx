@@ -40,7 +40,21 @@ function Comments() {
 
   const threads = comments
     .threadsInDocument(document.id)
-    .filter((thread) => !thread.isNew || thread.createdById === user.id);
+    .filter((thread) => !thread.isNew || thread.createdById === user.id)
+    .filter((thread) => {
+      if (threadOption === "Resolved" && thread?.resolvedById !== null) {
+        return thread;
+      } else if (threadOption === "All") {
+        return thread;
+      } else if (
+        (threadOption === "Open" && thread?.resolvedById === null) ||
+        thread.isNew
+      ) {
+        return thread;
+      }
+      // Fallback: Return false for any other cases
+      return false;
+    });
   const hasComments = threads.length > 0;
 
   return (
@@ -75,30 +89,18 @@ function Comments() {
             </select>
           </label>
         </div>
-
+        {console.log("sada", threads)}
         <Wrapper $hasComments={hasComments}>
           {hasComments ? (
-            threads
-              .filter((el) => {
-                if (threadOption === "Resolved" && el.resolvedById !== null) {
-                  return el;
-                }
-                if (threadOption === "All") {
-                  return el;
-                }
-                if (threadOption === "Open" && el.resolvedById === null) {
-                  return el;
-                }
-              })
-              .map((thread) => (
-                <CommentThread
-                  key={thread.id}
-                  comment={thread}
-                  document={document}
-                  recessed={!!focusedComment && focusedComment.id !== thread.id}
-                  focused={focusedComment?.id === thread.id}
-                />
-              ))
+            threads.map((thread) => (
+              <CommentThread
+                key={thread.id}
+                comment={thread}
+                document={document}
+                recessed={!!focusedComment && focusedComment.id !== thread.id}
+                focused={focusedComment?.id === thread.id}
+              />
+            ))
           ) : (
             <NoComments align="center" justify="center" auto>
               <PositionedEmpty>{t("No comments yet")}</PositionedEmpty>
