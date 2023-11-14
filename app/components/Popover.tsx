@@ -16,6 +16,7 @@ type Props = PopoverProps & {
   tabIndex?: number;
   scrollable?: boolean;
   mobilePosition?: "top" | "bottom";
+  sticky?: boolean;
   show: () => void;
   hide: () => void;
 };
@@ -27,9 +28,11 @@ const Popover: React.FC<Props> = ({
   scrollable = true,
   flex,
   mobilePosition,
+  sticky = false,
   ...rest
 }: Props) => {
   const isMobile = useMobile();
+  let style = {};
 
   // Custom Escape handler rather than using hideOnEsc from reakit so we can
   // prevent default behavior of exiting fullscreen.
@@ -61,6 +64,10 @@ const Popover: React.FC<Props> = ({
     );
   }
 
+  if (sticky) {
+    style = { position: "sticky", top: "60px" };
+  }
+
   return (
     <ReakitPopover {...rest} hideOnEsc={false}>
       <Contents
@@ -68,6 +75,7 @@ const Popover: React.FC<Props> = ({
         $width={width}
         $scrollable={scrollable}
         $flex={flex}
+        style={style}
       >
         {children}
       </Contents>
