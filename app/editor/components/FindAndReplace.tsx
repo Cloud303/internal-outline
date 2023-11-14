@@ -203,7 +203,7 @@ export default function FindAndReplace({ readOnly }: Props) {
       top: 60,
       right: 16,
       zIndex: depths.popover,
-      height: "500px",
+      height: "100%",
     }),
     []
   );
