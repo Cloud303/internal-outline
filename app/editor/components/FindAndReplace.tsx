@@ -203,6 +203,7 @@ export default function FindAndReplace({ readOnly }: Props) {
       top: 60,
       right: 16,
       zIndex: depths.popover,
+      height: "500px",
     }),
     []
   );
@@ -264,6 +265,7 @@ export default function FindAndReplace({ readOnly }: Props) {
         style={style}
         aria-label={t("Find and replace")}
         width={420}
+        sticky={true}
       >
         <Content column>
           <Flex gap={8}>
