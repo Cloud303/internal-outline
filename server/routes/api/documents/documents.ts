@@ -2,14 +2,14 @@ import path from "path";
 import fs from "fs-extra";
 import invariant from "invariant";
 import JSZip from "jszip";
-import { Request } from "koa";
 import Router from "koa-router";
 import escapeRegExp from "lodash/escapeRegExp";
 import mime from "mime-types";
-import { Op, ScopeOptions, WhereOptions, Transaction } from "sequelize";
+import { Op, ScopeOptions, WhereOptions } from "sequelize";
 import { TeamPreference } from "@shared/types";
 import { subtractDate } from "@shared/utils/date";
 import slugify from "@shared/utils/slugify";
+import createDocumentChildDuplicates from "@server/commands/createDocumentChildDuplicates";
 import documentCreator from "@server/commands/documentCreator";
 import documentImporter from "@server/commands/documentImporter";
 import documentLoader from "@server/commands/documentLoader";
@@ -1397,7 +1397,7 @@ router.post(
         collection.getDocumentTree(documentId);
       if (documentTree?.children?.length) {
         // Create duplicates of nested docs
-        createChildDuplicates({
+        createDocumentChildDuplicates({
           collection,
           user,
           request: ctx.request,
@@ -1491,9 +1491,12 @@ router.post(
       // Check document tree for child/nested docs
       const documentTree: NavigationNode | null =
         collection.getDocumentTree(documentId);
+      // console.log("documentTree?.children", documentTree.children);
+      // const documentChildDocumentIds = await document.getChildDocumentIds();
+      // console.log("documentChildDocumentIds:", documentChildDocumentIds);
       if (documentTree?.children?.length) {
         // Create duplicates of nested docs
-        createChildDuplicates({
+        createDocumentChildDuplicates({
           collection,
           user,
           request: ctx.request,
@@ -1517,142 +1520,142 @@ router.post(
 );
 
 // Recursive function to loop through nested documents
-async function createChildDuplicates({
-  collection,
-  user,
-  request,
-  body,
-  parentDocument,
-  childs,
-}: {
-  collection: Collection;
-  user: User;
-  request: Request;
-  body: {
-    index: number | undefined;
-    publish: boolean | undefined;
-    editorVersion: string | undefined;
-  };
-  parentDocument: Document | undefined;
-  childs: NavigationNode[] | undefined;
-}) {
-  // if (parentDocumentId) {
-  //   assertUuid(parentDocumentId, "parentDocumentId must be an uuid");
-  // }
+// async function createChildDuplicates({
+//   collection,
+//   user,
+//   request,
+//   body,
+//   parentDocument,
+//   childs,
+// }: {
+//   collection: Collection;
+//   user: User;
+//   request: Request;
+//   body: {
+//     index: number | undefined;
+//     publish: boolean | undefined;
+//     editorVersion: string | undefined;
+//   };
+//   parentDocument: Document | undefined;
+//   childs: NavigationNode[] | undefined;
+// }) {
+//   // if (parentDocumentId) {
+//   //   assertUuid(parentDocumentId, "parentDocumentId must be an uuid");
+//   // }
 
-  // if (body.index) {
-  //   assertPositiveInteger(body.index, "index must be an integer (>=0)");
-  // }
+//   // if (body.index) {
+//   //   assertPositiveInteger(body.index, "index must be an integer (>=0)");
+//   // }
 
-  authorize(user, "createDocument", user.team);
+//   authorize(user, "createDocument", user.team);
 
-  // let parentDocument;
+//   // let parentDocument;
 
-  // if (parentDocumentId) {
-  //   parentDocument = await Document.findOne({
-  //     where: {
-  //       id: parentDocumentId,
-  //       collectionId: collection.id,
-  //     },
-  //   });
-  //   authorize(user, "read", parentDocument, {
-  //     collection,
-  //   });
-  // }
+//   // if (parentDocumentId) {
+//   //   parentDocument = await Document.findOne({
+//   //     where: {
+//   //       id: parentDocumentId,
+//   //       collectionId: collection.id,
+//   //     },
+//   //   });
+//   //   authorize(user, "read", parentDocument, {
+//   //     collection,
+//   //   });
+//   // }
 
-  authorize(user, "read", parentDocument, {
-    collection,
-  });
+//   authorize(user, "read", parentDocument, {
+//     collection,
+//   });
 
-  for (const child of childs || []) {
-    let i = 1;
-    const childDoc: Document | null = await Document.findByPk(child.id, {
-      userId: user.id,
-    });
+//   for (const child of childs || []) {
+//     let i = 1;
+//     const childDoc: Document | null = await Document.findByPk(child.id, {
+//       userId: user.id,
+//     });
 
-    let templateDocument: Document | null | undefined;
-    if (childDoc?.templateId) {
-      templateDocument = await Document.findByPk(childDoc?.templateId, {
-        userId: user.id,
-      });
-      authorize(user, "read", templateDocument);
-    }
-    const obj = {
-      title: `${childDoc?.title}`,
-      text: `${childDoc?.text}`,
-      publish: body.publish,
-      collectionId: `${childDoc?.collectionId}`,
-      parentDocumentId: parentDocument.id,
-      templateDocument,
-      template: childDoc?.template,
-      index: i,
-      user,
-      editorVersion: body.editorVersion,
-      ip: request.ip,
-    };
-    const newDoc = await createDoc({ doc: obj });
+//     let templateDocument: Document | null | undefined;
+//     if (childDoc?.templateId) {
+//       templateDocument = await Document.findByPk(childDoc?.templateId, {
+//         userId: user.id,
+//       });
+//       authorize(user, "read", templateDocument);
+//     }
+//     const obj = {
+//       title: `${childDoc?.title}`,
+//       text: `${childDoc?.text}`,
+//       publish: body.publish,
+//       collectionId: `${childDoc?.collectionId}`,
+//       parentDocumentId: parentDocument.id,
+//       templateDocument,
+//       template: childDoc?.template,
+//       index: i,
+//       user,
+//       editorVersion: body.editorVersion,
+//       ip: request.ip,
+//     };
+//     const newDoc = await createDoc({ doc: obj });
 
-    // const document = await documentCreator({
-    //   title,
-    //   text,
-    //   publish,
-    //   collectionId,
-    //   parentDocumentId,
-    //   templateDocument,
-    //   template,
-    //   fullWidth,
-    //   user,
-    //   editorVersion,
-    //   ip: ctx.request.ip,
-    //   transaction,
-    // });
+//     // const document = await documentCreator({
+//     //   title,
+//     //   text,
+//     //   publish,
+//     //   collectionId,
+//     //   parentDocumentId,
+//     //   templateDocument,
+//     //   template,
+//     //   fullWidth,
+//     //   user,
+//     //   editorVersion,
+//     //   ip: ctx.request.ip,
+//     //   transaction,
+//     // });
 
-    if (child.children.length > 0) {
-      await createChildDuplicates({
-        collection,
-        user,
-        request,
-        body,
-        parentDocument: newDoc,
-        childs: child.children,
-      });
-    }
-    i += 1;
-  }
-}
+//     if (child.children.length > 0) {
+//       await createChildDuplicates({
+//         collection,
+//         user,
+//         request,
+//         body,
+//         parentDocument: newDoc,
+//         childs: child.children,
+//       });
+//     }
+//     i += 1;
+//   }
+// }
 
 // Function creates a new document
-async function createDoc({
-  doc,
-}: {
-  doc: {
-    title: string;
-    text: string;
-    publish: boolean | undefined;
-    collectionId: string;
-    parentDocumentId: string | undefined;
-    templateDocument: Document | null | undefined;
-    template: boolean | undefined;
-    index: number | undefined;
-    user: User;
-    editorVersion: string | undefined;
-    ip: string | undefined;
-    id?: string | undefined;
-    publishedAt?: Date | undefined;
-    createdAt?: Date | undefined;
-    updatedAt?: Date | undefined;
-    source?: "import" | undefined;
-    transaction?: Transaction;
-  };
-}): Promise<Document | undefined> {
-  try {
-    return await documentCreator({
-      ...doc,
-    });
-  } catch (err) {
-    // console.log("ERROR:", err);
-    return;
-  }
-}
+// async function createDoc({
+//   doc,
+// }: {
+//   doc: {
+//     title: string;
+//     text: string;
+//     publish: boolean | undefined;
+//     collectionId: string;
+//     parentDocumentId: string | undefined;
+//     templateDocument: Document | null | undefined;
+//     template: boolean | undefined;
+//     index: number | undefined;
+//     user: User;
+//     editorVersion: string | undefined;
+//     ip: string | undefined;
+//     id?: string | undefined;
+//     publishedAt?: Date | undefined;
+//     createdAt?: Date | undefined;
+//     updatedAt?: Date | undefined;
+//     source?: "import" | undefined;
+//     transaction?: Transaction;
+//   };
+// }): Promise<Document | undefined> {
+//   try {
+//     return await documentCreator({
+//       ...doc,
+//     });
+//   } catch (err) {
+//     // console.log("ERROR:", err);
+//     return;
+//   }
+// }
 
 export default router;
