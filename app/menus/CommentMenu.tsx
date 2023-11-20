@@ -3,6 +3,7 @@ import { observer } from "mobx-react";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { useMenuState } from "reakit/Menu";
+import { toast } from "sonner";
 import Comment from "~/models/Comment";
 import CommentDeleteDialog from "~/components/CommentDeleteDialog";
 import CommentReOpenDialog from "~/components/CommentReOpenDialog";
@@ -14,7 +15,6 @@ import Separator from "~/components/ContextMenu/Separator";
 import EventBoundary from "~/components/EventBoundary";
 import usePolicy from "~/hooks/usePolicy";
 import useStores from "~/hooks/useStores";
-import useToasts from "~/hooks/useToasts";
 import { commentPath, urlify } from "~/utils/routeHelpers";
 
 type Props = {
@@ -43,7 +43,6 @@ function CommentMenu({
   const menu = useMenuState({
     modal: true,
   });
-  const { showToast } = useToasts();
   const { documents, dialogs } = useStores();
   const { t } = useTranslation();
   const can = usePolicy(comment.id);
@@ -80,9 +79,9 @@ function CommentMenu({
   const handleCopyLink = React.useCallback(() => {
     if (document) {
       copy(urlify(commentPath(document, comment)));
-      showToast(t("Link copied"));
+      toast.message(t("Link copied"));
     }
-  }, [t, document, comment, showToast]);
+  }, [t, document, comment]);
 
   return (
     <>

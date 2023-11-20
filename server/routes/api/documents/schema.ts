@@ -174,6 +174,23 @@ export const DocumentsSearchSchema = BaseSchema.extend({
 
 export type DocumentsSearchReq = z.infer<typeof DocumentsSearchSchema>;
 
+export const DocumentsDuplicateSchema = BaseSchema.extend({
+  body: BaseIdSchema.extend({
+    /** New document title */
+    title: z.string().optional(),
+    /** Whether child documents should also be duplicated */
+    recursive: z.boolean().optional(),
+    /** Whether the new document should be published */
+    publish: z.boolean().optional(),
+    /** Id of the collection to which the document should be copied */
+    collectionId: z.string().uuid().optional(),
+    /** Id of the parent document to which the document should be copied */
+    parentDocumentId: z.string().uuid().optional(),
+  }),
+});
+
+export type DocumentsDuplicateReq = z.infer<typeof DocumentsDuplicateSchema>;
+
 export const DocumentsTemplatizeSchema = BaseSchema.extend({
   body: BaseIdSchema,
 });
@@ -334,26 +351,26 @@ export const DocumentsCreateSchema = BaseSchema.extend({
     message: "collectionId is required to publish",
   });
 
-export const DocumentsDuplicateSchema = BaseSchema.extend({
-  body: z.object({
-    /** Doc title */
-    title: z.string().default(""),
+// export const DocumentsDuplicateSchema = BaseSchema.extend({
+//   body: z.object({
+//     /** Doc title */
+//     title: z.string().default(""),
 
-    /** Create Doc under this collection */
-    collectionId: z.string().uuid().nullish(),
+//     /** Create Doc under this collection */
+//     collectionId: z.string().uuid().nullish(),
 
-    /** Create Doc under this parent */
-    parentDocumentId: z.string().uuid().nullish(),
+//     /** Create Doc under this parent */
+//     parentDocumentId: z.string().uuid().nullish(),
 
-    documentId: z.string().uuid().optional(),
-  }),
-}).refine((req) => !(req.body.parentDocumentId && !req.body.collectionId), {
-  message: "collectionId is required to create a nested document",
-});
+//     documentId: z.string().uuid().optional(),
+//   }),
+// }).refine((req) => !(req.body.parentDocumentId && !req.body.collectionId), {
+//   message: "collectionId is required to create a nested document",
+// });
 
 export type DocumentsCreateReq = z.infer<typeof DocumentsCreateSchema>;
 
-export type DocumentsDuplicateReq = z.infer<typeof DocumentsDuplicateSchema>;
+// export type DocumentsDuplicateReq = z.infer<typeof DocumentsDuplicateSchema>;
 
 export const DocumentsUsersSchema = BaseSchema.extend({
   body: BaseIdSchema.extend({

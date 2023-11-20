@@ -258,6 +258,7 @@ export const Background = styled(Scrollable)<BackgroundProps>`
     transform-origin: ${(props: BackgroundProps) =>
       props.rightAnchor ? "75%" : "25%"} 0;
     max-width: ${(props: BackgroundProps) => props.maxWidth ?? 276}px;
+    max-height: 100vh;
     background: ${(props: BackgroundProps) => props.theme.menuBackground};
     box-shadow: ${(props: BackgroundProps) => props.theme.menuShadow};
   `};

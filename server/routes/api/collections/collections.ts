@@ -170,7 +170,9 @@ router.post(
     const { user } = ctx.state.auth;
     authorize(user, "importCollection", user.team);
 
-    const attachment = await Attachment.findByPk(attachmentId);
+    const attachment = await Attachment.findByPk(attachmentId, {
+      transaction,
+    });
     authorize(user, "read", attachment);
 
     const fileOperation = await FileOperation.create(
@@ -378,7 +380,7 @@ router.post(
 
     const collection = await Collection.scope({
       method: ["withMembership", actor.id],
-    }).findByPk(id);
+    }).findByPk(id, { transaction });
     authorize(actor, "update", collection);
 
     const user = await User.findByPk(userId);
@@ -448,10 +450,10 @@ router.post(
 
     const collection = await Collection.scope({
       method: ["withMembership", actor.id],
-    }).findByPk(id);
+    }).findByPk(id, { transaction });
     authorize(actor, "update", collection);
 
-    const user = await User.findByPk(userId);
+    const user = await User.findByPk(userId, { transaction });
     authorize(actor, "read", user);
 
     await collection.$remove("user", user, { transaction });
@@ -550,12 +552,12 @@ router.post(
     const { id, format, includeAttachments } = ctx.input.body;
     const { user } = ctx.state.auth;
 
-    const team = await Team.findByPk(user.teamId);
+    const team = await Team.findByPk(user.teamId, { transaction });
     authorize(user, "createExport", team);
 
     const collection = await Collection.scope({
       method: ["withMembership", user.id],
-    }).findByPk(id);
+    }).findByPk(id, { transaction });
     authorize(user, "export", collection);
 
     const fileOperation = await collectionExporter({
@@ -587,7 +589,7 @@ router.post(
     const { transaction } = ctx.state;
     const { format, includeAttachments } = ctx.input.body;
     const { user } = ctx.state.auth;
-    const team = await Team.findByPk(user.teamId);
+    const team = await Team.findByPk(user.teamId, { transaction });
     authorize(user, "createExport", team);
 
     const fileOperation = await collectionExporter({

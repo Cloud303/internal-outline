@@ -1,7 +1,5 @@
-import BlockMenu from "../extensions/BlockMenu";
 import ClipboardTextSerializer from "../extensions/ClipboardTextSerializer";
 import DateTime from "../extensions/DateTime";
-import FindAndReplace from "../extensions/FindAndReplace";
 import History from "../extensions/History";
 import Keys from "../extensions/Keys";
 import MaxLength from "../extensions/MaxLength";
@@ -89,7 +87,7 @@ export const basicExtensions: Nodes = [
  * editors that need advanced formatting.
  */
 export const richExtensions: Nodes = [
-  ...basicExtensions.filter((n) => n !== SimpleImage),
+  ...basicExtensions.filter((n) => n !== SimpleImage && n !== Keys),
   Image,
   HardBreak,
   CodeBlock,
@@ -114,11 +112,10 @@ export const richExtensions: Nodes = [
   TableOfContents,
   Highlight,
   TemplatePlaceholder,
-  BlockMenu,
   Math,
   MathBlock,
   PreventTab,
-  FindAndReplace,
+  Keys,
 ];
 
 /**

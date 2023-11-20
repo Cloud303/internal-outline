@@ -41,11 +41,8 @@ async function presentDocument(
     archivedAt: document.archivedAt,
     deletedAt: document.deletedAt,
     teamId: document.teamId,
-    template: document.template,
-    templateId: document.templateId,
     collaboratorIds: [],
     revision: document.revisionCount,
-    insightsEnabled: document.insightsEnabled,
     fullWidth: document.fullWidth,
     collectionId: undefined,
     parentDocumentId: undefined,
@@ -62,6 +59,9 @@ async function presentDocument(
     data.createdBy = presentUser(document.createdBy);
     data.updatedBy = presentUser(document.updatedBy);
     data.collaboratorIds = document.collaboratorIds;
+    data.templateId = document.templateId;
+    data.template = document.template;
+    data.insightsEnabled = document.insightsEnabled;
   }
 
   return data;

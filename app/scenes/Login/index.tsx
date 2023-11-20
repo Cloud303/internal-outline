@@ -23,6 +23,7 @@ import PageTitle from "~/components/PageTitle";
 import TeamLogo from "~/components/TeamLogo";
 import Text from "~/components/Text";
 import env from "~/env";
+import useCurrentUser from "~/hooks/useCurrentUser";
 import useLastVisitedPath from "~/hooks/useLastVisitedPath";
 import useQuery from "~/hooks/useQuery";
 import useStores from "~/hooks/useStores";
@@ -44,12 +45,13 @@ function Login({ children }: Props) {
   const notice = query.get("notice");
 
   const { t } = useTranslation();
+  const user = useCurrentUser({ rejectOnEmpty: false });
   const { auth } = useStores();
   const { config } = auth;
   const [error, setError] = React.useState(null);
   const [emailLinkSentTo, setEmailLinkSentTo] = React.useState("");
   const isCreate = location.pathname === "/create";
-  const rememberLastPath = !!auth.user?.getPreference(
+  const rememberLastPath = !!user?.getPreference(
     UserPreference.RememberLastPath
   );
   const [lastVisitedPath] = useLastVisitedPath();

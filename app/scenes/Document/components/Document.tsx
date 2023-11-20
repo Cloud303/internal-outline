@@ -11,6 +11,7 @@ import {
   withRouter,
   Redirect,
 } from "react-router";
+import { toast } from "sonner";
 import styled from "styled-components";
 import breakpoint from "styled-components-breakpoint";
 import { s } from "@shared/styles";
@@ -177,8 +178,13 @@ class DocumentScene extends React.Component<Props> {
       this.title = title;
       this.props.document.title = title;
     }
+    if (template.emoji) {
+      this.props.document.emoji = template.emoji;
+    }
+    if (template.text) {
+      this.props.document.text = template.text;
+    }
 
-    this.props.document.text = template.text;
     this.updateIsDirty();
 
     return this.onSave({
@@ -189,7 +195,7 @@ class DocumentScene extends React.Component<Props> {
   };
 
   onSynced = async () => {
-    const { toasts, history, location, t } = this.props;
+    const { history, location, t } = this.props;
     const restore = location.state?.restore;
     const revisionId = location.state?.revisionId;
     const editorRef = this.editor.current;
@@ -204,7 +210,7 @@ class DocumentScene extends React.Component<Props> {
 
     if (response) {
       await this.replaceDocument(response.data);
-      toasts.showToast(t("Document restored"));
+      toast.success(t("Document restored"));
       history.replace(this.props.document.url, history.location.state);
     }
   };
@@ -331,9 +337,7 @@ class DocumentScene extends React.Component<Props> {
         this.props.ui.setActiveDocument(savedDocument);
       }
     } catch (err) {
-      this.props.toasts.showToast(err.message, {
-        type: "error",
-      });
+      toast.error(err.message);
     } finally {
       this.isSaving = false;
       this.isPublishing = false;
