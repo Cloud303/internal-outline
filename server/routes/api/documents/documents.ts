@@ -245,28 +245,27 @@ router.post(
     const documents = await Document.scope([
       collectionScope,
       viewScope,
+      "withDrafts",
     ]).findAll({
       where: {
         teamId: user.teamId,
-        collectionId: {
-          [Op.or]: [{ [Op.in]: collectionIds }, { [Op.is]: null }],
-        },
         deletedAt: {
           [Op.ne]: null,
         },
+        [Op.or]: [
+          {
+            collectionId: {
+              [Op.in]: collectionIds,
+            },
+          },
+          {
+            createdById: user.id,
+            collectionId: {
+              [Op.is]: null,
+            },
+          },
+        ],
       },
-      include: [
-        {
-          model: User,
-          as: "createdBy",
-          paranoid: false,
-        },
-        {
-          model: User,
-          as: "updatedBy",
-          paranoid: false,
-        },
-      ],
       paranoid: false,
       order: [[sort, direction]],
       offset: ctx.state.pagination.offset,
@@ -529,6 +528,7 @@ router.post(
       content = await DocumentHelper.toHTML(document, {
         signedUrls: true,
         centered: true,
+        includeMermaid: true,
       });
     } else if (accept?.includes("application/pdf")) {
       throw IncorrectEditionError(

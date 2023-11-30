@@ -1,7 +1,7 @@
 ARG APP_PATH=/opt/outline
 
 ARG APP_PATH=/opt/outline
-FROM public.ecr.aws/docker/library/node:18-alpine3.17 AS deps
+FROM public.ecr.aws/docker/library/node:20-alpine AS deps
 
 ARG APP_PATH
 WORKDIR $APP_PATH
@@ -26,7 +26,7 @@ ARG APP_PATH
 WORKDIR $APP_PATH
 
 # ---
-FROM public.ecr.aws/docker/library/node:18-alpine3.17 AS runner
+FROM public.ecr.aws/docker/library/node:20-alpine AS runner
 
 RUN apk update && apk add --no-cache curl && apk add --no-cache ca-certificates
 
