@@ -1412,7 +1412,6 @@ router.post(
       title,
       text,
       emoji,
-      publish = true,
       collectionId,
       parentDocumentId,
       fullWidth,
@@ -1421,6 +1420,7 @@ router.post(
       documentId,
       createdAt,
     } = ctx.input.body;
+    let { publish } = ctx.input.body;
     const editorVersion = ctx.headers["x-editor-version"] as string | undefined;
 
     const { transaction } = ctx.state;
@@ -1439,6 +1439,7 @@ router.post(
         transaction,
       });
       authorize(user, "createDocument", collection);
+      publish = true;
     }
 
     let parentDocument: Document | null;
