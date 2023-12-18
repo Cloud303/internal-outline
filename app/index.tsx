@@ -21,6 +21,7 @@ import env from "~/env";
 import { initI18n } from "~/utils/i18n";
 import Desktop from "./components/DesktopEventHandler";
 import LazyPolyfill from "./components/LazyPolyfills";
+import MobileScrollWrapper from "./components/MobileScrollWrapper";
 import Routes from "./routes";
 import Logger from "./utils/Logger";
 import history from "./utils/history";
@@ -62,7 +63,7 @@ if (element) {
                   <LazyPolyfill>
                     <LazyMotion features={loadFeatures}>
                       <Router history={history}>
-                        <>
+                        <MobileScrollWrapper>
                           <PageTheme />
                           <ScrollToTop>
                             <Routes />
@@ -70,7 +71,7 @@ if (element) {
                           <Toasts />
                           <Dialogs />
                           <Desktop />
-                        </>
+                        </MobileScrollWrapper>
                       </Router>
                     </LazyMotion>
                   </LazyPolyfill>

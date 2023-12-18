@@ -538,13 +538,8 @@ router.post(
       contentType = "text/markdown";
       content = DocumentHelper.toMarkdown(document);
     } else {
-      contentType = "application/json";
-      content = DocumentHelper.toMarkdown(document);
-    }
-
-    if (contentType === "application/json") {
       ctx.body = {
-        data: content,
+        data: DocumentHelper.toMarkdown(document),
       };
       return;
     }
@@ -691,12 +686,11 @@ router.post(
       // restore a document to a specific revision
       authorize(user, "update", document);
       const revision = await Revision.findByPk(revisionId);
-
       authorize(document, "restore", revision);
 
-      document.text = revision.text;
-      document.title = revision.title;
+      document.restoreFromRevision(revision);
       await document.save();
+
       await Event.create({
         name: "documents.restore",
         documentId: document.id,

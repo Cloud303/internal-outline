@@ -81,12 +81,14 @@ export default class CommentsStore extends Store<Comment> {
         documentId,
         ...options,
       });
+      console.log("Res", res);
       invariant(res && res.data, "Comment list not available");
-
+      console.log("Res", res);
       runInAction("CommentsStore#fetchDocumentComments", () => {
         res.data.forEach(this.add);
         this.addPolicies(res.policies);
       });
+      console.log("Res", res);
       return res.data;
     } finally {
       this.isFetching = false;

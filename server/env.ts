@@ -41,7 +41,7 @@ export class Environment {
   }
 
   /**
-   * The current envionment name.
+   * The current environment name.
    */
   @IsIn(["development", "production", "staging", "test"])
   public ENVIRONMENT = process.env.NODE_ENV ?? "production";

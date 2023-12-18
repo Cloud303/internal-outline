@@ -116,7 +116,7 @@ router.post(
 
     ctx.body = {
       pagination: ctx.state.pagination,
-      comments,
+      data: comments.map(presentComment),
       policies: presentPolicies(user, comments),
     };
   }
