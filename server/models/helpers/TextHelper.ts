@@ -74,6 +74,31 @@ export default class TextHelper {
     return text;
   }
 
+  static async attachmentsToS3Urls(text: string, teamId: string) {
+    const attachmentIds = parseAttachmentIds(text);
+
+    await Promise.all(
+      attachmentIds.map(async (id) => {
+        const attachment = await Attachment.findOne({
+          where: {
+            id,
+            teamId,
+          },
+        });
+
+        if (attachment) {
+          const signedUrl = await FileStorage.getUrlForKey(attachment.key);
+
+          text = text.replace(
+            new RegExp(escapeRegExp(attachment.redirectUrl), "g"),
+            signedUrl
+          );
+        }
+      })
+    );
+    return text;
+  }
+
   /**
    * Replaces remote and base64 encoded images in the given text with attachment
    * urls and uploads the images to the storage provider.

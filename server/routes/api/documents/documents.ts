@@ -526,7 +526,7 @@ router.post(
     if (accept?.includes("text/html")) {
       contentType = "text/html";
       content = await DocumentHelper.toHTML(document, {
-        signedUrls: true,
+        signedUrls: false,
         centered: true,
         includeMermaid: true,
       });

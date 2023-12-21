@@ -1,6 +1,7 @@
 import path from "path";
 import util from "util";
 import AWS, { S3 } from "aws-sdk";
+import { CredentialsOptions } from "aws-sdk/lib/credentials";
 import fs from "fs-extra";
 import invariant from "invariant";
 import compact from "lodash/compact";
@@ -12,6 +13,14 @@ import BaseStorage from "./BaseStorage";
 export default class S3Storage extends BaseStorage {
   constructor() {
     super();
+    let credentials: AWS.Credentials | CredentialsOptions | null | undefined =
+      undefined;
+    if (env.isDevelopment) {
+      credentials = new AWS.SharedIniFileCredentials({
+        profile: "c303-master-dev",
+      });
+      AWS.config.credentials = credentials;
+    }
 
     this.client = new AWS.S3({
       s3BucketEndpoint: env.AWS_S3_ACCELERATE_URL ? true : undefined,
