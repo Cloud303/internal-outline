@@ -123,6 +123,13 @@ export default class DocumentHelper {
       element.classList.remove("comment-marker");
     });
 
+    // Remove elements with the class ".heading-actions"
+    const headingActionElements = doc.querySelectorAll(".heading-actions");
+    console.log("headingActionElements", headingActionElements);
+    headingActionElements.forEach((element) => {
+      element.remove(); // This removes the element completely
+    });
+
     output = dom.serialize();
 
     addTags({
@@ -145,6 +152,17 @@ export default class DocumentHelper {
         teamId,
         typeof options.signedUrls === "number" ? options.signedUrls : undefined
       );
+    } else {
+      const teamId =
+        document instanceof Document
+          ? document.teamId
+          : (await document.$get("document"))?.teamId;
+
+      if (!teamId) {
+        return output;
+      }
+
+      output = await TextHelper.attachmentsToS3Urls(output, teamId);
     }
 
     return output;
