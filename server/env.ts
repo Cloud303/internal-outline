@@ -469,6 +469,11 @@ export class Environment {
     process.env.ODOO_WEBHOOK_SECRET
   );
 
+  @IsOptional()
+  public SOW_COLLECTION_IDS = this.toOptionalString(
+    process.env.SOW_COLLECTION_IDS
+  );
+
   /**
    * OICD client credentials. To enable authentication with any
    * compatible provider.

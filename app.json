@@ -207,6 +207,10 @@
     "ODOO_WEBHOOK_ENDPOINT": {
       "description": "Endpoint for odoo webhook",
       "required": true
+    },
+    "SOW_COLLECTION_IDS": {
+      "description": "SOW collection IDs",
+      "required": false
     }
   }
 }

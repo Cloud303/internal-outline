@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import { AttachmentPreset } from "@shared/types";
 import { bytesToHumanReadable } from "@shared/utils/files";
 import { AttachmentValidation } from "@shared/validations";
+import env from "@server/env";
 import { AuthorizationError, ValidationError } from "@server/errors";
 import auth from "@server/middlewares/authentication";
 import { rateLimiter } from "@server/middlewares/rateLimiter";
@@ -28,9 +29,10 @@ router.post(
   validate(T.AttachmentsCreateSchema),
   transaction(),
   async (ctx: APIContext<T.AttachmentCreateReq>) => {
-    const { name, documentId, contentType, size, preset } = ctx.input.body;
+    const { name, documentId, contentType, size } = ctx.input.body;
     const { auth, transaction } = ctx.state;
     const { user } = auth;
+    let { preset } = ctx.input.body;
 
     // All user types can upload an avatar so no additional authorization is needed.
     if (preset === AttachmentPreset.Avatar) {
@@ -40,6 +42,12 @@ router.post(
         userId: user.id,
         transaction,
       });
+      if (env?.SOW_COLLECTION_IDS) {
+        const idArray = env.SOW_COLLECTION_IDS.split(",");
+        if (idArray.includes(document.collectionId)) {
+          preset = AttachmentPreset.SowDocumentAttachment;
+        }
+      }
       authorize(user, "update", document);
     } else {
       authorize(user, "createAttachment", user.team);
@@ -78,6 +86,7 @@ router.post(
       },
       { transaction }
     );
+
     await Event.create(
       {
         name: "attachments.create",
@@ -112,7 +121,8 @@ router.post(
           // always use the redirect url for document attachments, as the serializer
           // depends on it to detect attachment vs link
           url:
-            preset === AttachmentPreset.DocumentAttachment
+            preset === AttachmentPreset.DocumentAttachment ||
+            AttachmentPreset.SowDocumentAttachment
               ? attachment.redirectUrl
               : attachment.url,
         },
