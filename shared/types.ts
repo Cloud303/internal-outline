@@ -44,6 +44,7 @@ export enum MentionType {
 
 export type PublicEnv = {
   ODOO_WEBHOOK_ENDPOINT: string | undefined;
+  SOW_COLLECTION_IDS: string | undefined;
   ODOO_WEBHOOK_SECRET: string | undefined;
   CHATWOOT_MODE: boolean | undefined;
   CHATWOOT_BASE_URL: string | undefined;
@@ -75,6 +76,7 @@ export type PublicEnv = {
 
 export enum AttachmentPreset {
   DocumentAttachment = "documentAttachment",
+  SowDocumentAttachment = "SowDocumentAttachment",
   Import = "import",
   Avatar = "avatar",
   CoverImg = "documentCover",
