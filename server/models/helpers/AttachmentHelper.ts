@@ -73,6 +73,8 @@ export default class AttachmentHelper {
         return "public-read";
       case AttachmentPreset.CoverImg:
         return "public-read";
+      case AttachmentPreset.SowDocumentAttachment:
+        return "public-read";
       default:
         return env.AWS_S3_ACL;
     }

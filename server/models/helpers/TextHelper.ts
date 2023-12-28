@@ -59,10 +59,15 @@ export default class TextHelper {
         });
 
         if (attachment) {
-          const signedUrl = await FileStorage.getSignedUrl(
-            attachment.key,
-            expiresIn
-          );
+          let signedUrl = "";
+          if (attachment.key.includes("public/")) {
+            signedUrl = await FileStorage.getUrlForKey(attachment.key);
+          } else {
+            signedUrl = await FileStorage.getSignedUrl(
+              attachment.key,
+              expiresIn
+            );
+          }
 
           text = text.replace(
             new RegExp(escapeRegExp(attachment.redirectUrl), "g"),
