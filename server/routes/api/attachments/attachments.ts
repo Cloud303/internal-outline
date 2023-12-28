@@ -43,11 +43,8 @@ router.post(
         transaction,
       });
       if (env?.SOW_COLLECTION_IDS) {
-        console.log("env?.SOW_COLLECTION_IDS", env?.SOW_COLLECTION_IDS);
         const idArray = env.SOW_COLLECTION_IDS.split(",");
-        console.log("idArray", idArray);
         if (idArray.includes(document.collectionId)) {
-          console.log("document.collectionId", document.collectionId);
           preset = AttachmentPreset.SowDocumentAttachment;
         }
       }
