@@ -45,7 +45,7 @@ function CommentMenu({
   });
   const { documents, dialogs } = useStores();
   const { t } = useTranslation();
-  const can = usePolicy(comment.id);
+  const can = usePolicy(comment);
   const document = documents.get(comment.documentId);
   const resolvedParentComment =
     comment.resolvedById !== null && comment.parentCommentId === null;
