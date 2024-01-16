@@ -44,6 +44,7 @@ export const CommentsUpdateSchema = BaseSchema.extend({
     // data: z.any(),
 
     resolvedBy: z.any(),
+    reopen: z.any(),
     data: ProsemirrorSchema,
   }),
 });

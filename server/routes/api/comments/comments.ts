@@ -150,7 +150,7 @@ router.post(
   validate(T.CommentsUpdateSchema),
   transaction(),
   async (ctx: APIContext<T.CommentsUpdateReq>) => {
-    const { id, data, resolvedBy } = ctx.input.body;
+    const { id, data, resolvedBy, reopen } = ctx.input.body;
     const { user } = ctx.state.auth;
     const { transaction } = ctx.state;
 
@@ -173,7 +173,7 @@ router.post(
     await commentUpdater({
       user,
       comment,
-      data,
+      data: reopen ? reopen : data,
       resolvedBy,
       ip: ctx.request.ip,
       transaction,

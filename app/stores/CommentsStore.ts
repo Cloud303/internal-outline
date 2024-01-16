@@ -113,7 +113,7 @@ export default class CommentsStore extends Store<Comment> {
         ...params,
         ...options,
         apiVersion: 2,
-        data: {
+        reopen: {
           reopen: true,
         },
       });

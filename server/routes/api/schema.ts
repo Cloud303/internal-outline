@@ -12,6 +12,9 @@ export const BaseSchema = z.object({
 
 export const ProsemirrorSchema = z.custom<TProsemirrorData>((val) => {
   try {
+    if (val === undefined) {
+      return true;
+    }
     const node = Node.fromJSON(schema, val);
     node.check();
     return true;
