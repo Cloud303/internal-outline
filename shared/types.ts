@@ -69,7 +69,7 @@ export type PublicEnv = {
   APP_NAME: string;
   ROOT_SHARE_ID?: string;
   analytics: {
-    service?: IntegrationService;
+    service?: IntegrationService | UserCreatableIntegrationService;
     settings?: IntegrationSettings<IntegrationType.Analytics>;
   };
 };
@@ -93,6 +93,12 @@ export enum IntegrationService {
   Diagrams = "diagrams",
   Grist = "grist",
   Slack = "slack",
+  GoogleAnalytics = "google-analytics",
+}
+
+export enum UserCreatableIntegrationService {
+  Diagrams = "diagrams",
+  Grist = "grist",
   GoogleAnalytics = "google-analytics",
 }
 
@@ -260,5 +266,15 @@ export type Unfurl<T = OEmbedType> = {
   meta?: Record<string, string>;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type ProsemirrorData = Record<string, any>;
+export type JSONValue =
+  | string
+  | number
+  | boolean
+  | undefined
+  | null
+  | { [x: string]: JSONValue }
+  | Array<JSONValue>;
+
+export type JSONObject = { [x: string]: JSONValue };
+
+export type ProsemirrorData = JSONObject;

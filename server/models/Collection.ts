@@ -10,6 +10,8 @@ import {
   Op,
   FindOptions,
   NonNullFindOptions,
+  InferAttributes,
+  InferCreationAttributes,
 } from "sequelize";
 import {
   Sequelize,
@@ -159,7 +161,10 @@ import NotContainsUrl from "./validators/NotContainsUrl";
 }))
 @Table({ tableName: "collections", modelName: "collection" })
 @Fix
-class Collection extends ParanoidModel {
+class Collection extends ParanoidModel<
+  InferAttributes<Collection>,
+  Partial<InferCreationAttributes<Collection>>
+> {
   @SimpleLength({
     min: 10,
     max: 10,
@@ -645,6 +650,10 @@ class Collection extends ParanoidModel {
   ) {
     if (!this.documentStructure) {
       this.documentStructure = [];
+    }
+
+    if (this.getDocumentTree(document.id)) {
+      return this;
     }
 
     // If moving existing document with children, use existing structure

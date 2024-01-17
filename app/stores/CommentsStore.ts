@@ -1,11 +1,8 @@
 import { User } from "@sentry/react";
-import invariant from "invariant";
 import filter from "lodash/filter";
 import orderBy from "lodash/orderBy";
-import { action, runInAction, computed } from "mobx";
+import { action, computed } from "mobx";
 import Comment from "~/models/Comment";
-import Document from "~/models/Document";
-import { PaginationParams } from "~/types";
 import { client } from "~/utils/ApiClient";
 import RootStore from "./RootStore";
 import Store from "./base/Store";
@@ -69,32 +66,6 @@ export default class CommentsStore extends Store<Comment> {
     }
   }
 
-  @action
-  fetchDocumentComments = async (
-    documentId: string,
-    options?: PaginationParams | undefined
-  ): Promise<Document[]> => {
-    this.isFetching = true;
-
-    try {
-      const res = await client.post(`/comments.list`, {
-        documentId,
-        ...options,
-      });
-      console.log("Res", res);
-      invariant(res && res.data, "Comment list not available");
-      console.log("Res", res);
-      runInAction("CommentsStore#fetchDocumentComments", () => {
-        res.data.forEach(this.add);
-        this.addPolicies(res.policies);
-      });
-      console.log("Res", res);
-      return res.data;
-    } finally {
-      this.isFetching = false;
-    }
-  };
-
   @computed
   get orderedData(): Comment[] {
     return orderBy(Array.from(this.data.values()), "createdAt", "asc");
@@ -142,7 +113,7 @@ export default class CommentsStore extends Store<Comment> {
         ...params,
         ...options,
         apiVersion: 2,
-        data: {
+        reopen: {
           reopen: true,
         },
       });

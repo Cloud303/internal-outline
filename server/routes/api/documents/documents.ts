@@ -154,12 +154,15 @@ router.post(
       sort = "updatedAt";
     }
 
-    const documents = await Document.defaultScopeWithUser(user.id).findAll({
-      where,
-      order: [[sort, direction]],
-      offset: ctx.state.pagination.offset,
-      limit: ctx.state.pagination.limit,
-    });
+    const [documents, total] = await Promise.all([
+      Document.defaultScopeWithUser(user.id).findAll({
+        where,
+        order: [[sort, direction]],
+        offset: ctx.state.pagination.offset,
+        limit: ctx.state.pagination.limit,
+      }),
+      Document.count({ where }),
+    ]);
 
     // index sort is special because it uses the order of the documents in the
     // collection.documentStructure rather than a database column
@@ -174,7 +177,7 @@ router.post(
     );
     const policies = presentPolicies(user, documents);
     ctx.body = {
-      pagination: ctx.state.pagination,
+      pagination: { ...ctx.state.pagination, total },
       data,
       policies,
     };
@@ -905,7 +908,6 @@ router.post(
         editorVersion: original.editorVersion,
         collectionId: original.collectionId,
         teamId: original.teamId,
-        userId: user.id,
         publishedAt: new Date(),
         lastModifiedById: user.id,
         createdById: user.id,

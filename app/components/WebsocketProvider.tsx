@@ -18,6 +18,7 @@ import Pin from "~/models/Pin";
 import Star from "~/models/Star";
 import Subscription from "~/models/Subscription";
 import Team from "~/models/Team";
+import User from "~/models/User";
 import withStores from "~/components/withStores";
 import {
   PartialWithId,
@@ -189,7 +190,6 @@ class WebsocketProvider extends React.Component<Props> {
                 documents.removeCollectionDocuments(collectionId);
                 memberships.removeCollectionMemberships(collectionId);
                 collections.remove(collectionId);
-                policies.remove(collectionId);
                 return;
               }
             }
@@ -304,7 +304,6 @@ class WebsocketProvider extends React.Component<Props> {
         documents.removeCollectionDocuments(collectionId);
         memberships.removeCollectionMemberships(collectionId);
         collections.remove(collectionId);
-        policies.remove(collectionId);
       })
     );
 
@@ -399,14 +398,20 @@ class WebsocketProvider extends React.Component<Props> {
               err instanceof NotFoundError
             ) {
               collections.remove(event.collectionId);
-              memberships.remove(`${event.userId}-${event.collectionId}`);
+              memberships.revoke({
+                userId: event.userId,
+                collectionId: event.collectionId,
+              });
               return;
             }
           }
 
           documents.removeCollectionDocuments(event.collectionId);
         } else {
-          memberships.remove(`${event.userId}-${event.collectionId}`);
+          memberships.revoke({
+            userId: event.userId,
+            collectionId: event.collectionId,
+          });
         }
       }
     );
@@ -459,6 +464,13 @@ class WebsocketProvider extends React.Component<Props> {
         subscriptions.remove(event.modelId);
       }
     );
+
+    this.socket.on("users.demote", async (event: PartialWithId<User>) => {
+      if (auth.user && event.id === auth.user.id) {
+        documents.all.forEach((document) => policies.remove(document.id));
+        await collections.fetchAll();
+      }
+    });
 
     // received a message from the API server that we should request
     // to join a specific room. Forward that to the ws server.

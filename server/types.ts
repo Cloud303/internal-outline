@@ -8,7 +8,7 @@ import {
   Client,
   CollectionPermission,
 } from "@shared/types";
-import BaseSchema from "@server/routes/api/BaseSchema";
+import { BaseSchema } from "@server/routes/api/schema";
 import { AccountProvisionerResult } from "./commands/accountProvisioner";
 import { FileOperation, Team, User } from "./models";
 
@@ -199,15 +199,14 @@ export type CollectionUserEvent = BaseEvent & {
   name: "collections.add_user" | "collections.remove_user";
   userId: string;
   collectionId: string;
+  data: { name: string; membershipId: string };
 };
 
 export type CollectionGroupEvent = BaseEvent & {
   name: "collections.add_group" | "collections.remove_group";
   collectionId: string;
   modelId: string;
-  data: {
-    name: string;
-  };
+  data: { name: string; membershipId: string };
 };
 
 export type CollectionEvent = BaseEvent &
@@ -343,6 +342,8 @@ export type ViewEvent = BaseEvent & {
     title: string;
   };
 };
+
+export type WebhookDeliveryStatus = "pending" | "success" | "failed";
 
 export type WebhookSubscriptionEvent = BaseEvent & {
   name:

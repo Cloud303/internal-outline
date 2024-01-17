@@ -8,6 +8,9 @@ import {
   SaveOptions,
   Op,
   FindOptions,
+  InferAttributes,
+  InferCreationAttributes,
+  InstanceUpdateOptions,
 } from "sequelize";
 import {
   Table,
@@ -40,14 +43,13 @@ import {
 } from "@shared/types";
 import { stringToColor } from "@shared/utils/color";
 import env from "@server/env";
+import Model from "@server/models/base/Model";
 import DeleteAttachmentTask from "@server/queues/tasks/DeleteAttachmentTask";
 import parseAttachmentIds from "@server/utils/parseAttachmentIds";
 import { ValidationError } from "../errors";
-import ApiKey from "./ApiKey";
 import Attachment from "./Attachment";
 import AuthenticationProvider from "./AuthenticationProvider";
 import Collection from "./Collection";
-import Star from "./Star";
 import Team from "./Team";
 import UserAuthentication from "./UserAuthentication";
 import UserPermission from "./UserPermission";
@@ -119,7 +121,10 @@ export enum UserFlag {
 }))
 @Table({ tableName: "users", modelName: "user" })
 @Fix
-class User extends ParanoidModel {
+class User extends ParanoidModel<
+  InferAttributes<User>,
+  Partial<InferCreationAttributes<User>>
+> {
   @IsEmail
   @Length({ max: 255, msg: "User email must be 255 characters or less" })
   @Column
@@ -521,7 +526,10 @@ class User extends ParanoidModel {
       ],
     });
 
-  demote = async (to: UserRole, options?: SaveOptions<User>) => {
+  demote: (
+    to: UserRole,
+    options?: InstanceUpdateOptions<InferAttributes<Model>>
+  ) => Promise<void> = async (to, options) => {
     const res = await (this.constructor as typeof User).findAndCountAll({
       where: {
         teamId: this.teamId,
@@ -570,7 +578,9 @@ class User extends ParanoidModel {
     }
   };
 
-  promote = (options?: SaveOptions<User>) =>
+  promote: (
+    options?: InstanceUpdateOptions<InferAttributes<User>>
+  ) => Promise<User> = (options) =>
     this.update(
       {
         isAdmin: true,
@@ -586,24 +596,6 @@ class User extends ParanoidModel {
     model: User,
     options: { transaction: Transaction }
   ) => {
-    await ApiKey.destroy({
-      where: {
-        userId: model.id,
-      },
-      transaction: options.transaction,
-    });
-    await Star.destroy({
-      where: {
-        userId: model.id,
-      },
-      transaction: options.transaction,
-    });
-    await UserAuthentication.destroy({
-      where: {
-        userId: model.id,
-      },
-      transaction: options.transaction,
-    });
     model.email = null;
     model.name = "Unknown";
     model.avatarUrl = null;
@@ -625,14 +617,9 @@ class User extends ParanoidModel {
 
   @AfterUpdate
   static deletePreviousAvatar = async (model: User) => {
-    if (
-      model.previous("avatarUrl") &&
-      model.previous("avatarUrl") !== model.avatarUrl
-    ) {
-      const attachmentIds = parseAttachmentIds(
-        model.previous("avatarUrl"),
-        true
-      );
+    const previousAvatarUrl = model.previous("avatarUrl");
+    if (previousAvatarUrl && previousAvatarUrl !== model.avatarUrl) {
+      const attachmentIds = parseAttachmentIds(previousAvatarUrl, true);
       if (!attachmentIds.length) {
         return;
       }

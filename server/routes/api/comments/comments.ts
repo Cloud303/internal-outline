@@ -56,12 +56,33 @@ router.post(
 );
 
 router.post(
+  "comments.info",
+  auth(),
+  checkCommentingEnabled(),
+  validate(T.CommentsInfoSchema),
+  async (ctx: APIContext<T.CommentsInfoReq>) => {
+    const { id } = ctx.input.body;
+    const { user } = ctx.state.auth;
+
+    const comment = await Comment.findByPk(id, {
+      rejectOnEmpty: true,
+    });
+    authorize(user, "read", comment);
+
+    ctx.body = {
+      data: presentComment(comment),
+      policies: presentPolicies(user, [comment]),
+    };
+  }
+);
+
+router.post(
   "comments.list",
   auth(),
   pagination(),
   checkCommentingEnabled(),
-  validate(T.CollectionsListSchema),
-  async (ctx: APIContext<T.CollectionsListReq>) => {
+  validate(T.CommentsListSchema),
+  async (ctx: APIContext<T.CommentsListReq>) => {
     const { sort, direction, documentId, collectionId } = ctx.input.body;
     const { user } = ctx.state.auth;
 
@@ -129,7 +150,7 @@ router.post(
   validate(T.CommentsUpdateSchema),
   transaction(),
   async (ctx: APIContext<T.CommentsUpdateReq>) => {
-    const { id, data, resolvedBy } = ctx.input.body;
+    const { id, data, resolvedBy, reopen } = ctx.input.body;
     const { user } = ctx.state.auth;
     const { transaction } = ctx.state;
 
@@ -152,7 +173,7 @@ router.post(
     await commentUpdater({
       user,
       comment,
-      data,
+      data: reopen ? reopen : data,
       resolvedBy,
       ip: ctx.request.ip,
       transaction,
