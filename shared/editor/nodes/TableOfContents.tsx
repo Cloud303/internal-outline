@@ -7,7 +7,7 @@ import TableOfContents from "../components/TableOfContents";
 import { MarkdownSerializerState } from "../lib/markdown/serializer";
 import Node from "./Node";
 
-export default class ToggleList extends Node {
+export default class TableOfContent extends Node {
   editor: Editor;
 
   get name() {
@@ -20,12 +20,16 @@ export default class ToggleList extends Node {
       group: "block",
       parseDOM: [{ tag: "div" }],
       toDOM: (node) => {
-        const dom = document.createElement("div");
-        ReactDOM.render(
-          <TableOfContents editor={this.editor} node={node} />,
-          dom
-        );
-        return dom;
+        let dom;
+        if (typeof document !== "undefined") {
+          dom = document.createElement("div");
+          ReactDOM.render(
+            <TableOfContents editor={this.editor} node={node} />,
+            dom
+          );
+          return dom;
+        }
+        return ["div"];
       },
     };
   }
