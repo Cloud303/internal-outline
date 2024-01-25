@@ -33,16 +33,20 @@ export default class ToggleList extends Node {
       group: "block",
       parseDOM: [{ tag: "div" }],
       toDOM: (node) => {
-        const dom = document.createElement("div");
-        ReactDOM.render(
-          <Accordion
-            heading={node.attrs.heading}
-            desc={node.attrs.desc}
-            editor={this.editor}
-          />,
-          dom
-        );
-        return dom;
+        let dom;
+        if (typeof document !== "undefined") {
+          dom = document.createElement("div");
+          ReactDOM.render(
+            <Accordion
+              heading={node.attrs.heading}
+              desc={node.attrs.desc}
+              editor={this.editor}
+            />,
+            dom
+          );
+          return dom;
+        }
+        return ["div"];
       },
     };
   }
