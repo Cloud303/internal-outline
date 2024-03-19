@@ -54,6 +54,16 @@ class SlackPluginEnvironment extends Environment {
   public SLACK_MESSAGE_ACTIONS = this.toBoolean(
     environment.SLACK_MESSAGE_ACTIONS ?? "false"
   );
+
+  @IsOptional()
+  public ODOO_WEBHOOK_ENDPOINT = this.toOptionalString(
+    environment.ODOO_WEBHOOK_ENDPOINT
+  );
+
+  @IsOptional()
+  public ODOO_WEBHOOK_SECRET = this.toOptionalString(
+    environment.ODOO_WEBHOOK_SECRET
+  );
 }
 
 export default new SlackPluginEnvironment();
