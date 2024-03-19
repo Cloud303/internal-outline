@@ -150,13 +150,36 @@ export default function FindAndReplace({
 
   const handleKeyDown = React.useCallback(
     (ev: React.KeyboardEvent<HTMLInputElement>) => {
-      if (ev.key === "Enter") {
-        ev.preventDefault();
-
+      function nextPrevious(ev: React.KeyboardEvent<HTMLInputElement>) {
         if (ev.shiftKey) {
           editor.commands.prevSearchMatch();
         } else {
           editor.commands.nextSearchMatch();
+        }
+      }
+      function selectInputText() {
+        inputRef.current?.setSelectionRange(0, inputRef.current?.value.length);
+      }
+
+      switch (ev.key) {
+        case "Enter": {
+          ev.preventDefault();
+          nextPrevious(ev);
+          return;
+        }
+        case "g": {
+          if (ev.metaKey) {
+            ev.preventDefault();
+            nextPrevious(ev);
+            selectInputText();
+          }
+          return;
+        }
+        case "F3": {
+          ev.preventDefault();
+          nextPrevious(ev);
+          selectInputText();
+          return;
         }
       }
     },
@@ -251,7 +274,7 @@ export default function FindAndReplace({
   const navigation = (
     <>
       <Tooltip
-        tooltip={t("Previous match")}
+        content={t("Previous match")}
         shortcut="shift+enter"
         delay={500}
         placement="bottom"
@@ -261,7 +284,7 @@ export default function FindAndReplace({
         </ButtonLarge>
       </Tooltip>
       <Tooltip
-        tooltip={t("Next match")}
+        content={t("Next match")}
         shortcut="enter"
         delay={500}
         placement="bottom"
@@ -296,7 +319,7 @@ export default function FindAndReplace({
             >
               <SearchModifiers gap={8}>
                 <Tooltip
-                  tooltip={t("Match case")}
+                  content={t("Match case")}
                   shortcut={`${altDisplay}+${metaDisplay}+c`}
                   delay={500}
                   placement="bottom"
@@ -308,7 +331,7 @@ export default function FindAndReplace({
                   </ButtonSmall>
                 </Tooltip>
                 <Tooltip
-                  tooltip={t("Enable regex")}
+                  content={t("Enable regex")}
                   shortcut={`${altDisplay}+${metaDisplay}+r`}
                   delay={500}
                   placement="bottom"
@@ -324,7 +347,7 @@ export default function FindAndReplace({
             {navigation}
             {!readOnly && (
               <Tooltip
-                tooltip={t("Replace options")}
+                content={t("Replace options")}
                 delay={500}
                 placement="bottom"
               >

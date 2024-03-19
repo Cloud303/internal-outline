@@ -1,20 +1,28 @@
-import { Minute } from "@shared/utils/time";
 import {
   CollectionEvent,
   RevisionEvent,
   Event,
   DocumentEvent,
   CommentEvent,
+  CollectionUserEvent,
+  DocumentUserEvent,
 } from "@server/types";
-import CommentCreatedNotificationsTask from "../tasks/CommentCreatedNotificationsTask";
-import CommentUpdatedNotificationsTask from "../tasks/CommentUpdatedNotificationsTask";
+// import CollectionAddUserNotificationsTask from "../tasks/CollectionAddUserNotificationsTask";
+// import CollectionCreatedNotificationsTask from "../tasks/CollectionCreatedNotificationsTask";
+// import CommentCreatedNotificationsTask from "../tasks/CommentCreatedNotificationsTask";
+// import CommentUpdatedNotificationsTask from "../tasks/CommentUpdatedNotificationsTask";
+// import DocumentAddUserNotificationsTask from "../tasks/DocumentAddUserNotificationsTask";
+// import DocumentPublishedNotificationsTask from "../tasks/DocumentPublishedNotificationsTask";
+// import RevisionCreatedNotificationsTask from "../tasks/RevisionCreatedNotificationsTask";
 import BaseProcessor from "./BaseProcessor";
 
 export default class NotificationsProcessor extends BaseProcessor {
   static applicableEvents: Event["name"][] = [
     "documents.publish",
+    "documents.add_user",
     "revisions.create",
     "collections.create",
+    "collections.add_user",
     "comments.create",
     "comments.update",
   ];
@@ -23,10 +31,14 @@ export default class NotificationsProcessor extends BaseProcessor {
     switch (event.name) {
       case "documents.publish":
         return this.documentPublished(event);
+      case "documents.add_user":
+        return this.documentAddUser(event);
       case "revisions.create":
         return this.revisionCreated(event);
       case "collections.create":
         return this.collectionCreated(event);
+      case "collections.add_user":
+        return this.collectionAddUser(event);
       case "comments.create":
         return this.commentCreated(event);
       case "comments.update":
@@ -48,6 +60,13 @@ export default class NotificationsProcessor extends BaseProcessor {
     // await DocumentPublishedNotificationsTask.schedule(event);
   }
 
+  async documentAddUser(event: DocumentUserEvent) {
+    if (!event.data.isNew || event.userId === event.actorId) {
+      return;
+    }
+    // await DocumentAddUserNotificationsTask.schedule(event);
+  }
+
   async revisionCreated(event: RevisionEvent) {
     // await RevisionCreatedNotificationsTask.schedule(event);
   }
@@ -65,15 +84,19 @@ export default class NotificationsProcessor extends BaseProcessor {
     // await CollectionCreatedNotificationsTask.schedule(event);
   }
 
+  async collectionAddUser(event: CollectionUserEvent) {
+    if (!event.data.isNew || event.userId === event.actorId) {
+      return;
+    }
+
+    // await CollectionAddUserNotificationsTask.schedule(event);
+  }
+
   async commentCreated(event: CommentEvent) {
-    await CommentCreatedNotificationsTask.schedule(event, {
-      delay: Minute,
-    });
+    // await CommentCreatedNotificationsTask.schedule(event);
   }
 
   async commentUpdated(event: CommentEvent) {
-    await CommentUpdatedNotificationsTask.schedule(event, {
-      delay: Minute,
-    });
+    // await CommentUpdatedNotificationsTask.schedule(event);
   }
 }

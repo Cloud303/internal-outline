@@ -40,6 +40,7 @@ import {
   NotificationEventType,
   NotificationEventDefaults,
   UserRole,
+  DocumentPermission,
 } from "@shared/types";
 import { stringToColor } from "@shared/utils/color";
 import env from "@server/env";
@@ -52,7 +53,7 @@ import AuthenticationProvider from "./AuthenticationProvider";
 import Collection from "./Collection";
 import Team from "./Team";
 import UserAuthentication from "./UserAuthentication";
-import UserPermission from "./UserPermission";
+import UserMembership from "./UserMembership";
 import ParanoidModel from "./base/ParanoidModel";
 import Encrypted, {
   setEncryptedColumn,
@@ -255,6 +256,12 @@ class User extends ParanoidModel<
       : CollectionPermission.ReadWrite;
   }
 
+  get defaultDocumentPermission(): DocumentPermission {
+    return this.isViewer
+      ? DocumentPermission.Read
+      : DocumentPermission.ReadWrite;
+  }
+
   /**
    * Returns a code that can be used to delete this user account. The code will
    * be rotated when the user signs out.
@@ -283,8 +290,10 @@ class User extends ParanoidModel<
     type: NotificationEventType,
     value = true
   ) => {
-    this.notificationSettings[type] = value;
-    this.changed("notificationSettings", true);
+    this.notificationSettings = {
+      ...this.notificationSettings,
+      [type]: value,
+    };
   };
 
   /**
@@ -311,8 +320,10 @@ class User extends ParanoidModel<
     }
     const binary = value ? 1 : 0;
     if (this.flags[flag] !== binary) {
-      this.flags[flag] = binary;
-      this.changed("flags", true);
+      this.flags = {
+        ...this.flags,
+        [flag]: binary,
+      };
     }
 
     return this.flags;
@@ -338,9 +349,10 @@ class User extends ParanoidModel<
     if (!this.flags) {
       this.flags = {};
     }
-    this.flags[flag] = (this.flags[flag] ?? 0) + value;
-    this.changed("flags", true);
-
+    this.flags = {
+      ...this.flags,
+      [flag]: (this.flags[flag] ?? 0) + value,
+    };
     return this.flags;
   };
 
@@ -355,9 +367,10 @@ class User extends ParanoidModel<
     if (!this.preferences) {
       this.preferences = {};
     }
-    this.preferences[preference] = value;
-    this.changed("preferences", true);
-
+    this.preferences = {
+      ...this.preferences,
+      [preference]: value,
+    };
     return this.preferences;
   };
 
@@ -559,7 +572,7 @@ class User extends ParanoidModel<
           },
           options
         );
-        await UserPermission.update(
+        await UserMembership.update(
           {
             permission: CollectionPermission.Read,
           },

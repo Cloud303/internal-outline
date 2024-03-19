@@ -11,6 +11,7 @@ import {
 import Model from "./Model";
 
 class IdModel<
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   TModelAttributes extends {} = any,
   TCreationAttributes extends {} = TModelAttributes
 > extends Model<TModelAttributes, TCreationAttributes> {

@@ -2,6 +2,7 @@ import tracer, { Span } from "dd-trace";
 import env from "@server/env";
 
 type PrivateDatadogContext = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   req: Record<string, any> & {
     _datadog?: {
       span?: Span;
@@ -29,6 +30,7 @@ const getCurrentSpan = (): Span | null => tracer.scope().active();
  * @param tags An object with the tags to add to the span
  * @param span An optional span object to add the tags to. If none provided,the current span will be used.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function addTags(tags: Record<string, any>, span?: Span | null): void {
   if (tracer) {
     const currentSpan = span || getCurrentSpan();

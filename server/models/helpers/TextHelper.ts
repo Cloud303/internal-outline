@@ -9,11 +9,13 @@ import {
   unicodeCLDRtoBCP47,
 } from "@shared/utils/date";
 import attachmentCreator from "@server/commands/attachmentCreator";
+import { trace } from "@server/logging/tracing";
 import { Attachment, User } from "@server/models";
 import FileStorage from "@server/storage/files";
 import parseAttachmentIds from "@server/utils/parseAttachmentIds";
 import parseImages from "@server/utils/parseImages";
 
+@trace()
 export default class TextHelper {
   /**
    * Replaces template variables in the given text with the current date and time.
@@ -61,7 +63,7 @@ export default class TextHelper {
         if (attachment) {
           let signedUrl = "";
           if (attachment.key.includes("public/")) {
-            signedUrl = await FileStorage.getUrlForKey(attachment.key);
+            signedUrl = FileStorage.getUrlForKey(attachment.key);
           } else {
             signedUrl = await FileStorage.getSignedUrl(
               attachment.key,
@@ -92,7 +94,7 @@ export default class TextHelper {
         });
 
         if (attachment) {
-          const signedUrl = await FileStorage.getUrlForKey(attachment.key);
+          const signedUrl = FileStorage.getUrlForKey(attachment.key);
 
           text = text.replace(
             new RegExp(escapeRegExp(attachment.redirectUrl), "g"),

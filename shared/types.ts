@@ -6,6 +6,12 @@ export enum UserRole {
 
 export type DateFilter = "day" | "week" | "month" | "year";
 
+export enum StatusFilter {
+  Published = "published",
+  Archived = "archived",
+  Draft = "draft",
+}
+
 export enum Client {
   Web = "web",
   Desktop = "desktop",
@@ -43,30 +49,6 @@ export enum MentionType {
 }
 
 export type PublicEnv = {
-  ODOO_WEBHOOK_ENDPOINT: string | undefined;
-  SOW_COLLECTION_IDS: string | undefined;
-  ODOO_WEBHOOK_SECRET: string | undefined;
-  CHATWOOT_MODE: boolean | undefined;
-  CHATWOOT_BASE_URL: string | undefined;
-  CHATWOOT_WEBSITE_TOKEN: string | undefined;
-  URL: string;
-  CDN_URL: string;
-  COLLABORATION_URL: string;
-  AWS_S3_UPLOAD_BUCKET_URL: string;
-  AWS_S3_ACCELERATE_URL: string;
-  ENVIRONMENT: string;
-  SENTRY_DSN: string | undefined;
-  SENTRY_TUNNEL: string | undefined;
-  SLACK_CLIENT_ID: string | undefined;
-  OIDC_LOGOUT_URL: string | undefined;
-  SLACK_APP_ID: string | undefined;
-  MAXIMUM_IMPORT_SIZE: number;
-  EMAIL_ENABLED: boolean;
-  PDF_EXPORT_ENABLED: boolean;
-  DEFAULT_LANGUAGE: string;
-  GOOGLE_ANALYTICS_ID: string | undefined;
-  RELEASE: string | undefined;
-  APP_NAME: string;
   ROOT_SHARE_ID?: string;
   analytics: {
     service?: IntegrationService | UserCreatableIntegrationService;
@@ -76,7 +58,7 @@ export type PublicEnv = {
 
 export enum AttachmentPreset {
   DocumentAttachment = "documentAttachment",
-  SowDocumentAttachment = "SowDocumentAttachment",
+  WorkspaceImport = "workspaceImport",
   Import = "import",
   Avatar = "avatar",
   CoverImg = "documentCover",
@@ -107,6 +89,11 @@ export enum CollectionPermission {
   ReadWrite = "read_write",
   Admin = "admin",
   NoAccess = "no_access",
+}
+
+export enum DocumentPermission {
+  Read = "read",
+  ReadWrite = "read_write",
 }
 
 export type IntegrationSettings<T> = T extends IntegrationType.Embed
@@ -144,6 +131,8 @@ export type SourceMetadata = {
   fileName?: string;
   /** The original source mime type. */
   mimeType?: string;
+  /** The creator of the original external source. */
+  createdByName?: string;
   /** An ID in the external source. */
   externalId?: string;
   /** Whether the item was created through a trial license. */
@@ -168,6 +157,8 @@ export enum TeamPreference {
   PublicBranding = "publicBranding",
   /** Whether viewers should see download options. */
   ViewersCanExport = "viewersCanExport",
+  /** Whether members can invite new users. */
+  MembersCanInvite = "membersCanInvite",
   /** Whether users can comment on documents. */
   Commenting = "commenting",
   /** The custom theme for the team. */
@@ -178,6 +169,7 @@ export type TeamPreferences = {
   [TeamPreference.SeamlessEdit]?: boolean;
   [TeamPreference.PublicBranding]?: boolean;
   [TeamPreference.ViewersCanExport]?: boolean;
+  [TeamPreference.MembersCanInvite]?: boolean;
   [TeamPreference.Commenting]?: boolean;
   [TeamPreference.CustomTheme]?: Partial<CustomTheme>;
 };
@@ -208,6 +200,8 @@ export type CollectionSort = {
 export enum NotificationEventType {
   PublishDocument = "documents.publish",
   UpdateDocument = "documents.update",
+  AddUserToDocument = "documents.add_user",
+  AddUserToCollection = "collections.add_user",
   CreateRevision = "revisions.create",
   CreateCollection = "collections.create",
   CreateComment = "comments.create",
@@ -226,9 +220,9 @@ export enum NotificationChannelType {
 }
 
 export type NotificationSettings = {
-  [key in NotificationEventType]?:
+  [event in NotificationEventType]?:
     | {
-        [key in NotificationChannelType]?: boolean;
+        [type in NotificationChannelType]?: boolean;
       }
     | boolean;
 };
@@ -244,6 +238,8 @@ export const NotificationEventDefaults = {
   [NotificationEventType.Onboarding]: true,
   [NotificationEventType.Features]: true,
   [NotificationEventType.ExportCompleted]: true,
+  [NotificationEventType.AddUserToDocument]: true,
+  [NotificationEventType.AddUserToCollection]: true,
 };
 
 export enum UnfurlType {
@@ -257,14 +253,20 @@ export enum QueryNotices {
 
 export type OEmbedType = "photo" | "video" | "rich";
 
-export type Unfurl<T = OEmbedType> = {
-  url?: string;
-  type: T;
-  title: string;
-  description?: string;
-  thumbnailUrl?: string | null;
-  meta?: Record<string, string>;
-};
+export type Unfurl<T = OEmbedType> =
+  | {
+      url?: string;
+      type: T;
+      title: string;
+      description?: string;
+      thumbnailUrl?: string | null;
+      meta?: Record<string, string>;
+    }
+  | {
+      error: string;
+    };
+
+export type UnfurlSignature = (url: string) => Promise<Unfurl | false>;
 
 export type JSONValue =
   | string

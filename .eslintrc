@@ -32,19 +32,36 @@
     "object-shorthand": "error",
     "no-mixed-operators": "off",
     "no-useless-escape": "off",
+    "no-shadow": "off",
     "es/no-regexp-lookbehind-assertions": "error",
     "react/self-closing-comp": ["error", {
       "component": true,
       "html": true
     }],
-    // "@typescript-eslint/no-unused-vars": [
-    //   "error",
-    //   {
-    //     "argsIgnorePattern": "^_",
-    //     "args": "after-used",
-    //     "ignoreRestSiblings": true
-    //   }
-    // ],
+    "@typescript-eslint/no-shadow": [
+      "warn",
+      {
+        "hoist": "all",
+        "ignoreTypeValueShadow": true
+      }
+    ],
+    "@typescript-eslint/no-explicit-any": "warn",
+    "@typescript-eslint/no-floating-promises": "error",
+    "@typescript-eslint/await-thenable": "error",
+    "@typescript-eslint/no-misused-promises": [
+      "error",
+      {
+        "checksVoidReturn": false
+      }
+    ],
+    "@typescript-eslint/no-unused-vars": [
+      "warn",
+      {
+        "argsIgnorePattern": "^_",
+        "args": "after-used",
+        "ignoreRestSiblings": true
+      }
+    ],
     "padding-line-between-statements": ["error", { "blankLine": "always", "prev": "*", "next": "export" }],
     "lines-between-class-members": ["error", "always", { "exceptAfterSingleLine": true }],
     "lodash/import-scope": ["warn", "method"],

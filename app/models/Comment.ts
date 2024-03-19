@@ -78,7 +78,7 @@ class Comment extends Model {
   resolve = async (user: User) => {
     this.isSaving = true;
     try {
-      return await this.store.resolveComment({
+      return this.store.resolveComment({
         id: this.id,
         resolvedBy: user,
       });
@@ -90,7 +90,7 @@ class Comment extends Model {
   reopen = async (user: User) => {
     this.isSaving = true;
     try {
-      return await this.store.reopenComment({
+      return this.store.reopenComment({
         id: this.id,
         resolvedBy: user,
       });

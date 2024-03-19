@@ -18,7 +18,7 @@ import { transaction } from "@server/middlewares/transaction";
 import validate from "@server/middlewares/validate";
 import {
   Collection,
-  UserPermission,
+  UserMembership,
   GroupPermission,
   Team,
   Event,
@@ -387,6 +387,7 @@ router.post(
 router.post(
   "collections.add_user",
   auth(),
+  rateLimiter(RateLimiterStrategy.OneHundredPerHour),
   transaction(),
   validate(T.CollectionsAddUserSchema),
   async (ctx: APIContext<T.CollectionsAddUserReq>) => {
@@ -402,28 +403,20 @@ router.post(
     const user = await User.findByPk(userId);
     authorize(actor, "read", user);
 
-    let membership = await UserPermission.findOne({
+    const [membership, isNew] = await UserMembership.findOrCreate({
       where: {
         collectionId: id,
         userId,
+      },
+      defaults: {
+        permission: permission || user.defaultCollectionPermission,
+        createdById: actor.id,
       },
       transaction,
       lock: transaction.LOCK.UPDATE,
     });
 
-    if (!membership) {
-      membership = await UserPermission.create(
-        {
-          collectionId: id,
-          userId,
-          permission: permission || user.defaultCollectionPermission,
-          createdById: actor.id,
-        },
-        {
-          transaction,
-        }
-      );
-    } else if (permission) {
+    if (permission) {
       membership.permission = permission;
       await membership.save({ transaction });
     }
@@ -432,12 +425,13 @@ router.post(
       {
         name: "collections.add_user",
         userId,
+        modelId: membership.id,
         collectionId: collection.id,
         teamId: collection.teamId,
         actorId: actor.id,
         data: {
-          name: user.name,
-          membershipId: membership.id,
+          isNew,
+          permission: membership.permission,
         },
         ip: ctx.request.ip,
       },
@@ -487,12 +481,12 @@ router.post(
       {
         name: "collections.remove_user",
         userId,
+        modelId: membership.id,
         collectionId: collection.id,
         teamId: collection.teamId,
         actorId: actor.id,
         data: {
           name: user.name,
-          membershipId: membership.id,
         },
         ip: ctx.request.ip,
       },
@@ -519,7 +513,7 @@ router.post(
     }).findByPk(id);
     authorize(user, "read", collection);
 
-    let where: WhereOptions<UserPermission> = {
+    let where: WhereOptions<UserMembership> = {
       collectionId: id,
     };
     let userWhere;
@@ -549,8 +543,8 @@ router.post(
     };
 
     const [total, memberships] = await Promise.all([
-      UserPermission.count(options),
-      UserPermission.findAll({
+      UserMembership.count(options),
+      UserMembership.findAll({
         ...options,
         order: [["createdAt", "DESC"]],
         offset: ctx.state.pagination.offset,
@@ -661,7 +655,7 @@ router.post(
       permission !== CollectionPermission.ReadWrite &&
       collection.permission === CollectionPermission.ReadWrite
     ) {
-      await UserPermission.findOrCreate({
+      await UserMembership.findOrCreate({
         where: {
           collectionId: collection.id,
           userId: user.id,
@@ -1075,6 +1069,7 @@ async function processDocumentIds({
     if (documentTree?.children?.length) {
       // Create duplicates of nested docs
       // console.log("EHTI LOG: 1");
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       createChildDuplicates({
         collection,
         duplicateCollection,

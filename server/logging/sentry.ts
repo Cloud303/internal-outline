@@ -29,6 +29,7 @@ if (env.SENTRY_DSN) {
   });
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function requestErrorHandler(error: any, ctx: AppContext) {
   // we don't need to report every time a request stops to the bug tracker
   if (error.code === "EPIPE" || error.code === "ECONNRESET") {

@@ -69,7 +69,7 @@ const Popover: React.FC<Props> = ({
   }
 
   return (
-    <ReakitPopover {...rest} hideOnEsc={false}>
+    <StyledPopover {...rest} hideOnEsc={false} hideOnClickOutside>
       <Contents
         $shrink={shrink}
         $width={width}
@@ -79,7 +79,7 @@ const Popover: React.FC<Props> = ({
       >
         {children}
       </Contents>
-    </ReakitPopover>
+    </StyledPopover>
   );
 };
 
@@ -90,6 +90,10 @@ type ContentsProps = {
   $scrollable: boolean;
   $mobilePosition?: "top" | "bottom";
 };
+
+const StyledPopover = styled(ReakitPopover)`
+  z-index: ${depths.modal};
+`;
 
 const Contents = styled.div<ContentsProps>`
   display: ${(props) => (props.$flex ? "flex" : "block")};

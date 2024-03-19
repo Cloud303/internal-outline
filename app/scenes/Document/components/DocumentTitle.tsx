@@ -295,6 +295,9 @@ const EmojiWrapper = styled(Flex)<{ $position: "top" | "side"; dir?: string }>`
   height: 32px;
   width: 32px;
 
+  // Always move above TOC
+  z-index: 1;
+
   ${(props) =>
     props.$position === "top"
       ? css`
@@ -334,6 +337,7 @@ const Title = styled(ContentEditable)<TitleProps>`
   &::placeholder {
     color: ${s("placeholder")};
     -webkit-text-fill-color: ${s("placeholder")};
+    opacity: 1;
   }
 
   &:focus-within,

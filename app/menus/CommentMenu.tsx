@@ -55,7 +55,6 @@ function CommentMenu({
   const handleDelete = React.useCallback(() => {
     dialogs.openModal({
       title: t("Delete comment"),
-      isCentered: true,
       content: <CommentDeleteDialog comment={comment} onSubmit={onDelete} />,
     });
   }, [dialogs, comment, onDelete, t]);

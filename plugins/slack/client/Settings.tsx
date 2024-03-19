@@ -1,9 +1,8 @@
-import find from "lodash/find";
 import { observer } from "mobx-react";
 import * as React from "react";
 import { useTranslation, Trans } from "react-i18next";
 import styled from "styled-components";
-import { IntegrationType } from "@shared/types";
+import { IntegrationService, IntegrationType } from "@shared/types";
 import Collection from "~/models/Collection";
 import Integration from "~/models/Integration";
 import Button from "~/components/Button";
@@ -18,6 +17,7 @@ import env from "~/env";
 import useCurrentTeam from "~/hooks/useCurrentTeam";
 import useQuery from "~/hooks/useQuery";
 import useStores from "~/hooks/useStores";
+import { SlackUtils } from "../shared/SlackUtils";
 import SlackIcon from "./Icon";
 import SlackButton from "./components/SlackButton";
 import SlackListItem from "./components/SlackListItem";
@@ -38,14 +38,15 @@ function Slack() {
     });
   }, [collections, integrations]);
 
-  const commandIntegration = find(
-    integrations.slackIntegrations,
-    (i) => i.type === IntegrationType.Command
-  );
+  const commandIntegration = integrations.find({
+    type: IntegrationType.Command,
+    service: IntegrationService.Slack,
+  });
 
   const groupedCollections = collections.orderedData
     .map<[Collection, Integration | undefined]>((collection) => {
-      const integration = find(integrations.slackIntegrations, {
+      const integration = integrations.find({
+        service: IntegrationService.Slack,
         collectionId: collection.id,
       });
 
@@ -75,7 +76,7 @@ function Slack() {
           </Trans>
         </Notice>
       )}
-      <Text type="secondary">
+      <Text as="p" type="secondary">
         <Trans
           defaults="Get rich previews of {{ appName }} links shared in Slack and use the <em>{{ command }}</em> slash command to search for documents without leaving your chat."
           values={{
@@ -104,7 +105,7 @@ function Slack() {
                   // "users:read",
                   // "users:read.email",
                 ]}
-                redirectUri={`${env.URL}/auth/slack.commands`}
+                redirectUri={SlackUtils.commandsUrl()}
                 state={team.id}
                 icon={<SlackIcon />}
               />
@@ -113,7 +114,7 @@ function Slack() {
           <p>&nbsp;</p>
 
           <h2>{t("Collections")}</h2>
-          <Text type="secondary">
+          <Text as="p" type="secondary">
             <Trans>
               Connect {{ appName }} collections to Slack channels. Messages will
               be automatically posted to Slack when documents are published or

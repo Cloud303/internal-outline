@@ -35,6 +35,7 @@ class Metrics {
     return ddMetrics.gauge(key, value, [...tags, `instance:${instanceId}`]);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   increment(key: string, _tags?: Record<string, string>): void {
     if (!this.enabled) {
       return;

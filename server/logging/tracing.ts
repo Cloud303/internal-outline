@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // MIT License
 
 // Copyright (c) 2020 GameChanger Media
@@ -35,6 +36,7 @@ type Tags = {
 };
 
 interface Constructor {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   new (...args: any[]): any;
 }
 
@@ -58,6 +60,7 @@ interface TraceConfig {
 export const traceFunction =
   (config: TraceConfig) =>
   <
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     F extends (...args: any[]) => any,
     P extends Parameters<F>,
     R extends ReturnType<F>
@@ -66,7 +69,8 @@ export const traceFunction =
   ): F =>
     env.ENVIRONMENT === "test"
       ? target
-      : (function wrapperFn(this: any, ...args: P): R {
+      : // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (function wrapperFn(this: any, ...args: P): R {
           const { className, methodName = target.name, tags } = config;
           const childOf = config.isRoot
             ? undefined
@@ -125,7 +129,9 @@ export const traceFunction =
         } as F);
 
 const traceMethod = (config?: TraceConfig) =>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function <R, A extends any[], F extends (...args: A) => R>(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     target: any,
     _propertyKey: string,
     descriptor: PropertyDescriptor

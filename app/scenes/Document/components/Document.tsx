@@ -136,7 +136,7 @@ class DocumentScene extends React.Component<Props> {
   componentWillUnmount() {
     if (
       this.isEmpty &&
-      this.props.document.createdBy.id === this.props.auth.user?.id &&
+      this.props.document.createdBy?.id === this.props.auth.user?.id &&
       this.props.document.isDraft &&
       this.props.document.isActive &&
       this.props.document.hasEmptyTitle &&
@@ -215,13 +215,26 @@ class DocumentScene extends React.Component<Props> {
     }
   };
 
+  onUndoRedo = (event: KeyboardEvent) => {
+    if (isModKey(event)) {
+      if (event.shiftKey) {
+        if (this.editor.current?.redo()) {
+          event.preventDefault();
+        }
+      } else {
+        if (this.editor.current?.undo()) {
+          event.preventDefault();
+        }
+      }
+    }
+  };
+
   onMove = (ev: React.MouseEvent | KeyboardEvent) => {
     ev.preventDefault();
     const { document, dialogs, t, abilities } = this.props;
     if (abilities.move) {
       dialogs.openModal({
         title: t("Move document"),
-        isCentered: true,
         content: <DocumentMove document={document} />,
       });
     }
@@ -271,23 +284,8 @@ class DocumentScene extends React.Component<Props> {
     } else {
       dialogs.openModal({
         title: t("Publish document"),
-        isCentered: true,
         content: <DocumentPublish document={document} />,
       });
-    }
-  };
-
-  onToggleTableOfContents = (ev: KeyboardEvent) => {
-    if (!this.props.readOnly) {
-      return;
-    }
-    ev.preventDefault();
-    const { ui } = this.props;
-
-    if (ui.tocVisible) {
-      ui.hideTableOfContents();
-    } else {
-      ui.showTableOfContents();
     }
   };
 
@@ -407,7 +405,7 @@ class DocumentScene extends React.Component<Props> {
     }
   };
 
-  handleCoverImg = (e: React.ChangeEvent<HTMLInputElement>) => {
+  handleCoverImg = async (e: React.ChangeEvent<HTMLInputElement>) => {
     this.coverImg =
       e?.target?.files !== null
         ? URL.createObjectURL(e?.target?.files[0])
@@ -417,7 +415,7 @@ class DocumentScene extends React.Component<Props> {
         ? URL.createObjectURL(e?.target?.files[0])
         : this.coverImg;
     this.updateIsDirty();
-    this.autosave();
+    await this.autosave();
   };
 
   // getBase64(file: any, cb: any) {
@@ -479,33 +477,39 @@ class DocumentScene extends React.Component<Props> {
         });
         document.coverImg = attachment?.url;
         this.updateIsDirty();
-        this.autosave();
+        await this.autosave();
       } catch (err) {
         // console.log(err.message);
       }
     };
 
-    const handleRemoveCoverImg = () => {
+    const handleRemoveCoverImg = async () => {
       this.coverImg = "";
       this.coverImgPositionX = 0;
       this.coverImgPositionY = 0;
       document.coverImg = "";
 
       this.updateIsDirty();
-      this.autosave();
+      await this.autosave();
     };
 
-    const handleUpdatePostion = (positionX: number, positionY: number) => {
+    const handleUpdatePostion = async (
+      positionX: number,
+      positionY: number
+    ) => {
       this.coverImgPositionX = positionX;
       this.coverImgPositionY = positionY;
     };
 
-    const handleCoverPosition = (positionY: number, positionX: number) => {
+    const handleCoverPosition = async (
+      positionY: number,
+      positionX: number
+    ) => {
       document.coverImgPositionX = positionX;
       document.coverImgPositionY = positionY;
 
       this.updateIsDirty();
-      this.autosave();
+      await this.autosave();
     };
     const handleEditCover = (done: boolean) => {
       this.editCover = done;
@@ -525,6 +529,7 @@ class DocumentScene extends React.Component<Props> {
           />
         )}
         <RegisterKeyDown trigger="m" handler={this.onMove} />
+        <RegisterKeyDown trigger="z" handler={this.onUndoRedo} />
         <RegisterKeyDown trigger="e" handler={this.goToEdit} />
         <RegisterKeyDown trigger="Escape" handler={this.goBack} />
         <RegisterKeyDown trigger="h" handler={this.goToHistory} />
@@ -533,14 +538,6 @@ class DocumentScene extends React.Component<Props> {
           handler={(event) => {
             if (isModKey(event) && event.shiftKey) {
               this.onPublish(event);
-            }
-          }}
-        />
-        <RegisterKeyDown
-          trigger="h"
-          handler={(event) => {
-            if (event.ctrlKey && event.altKey) {
-              this.onToggleTableOfContents(event);
             }
           }}
         />

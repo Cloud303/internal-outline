@@ -9,6 +9,7 @@ const key = "sequelize:vault";
  * so that it can be used by getters and setters. Must be accompanied by a
  * @Column(DataType.BLOB) annotation.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export default function Encrypted(target: any, propertyKey: string) {
   Reflect.defineMetadata(key, vaults().vault(propertyKey), target, propertyKey);
 }
@@ -16,6 +17,7 @@ export default function Encrypted(target: any, propertyKey: string) {
 /**
  * Get the value of an encrypted column given the target and the property key.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function getEncryptedColumn(target: any, propertyKey: string): string {
   if (!target.getDataValue(propertyKey)) {
     return "";
@@ -42,6 +44,7 @@ export function getEncryptedColumn(target: any, propertyKey: string): string {
  * Set the value of an encrypted column given the target and the property key.
  */
 export function setEncryptedColumn(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   target: any,
   propertyKey: string,
   value: string

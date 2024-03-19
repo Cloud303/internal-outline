@@ -1,7 +1,7 @@
 import { Table, TBody, TR, TD } from "oy-vey";
 import * as React from "react";
 import theme from "@shared/styles/theme";
-import { twitterUrl } from "@shared/utils/urlHelpers";
+import { UrlHelper } from "@shared/utils/UrlHelper";
 import env from "@server/env";
 
 type Props = {
@@ -57,7 +57,7 @@ export default ({ unsubscribeUrl, children }: Props) => {
               {env.APP_NAME}
             </a>
             <Link href={env.URL}>{env.APP_NAME}</Link>
-            <a href={twitterUrl()} style={externalLinkStyle}>
+            <a href={UrlHelper.twitter} style={externalLinkStyle}>
               Twitter
             </a> */}
           </TD>

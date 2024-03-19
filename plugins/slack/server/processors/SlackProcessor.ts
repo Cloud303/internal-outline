@@ -4,7 +4,6 @@ import { differenceInMilliseconds } from "date-fns";
 import { Op } from "sequelize";
 import { IntegrationService, IntegrationType } from "@shared/types";
 import { Minute } from "@shared/utils/time";
-import env from "@server/env";
 import { Document, Integration, Collection, Team } from "@server/models";
 import BaseProcessor from "@server/queues/processors/BaseProcessor";
 import {
@@ -14,6 +13,8 @@ import {
   Event,
 } from "@server/types";
 import fetch from "@server/utils/fetch";
+import { sleep } from "@server/utils/timers";
+import env from "../env";
 import presentMessageAttachment from "../presenters/messageAttachment";
 
 export default class SlackProcessor extends BaseProcessor {
@@ -29,6 +30,8 @@ export default class SlackProcessor extends BaseProcessor {
     switch (event.name) {
       case "documents.publish":
       case "revisions.create":
+        // wait a few seconds to give the document summary chance to be generated
+        await sleep(5000);
         return this.documentUpdated(event);
       case "documents.move":
       case "documents.update":
