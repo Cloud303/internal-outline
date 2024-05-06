@@ -64,6 +64,7 @@ function Comments() {
       return false;
     });
   const hasComments = threads.length > 0;
+  const hasMultipleComments = comments.inDocument(document.id).length > 1;
 
   return (
     <Sidebar
@@ -72,8 +73,9 @@ function Comments() {
       scrollable={false}
     >
       <Scrollable
-        bottomShadow={!focusedComment}
         id="comments"
+        overflow={hasMultipleComments ? undefined : "initial"}
+        bottomShadow={!focusedComment}
         hiddenScrollbars
         topShadow
       >

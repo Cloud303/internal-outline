@@ -3,12 +3,12 @@ import { glob } from "glob";
 import type Router from "koa-router";
 import isArray from "lodash/isArray";
 import sortBy from "lodash/sortBy";
-import { UnfurlSignature } from "@shared/types";
 import type BaseEmail from "@server/emails/templates/BaseEmail";
 import env from "@server/env";
 import Logger from "@server/logging/Logger";
 import type BaseProcessor from "@server/queues/processors/BaseProcessor";
 import type BaseTask from "@server/queues/tasks/BaseTask";
+import { UnfurlSignature, UninstallSignature } from "@server/types";
 
 export enum PluginPriority {
   VeryHigh = 0,
@@ -28,6 +28,7 @@ export enum Hook {
   Processor = "processor",
   Task = "task",
   UnfurlProvider = "unfurl",
+  Uninstall = "uninstall",
 }
 
 /**
@@ -40,7 +41,8 @@ type PluginValueMap = {
   [Hook.EmailTemplate]: typeof BaseEmail;
   [Hook.Processor]: typeof BaseProcessor;
   [Hook.Task]: typeof BaseTask<any>;
-  [Hook.UnfurlProvider]: UnfurlSignature;
+  [Hook.Uninstall]: UninstallSignature;
+  [Hook.UnfurlProvider]: { unfurl: UnfurlSignature; cacheExpiry: number };
 };
 
 export type Plugin<T extends Hook> = {
@@ -79,12 +81,16 @@ export class PluginManager {
       .get(plugin.type)!
       .push({ ...plugin, priority: plugin.priority ?? PluginPriority.Normal });
 
-    Logger.debug(
-      "plugins",
-      `Plugin(type=${plugin.type}) registered ${
-        "name" in plugin.value ? plugin.value.name : ""
-      } ${plugin.description ? `(${plugin.description})` : ""}`
-    );
+    // Do not log plugin registration in forked worker processes, one log from the master process
+    // is enough. This can be detected by the presence of `process.send`.
+    if (process.send === undefined) {
+      Logger.debug(
+        "plugins",
+        `Plugin(type=${plugin.type}) registered ${
+          "name" in plugin.value ? plugin.value.name : ""
+        } ${plugin.description ? `(${plugin.description})` : ""}`
+      );
+    }
   }
 
   /**

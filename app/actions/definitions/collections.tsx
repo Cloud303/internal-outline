@@ -3,6 +3,7 @@ import {
   EditIcon,
   PadlockIcon,
   PlusIcon,
+  SearchIcon,
   StarredIcon,
   TrashIcon,
   UnstarredIcon,
@@ -16,9 +17,12 @@ import { CollectionEdit } from "~/components/Collection/CollectionEdit";
 import { CollectionNew } from "~/components/Collection/CollectionNew";
 import CollectionDeleteDialog from "~/components/CollectionDeleteDialog";
 import DynamicCollectionIcon from "~/components/Icons/CollectionIcon";
+import { getHeaderExpandedKey } from "~/components/Sidebar/components/Header";
 import { createAction } from "~/actions";
 import { CollectionSection } from "~/actions/sections";
+import { setPersistedState } from "~/hooks/usePersistedState";
 import history from "~/utils/history";
+import { searchPath } from "~/utils/routeHelpers";
 
 const ColorCollectionIcon = ({ collection }: { collection: Collection }) => (
   <DynamicCollectionIcon collection={collection} />
@@ -110,6 +114,17 @@ export const editCollectionPermissions = createAction({
   },
 });
 
+export const searchInCollection = createAction({
+  name: ({ t }) => t("Search in collection"),
+  analyticsName: "Search collection",
+  section: CollectionSection,
+  icon: <SearchIcon />,
+  visible: ({ activeCollectionId }) => !!activeCollectionId,
+  perform: ({ activeCollectionId }) => {
+    history.push(searchPath(undefined, { collectionId: activeCollectionId }));
+  },
+});
+
 export const starCollection = createAction({
   name: ({ t }) => t("Star"),
   analyticsName: "Star collection",
@@ -133,6 +148,7 @@ export const starCollection = createAction({
 
     const collection = stores.collections.get(activeCollectionId);
     await collection?.star();
+    setPersistedState(getHeaderExpandedKey("starred"), true);
   },
 });
 

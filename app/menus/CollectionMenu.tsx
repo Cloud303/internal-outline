@@ -30,6 +30,7 @@ import {
   editCollectionPermissions,
   starCollection,
   unstarCollection,
+  searchInCollection,
 } from "~/actions/definitions/collections";
 import useActionContext from "~/hooks/useActionContext";
 import useCurrentTeam from "~/hooks/useCurrentTeam";
@@ -210,6 +211,7 @@ function CollectionMenu({
         onClick: handleExport,
         icon: <ExportIcon />,
       },
+      actionToMenuItem(searchInCollection, context),
       {
         type: "separator",
       },

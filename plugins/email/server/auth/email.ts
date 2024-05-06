@@ -109,23 +109,25 @@ router.get(
       return ctx.redirect("/?notice=user-suspended");
     }
 
-    if (user.isInvited) {
-      // await new WelcomeEmail({
-      //   to: user.email,
-      //   teamUrl: user.team.url,
-      // }).schedule();
-      // const inviter = await user.$get("invitedBy");
-      // if (
-      //   inviter?.subscribedToEventType(NotificationEventType.InviteAccepted)
-      // ) {
-      //   await new InviteAcceptedEmail({
-      //     to: inviter.email,
-      //     inviterId: inviter.id,
-      //     invitedName: user.name,
-      //     teamUrl: user.team.url,
-      //   }).schedule();
-      // }
-    }
+    // if (user.isInvited) {
+    //   await new WelcomeEmail({
+    //     to: user.email,
+    //     role: user.role,
+    //     teamUrl: user.team.url,
+    //   }).schedule();
+
+    //   const inviter = await user.$get("invitedBy");
+    //   if (
+    //     inviter?.subscribedToEventType(NotificationEventType.InviteAccepted)
+    //   ) {
+    //     await new InviteAcceptedEmail({
+    //       to: inviter.email,
+    //       inviterId: inviter.id,
+    //       invitedName: user.name,
+    //       teamUrl: user.team.url,
+    //     }).schedule();
+    //   }
+    // }
 
     // set cookies on response and redirect to team subdomain
     await signIn(ctx, "email", {

@@ -2,6 +2,7 @@ export enum UserRole {
   Admin = "admin",
   Member = "member",
   Viewer = "viewer",
+  Guest = "guest",
 }
 
 export type DateFilter = "day" | "week" | "month" | "year";
@@ -82,6 +83,7 @@ export enum IntegrationService {
   Grist = "grist",
   Slack = "slack",
   GoogleAnalytics = "google-analytics",
+  GitHub = "github",
 }
 
 export type UserCreatableIntegrationService = Extract<
@@ -110,7 +112,15 @@ export enum DocumentPermission {
 }
 
 export type IntegrationSettings<T> = T extends IntegrationType.Embed
-  ? { url: string }
+  ? {
+      url: string;
+      github?: {
+        installation: {
+          id: number;
+          account: { id: number; name: string; avatarUrl: string };
+        };
+      };
+    }
   : T extends IntegrationType.Analytics
   ? { measurementId: string }
   : T extends IntegrationType.Post
@@ -119,6 +129,14 @@ export type IntegrationSettings<T> = T extends IntegrationType.Embed
   ? { serviceTeamId: string }
   :
       | { url: string }
+      | {
+          github?: {
+            installation: {
+              id: number;
+              account: { id?: number; name: string; avatarUrl?: string };
+            };
+          };
+        }
       | { url: string; channel: string; channelId: string }
       | { serviceTeamId: string }
       | { measurementId: string }
@@ -256,31 +274,96 @@ export const NotificationEventDefaults = {
   [NotificationEventType.AddUserToCollection]: true,
 };
 
-export enum UnfurlType {
+export enum UnfurlResourceType {
+  OEmbed = "oembed",
   Mention = "mention",
   Document = "document",
+  Issue = "issue",
+  PR = "pull",
 }
+
+export type UnfurlResponse = {
+  [UnfurlResourceType.OEmbed]: {
+    /** The resource type */
+    type: UnfurlResourceType.OEmbed;
+    /** URL pointing to the resource */
+    url: string;
+    /** A text title, describing the resource */
+    title: string;
+    /** A brief description about the resource */
+    description: string;
+    /** A URL to a thumbnail image representing the resource */
+    thumbnailUrl: string;
+  };
+  [UnfurlResourceType.Mention]: {
+    /** The resource type */
+    type: UnfurlResourceType.Mention;
+    /** Mentioned user's name */
+    name: string;
+    /** Mentioned user's avatar URL */
+    avatarUrl: string | null;
+    /** Used to create mentioned user's avatar if no avatar URL provided */
+    color: string;
+    /** Mentiond user's recent activity */
+    lastActive: string;
+  };
+  [UnfurlResourceType.Document]: {
+    /** The resource type */
+    type: UnfurlResourceType.Document;
+    /** URL pointing to the resource */
+    url: string;
+    /** Document id */
+    id: string;
+    /** Document title */
+    title: string;
+    /** Document summary */
+    summary: string;
+    /** Viewer's last activity on this document */
+    lastActivityByViewer: string;
+  };
+  [UnfurlResourceType.Issue]: {
+    /** The resource type */
+    type: UnfurlResourceType.Issue;
+    /** Issue link */
+    url: string;
+    /** Issue identifier */
+    id: string;
+    /** Issue title */
+    title: string;
+    /** Issue description */
+    description: string;
+    /** Issue's author */
+    author: { name: string; avatarUrl: string };
+    /** Issue's labels */
+    labels: Array<{ name: string; color: string }>;
+    /** Issue's status */
+    state: { name: string; color: string };
+    /** Issue's creation time */
+    createdAt: string;
+  };
+  [UnfurlResourceType.PR]: {
+    /** The resource type */
+    type: UnfurlResourceType.PR;
+    /** Pull Request link */
+    url: string;
+    /** Pull Request identifier */
+    id: string;
+    /** Pull Request title */
+    title: string;
+    /** Pull Request description */
+    description: string;
+    /** Pull Request author */
+    author: { name: string; avatarUrl: string };
+    /** Pull Request status */
+    state: { name: string; color: string };
+    /** Pull Request creation time */
+    createdAt: string;
+  };
+};
 
 export enum QueryNotices {
   UnsubscribeDocument = "unsubscribe-document",
 }
-
-export type OEmbedType = "photo" | "video" | "rich";
-
-export type Unfurl<T = OEmbedType> =
-  | {
-      url?: string;
-      type: T;
-      title: string;
-      description?: string;
-      thumbnailUrl?: string | null;
-      meta?: Record<string, string>;
-    }
-  | {
-      error: string;
-    };
-
-export type UnfurlSignature = (url: string) => Promise<Unfurl | false>;
 
 export type JSONValue =
   | string

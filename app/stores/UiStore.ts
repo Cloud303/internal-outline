@@ -20,6 +20,16 @@ export enum SystemTheme {
   Dark = "dark",
 }
 
+type PersistedData = {
+  languagePromptDismissed: boolean | undefined;
+  theme: Theme;
+  sidebarCollapsed: boolean;
+  sidebarWidth: number;
+  sidebarRightWidth: number;
+  tocVisible: boolean;
+  commentsExpanded: string[];
+};
+
 class UiStore {
   // has the user seen the prompt to change the UI language and actioned it
   @observable
@@ -74,7 +84,16 @@ class UiStore {
 
   constructor() {
     // Rehydrate
-    const data: Partial<UiStore> = Storage.get(UI_STORE) || {};
+    const data: PersistedData = Storage.get(UI_STORE) || {};
+    this.languagePromptDismissed = data.languagePromptDismissed;
+    this.sidebarCollapsed = !!data.sidebarCollapsed;
+    this.sidebarWidth = data.sidebarWidth || defaultTheme.sidebarWidth;
+    this.sidebarRightWidth =
+      data.sidebarRightWidth || defaultTheme.sidebarRightWidth;
+    this.tocVisible = !!data.tocVisible;
+    this.commentsExpanded = data.commentsExpanded || [];
+    this.theme = data.theme || Theme.System;
+
     // system theme listeners
     if (window.matchMedia) {
       const colorSchemeQueryList = window.matchMedia(
@@ -94,16 +113,23 @@ class UiStore {
         colorSchemeQueryList.addListener(setSystemTheme);
       }
     }
-    // persisted keys
-    this.languagePromptDismissed = data.languagePromptDismissed;
-    this.sidebarCollapsed = !!data.sidebarCollapsed;
-    this.sidebarWidth = data.sidebarWidth || defaultTheme.sidebarWidth;
-    this.sidebarRightWidth =
-      data.sidebarRightWidth || defaultTheme.sidebarRightWidth;
-    this.tocVisible =
-      data.tocVisible !== undefined ? !!data.tocVisible : this.tocVisible;
-    this.commentsExpanded = data.commentsExpanded || [];
-    this.theme = data.theme || Theme.System;
+
+    window.addEventListener("storage", (event) => {
+      if (event.key === UI_STORE && event.newValue) {
+        const newData: PersistedData | null = JSON.parse(event.newValue);
+
+        // data may be null if key is deleted in localStorage
+        if (!newData) {
+          return;
+        }
+
+        // Note: we do not sync all properties here, sidebar widths cause fighting between windows
+        this.theme = newData.theme;
+        this.languagePromptDismissed = newData.languagePromptDismissed;
+        this.sidebarCollapsed = !!newData.sidebarCollapsed;
+        this.tocVisible = !!newData.tocVisible;
+      }
+    });
 
     autorun(() => {
       Storage.set(UI_STORE, this.asJson);
@@ -267,7 +293,7 @@ class UiStore {
   }
 
   @computed
-  get asJson() {
+  get asJson(): PersistedData {
     return {
       tocVisible: this.tocVisible,
       sidebarCollapsed: this.sidebarCollapsed,

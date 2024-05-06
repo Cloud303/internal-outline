@@ -55,15 +55,6 @@ const scopes = [
   "identity.team",
 ];
 
-function redirectOnClient(ctx: Context, url: string) {
-  ctx.type = "text/html";
-  ctx.body = `
-<html>
-<head>
-<meta http-equiv="refresh" content="0;URL='${url}'"/>
-</head>`;
-}
-
 if (env.SLACK_CLIENT_ID && env.SLACK_CLIENT_SECRET) {
   const strategy = new SlackStrategy(
     {
@@ -164,8 +155,7 @@ if (env.SLACK_CLIENT_ID && env.SLACK_CLIENT_SECRET) {
             const team = await Team.findByPk(teamId, {
               rejectOnEmpty: true,
             });
-            return redirectOnClient(
-              ctx,
+            return ctx.redirectOnClient(
               SlackUtils.connectUrl({
                 baseUrl: team.url,
                 params: ctx.request.querystring,
@@ -181,9 +171,9 @@ if (env.SLACK_CLIENT_ID && env.SLACK_CLIENT_SECRET) {
 
       switch (type) {
         case IntegrationType.Post: {
-          const collection = await Collection.findByPk(collectionId, {
-            rejectOnEmpty: true,
-          });
+          const collection = await Collection.scope({
+            method: ["withMembership", user.id],
+          }).findByPk(collectionId);
           authorize(user, "read", collection);
           authorize(user, "update", user.team);
 

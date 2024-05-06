@@ -17,6 +17,7 @@ import {
   OutdentIcon,
   IndentIcon,
   CopyIcon,
+  Heading3Icon,
 } from "outline-icons";
 import { EditorState } from "prosemirror-state";
 import { isInTable } from "prosemirror-tables";
