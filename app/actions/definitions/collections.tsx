@@ -10,6 +10,7 @@ import {
   DuplicateIcon,
 } from "outline-icons";
 import * as React from "react";
+import { toast } from "sonner";
 import stores from "~/stores";
 import Collection from "~/models/Collection";
 import CollectionPermissions from "~/scenes/CollectionPermissions";
@@ -197,9 +198,7 @@ export const duplicateCollection = createAction({
     const duped = await collection?.duplicate();
     // when duplicating, go straight to the duplicated document content
     history.push(`${duped?.url}`);
-    stores.toasts.showToast(t("Collection duplicated"), {
-      type: "success",
-    });
+    toast.success(t("Collection duplicated"));
   },
 });
 

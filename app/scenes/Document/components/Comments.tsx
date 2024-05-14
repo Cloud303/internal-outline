@@ -99,7 +99,6 @@ function Comments() {
             </select>
           </label>
         </div>
-        {console.log("sada", threads)}
         <Wrapper $hasComments={hasComments}>
           {hasComments ? (
             threads.map((thread) => (

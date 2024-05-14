@@ -2,7 +2,7 @@ import fractionalIndex from "fractional-index";
 import invariant from "invariant";
 import { Request } from "koa";
 import Router from "koa-router";
-import { Sequelize, Op, WhereOptions, Transaction } from "sequelize";
+import { Sequelize, Op, WhereOptions } from "sequelize";
 import {
   CollectionPermission,
   FileOperationState,
@@ -10,7 +10,7 @@ import {
 } from "@shared/types";
 import collectionDestroyer from "@server/commands/collectionDestroyer";
 import collectionExporter from "@server/commands/collectionExporter";
-import documentCreator from "@server/commands/documentCreator";
+import documentDuplicator from "@server/commands/documentDuplicator";
 import teamUpdater from "@server/commands/teamUpdater";
 import auth from "@server/middlewares/authentication";
 import { rateLimiter } from "@server/middlewares/rateLimiter";
@@ -42,8 +42,6 @@ import { APIContext } from "@server/types";
 import { RateLimiterStrategy } from "@server/utils/RateLimiter";
 import { collectionIndexing } from "@server/utils/indexing";
 import removeIndexCollision from "@server/utils/removeIndexCollision";
-import { assertUuid, assertPositiveInteger } from "@server/validation";
-import { NavigationNode } from "~/types";
 import pagination from "../middlewares/pagination";
 import * as T from "./schema";
 
@@ -923,24 +921,14 @@ router.post(
 
     let documentIds: string[] = [];
 
-    // get documet tree
-    let where: WhereOptions<Document> = {
-      teamId: user.teamId,
-      archivedAt: {
-        [Op.is]: null,
-      },
-    };
     authorize(user, "createCollection", user.team);
-    where = { ...where, collectionId };
+
     const collection = await Collection.scope({
       method: ["withMembership", user.id],
     }).findByPk(collectionId);
     authorize(user, "read", collection);
-    // console.log("collection?.documentStructure:", collection?.documentStructure);
 
     documentIds = (collection?.documentStructure || []).map((node) => node.id);
-
-    // console.log("collections.duplicate:", documentIds);
 
     // create new collection
     const collections = await Collection.findAll({
@@ -961,6 +949,7 @@ router.post(
       collections.length ? collections[0].index : null
     );
     index = await removeIndexCollision(user.teamId, index);
+
     const duplicateCollection = await Collection.create({
       name,
       description,
@@ -974,19 +963,13 @@ router.post(
       index,
     });
 
-    const editorVersion = ctx.headers["x-editor-version"] as string | undefined;
+    // const editorVersion = ctx.headers["x-editor-version"] as string | undefined;
 
     await processDocumentIds({
-      collection,
       duplicateCollection,
       documentIds,
       user,
       request: ctx.request,
-      body: {
-        index: undefined,
-        publish: true,
-        editorVersion,
-      },
     });
 
     await Event.create({
@@ -1015,212 +998,247 @@ router.post(
 
 // Process documentId
 async function processDocumentIds({
-  collection,
   duplicateCollection,
   documentIds,
   user,
   request,
-  body,
 }: {
-  collection: Collection;
   duplicateCollection: Collection;
   documentIds: string[];
   user: User;
   request: Request;
-  body: {
-    index: number | undefined;
-    publish: boolean | undefined;
-    editorVersion: string | undefined;
-  };
 }) {
-  // console.log("processDocumentIds:", documentIds);
-
-  let templateDocument: Document | null | undefined;
-  authorize(user, "createDocument", user.team);
-
   // create duplicate documents in the collection
   for (const documentId of documentIds || []) {
-    // console.log("documentId", documentId);
-    const document: Document | null = await Document.findByPk(documentId, {
-      userId: user.id,
-    });
-
-    authorize(user, "read", document, {
-      collection,
-    });
-    const duplicateDocument = await documentCreator({
-      title: `${document?.title}`,
-      text: `${document?.text}`,
-      publish: true,
-      collectionId: duplicateCollection.id,
-      parentDocumentId: undefined,
-      templateDocument,
-      template: undefined,
-      // index: undefined,
-      user,
-      editorVersion: body.editorVersion,
-      ip: request.ip,
-    });
-    authorize(user, "read", duplicateDocument, {
-      duplicateCollection,
-    });
-
-    const documentTree: NavigationNode | null =
-      collection.getDocumentTree(documentId);
-
-    // console.log("EHTI LOG: ", documentTree?.children?.length);
-    if (documentTree?.children?.length) {
-      // Create duplicates of nested docs
-      // console.log("EHTI LOG: 1");
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      createChildDuplicates({
-        collection,
-        duplicateCollection,
-        user,
-        request,
-        body: {
-          index: undefined,
-          publish: true,
-          editorVersion: body.editorVersion,
-        },
-        parentDocumentId: duplicateDocument.id,
-        childs: documentTree?.children,
-      });
-    }
-  }
-}
-
-// Recursive function to loop through nested documents
-async function createChildDuplicates({
-  collection,
-  duplicateCollection,
-  user,
-  request,
-  body,
-  parentDocumentId,
-  childs,
-}: {
-  collection: Collection;
-  duplicateCollection: Collection;
-  user: User;
-  request: Request;
-  body: {
-    index: number | undefined;
-    publish: boolean | undefined;
-    editorVersion: string | undefined;
-  };
-  parentDocumentId: string | undefined;
-  childs: NavigationNode[] | undefined;
-}) {
-  if (parentDocumentId) {
-    assertUuid(parentDocumentId, "parentDocumentId must be an uuid");
-  }
-
-  if (body.index) {
-    assertPositiveInteger(body.index, "index must be an integer (>=0)");
-  }
-  authorize(user, "createDocument", user.team);
-
-  let parentDocument;
-
-  if (parentDocumentId) {
-    parentDocument = await Document.findOne({
-      where: {
-        id: parentDocumentId,
-        collectionId: duplicateCollection.id,
-      },
-    });
-    authorize(user, "read", parentDocument, {
-      duplicateCollection,
-    });
-  }
-  for (const child of childs || []) {
-    let i = 1;
-    const childDoc: Document | null = await Document.findByPk(child.id, {
-      userId: user.id,
-    });
-
-    let templateDocument: Document | null | undefined;
-    if (childDoc?.templateId) {
-      templateDocument = await Document.findByPk(childDoc?.templateId, {
+    if (documentId) {
+      const parentDocumentId = undefined;
+      const document = await Document.findByPk(documentId, {
         userId: user.id,
       });
-      authorize(user, "read", templateDocument);
+      if (document) {
+        await documentDuplicator({
+          user,
+          document,
+          collection: duplicateCollection,
+          title: `${document?.title}`,
+          publish: true,
+          // transaction,
+          recursive: true,
+          parentDocumentId,
+          ip: request.ip,
+        });
+      }
     }
-    const obj = {
-      title: `${childDoc?.title}`,
-      text: `${childDoc?.text}`,
-      publish: body.publish,
-      collectionId: `${duplicateCollection.id}`,
-      parentDocumentId,
-      templateDocument,
-      template: childDoc?.template,
-      index: i,
-      user,
-      editorVersion: body.editorVersion,
-      ip: request.ip,
-    };
-
-    // console.log("EHTI LOG: 2", obj);
-    const childData = await createDoc({ doc: obj });
-    // console.log("EHTI LOG: 3", childData);
-    if (child.children.length > 0) {
-      await createChildDuplicates({
-        collection,
-        duplicateCollection,
-        user,
-        request,
-        body,
-        parentDocumentId: childData?.id,
-        childs: child.children,
-      });
-    }
-    i += 1;
   }
 }
+
+// async function processDocumentIds({
+//   collection,
+//   duplicateCollection,
+//   documentIds,
+//   user,
+//   request,
+//   body,
+// }: {
+//   collection: Collection;
+//   duplicateCollection: Collection;
+//   documentIds: string[];
+//   user: User;
+//   request: Request;
+//   body: {
+//     index: number | undefined;
+//     publish: boolean | undefined;
+//     editorVersion: string | undefined;
+//   };
+// }) {
+//   // console.log("processDocumentIds:", documentIds);
+
+//   let templateDocument: Document | null | undefined;
+//   authorize(user, "createDocument", user.team);
+
+//   // create duplicate documents in the collection
+//   for (const documentId of documentIds || []) {
+//     // console.log("documentId", documentId);
+//     const document: Document | null = await Document.findByPk(documentId, {
+//       userId: user.id,
+//     });
+
+//     authorize(user, "read", document, {
+//       collection,
+//     });
+//     const duplicateDocument = await documentCreator({
+//       title: `${document?.title}`,
+//       text: `${document?.text}`,
+//       publish: true,
+//       collectionId: duplicateCollection.id,
+//       parentDocumentId: undefined,
+//       templateDocument,
+//       template: undefined,
+//       // index: undefined,
+//       user,
+//       editorVersion: body.editorVersion,
+//       ip: request.ip,
+//     });
+//     authorize(user, "read", duplicateDocument, {
+//       duplicateCollection,
+//     });
+
+//     const documentTree: NavigationNode | null =
+//       collection.getDocumentTree(documentId);
+
+//     // console.log("EHTI LOG: ", documentTree?.children?.length);
+//     if (documentTree?.children?.length) {
+//       // Create duplicates of nested docs
+//       // console.log("EHTI LOG: 1");
+//       // eslint-disable-next-line @typescript-eslint/no-floating-promises
+//       createChildDuplicates({
+//         collection,
+//         duplicateCollection,
+//         user,
+//         request,
+//         body: {
+//           index: undefined,
+//           publish: true,
+//           editorVersion: body.editorVersion,
+//         },
+//         parentDocumentId: duplicateDocument.id,
+//         childs: documentTree?.children,
+//       });
+//     }
+//   }
+// }
+
+// Recursive function to loop through nested documents
+// async function createChildDuplicates({
+//   collection,
+//   duplicateCollection,
+//   user,
+//   request,
+//   body,
+//   parentDocumentId,
+//   childs,
+// }: {
+//   collection: Collection;
+//   duplicateCollection: Collection;
+//   user: User;
+//   request: Request;
+//   body: {
+//     index: number | undefined;
+//     publish: boolean | undefined;
+//     editorVersion: string | undefined;
+//   };
+//   parentDocumentId: string | undefined;
+//   childs: NavigationNode[] | undefined;
+// }) {
+//   if (parentDocumentId) {
+//     assertUuid(parentDocumentId, "parentDocumentId must be an uuid");
+//   }
+
+//   if (body.index) {
+//     assertPositiveInteger(body.index, "index must be an integer (>=0)");
+//   }
+//   authorize(user, "createDocument", user.team);
+
+//   let parentDocument;
+
+//   if (parentDocumentId) {
+//     parentDocument = await Document.findOne({
+//       where: {
+//         id: parentDocumentId,
+//         collectionId: duplicateCollection.id,
+//       },
+//     });
+//     authorize(user, "read", parentDocument, {
+//       duplicateCollection,
+//     });
+//   }
+//   for (const child of childs || []) {
+//     let i = 1;
+//     const childDoc: Document | null = await Document.findByPk(child.id, {
+//       userId: user.id,
+//     });
+
+//     let templateDocument: Document | null | undefined;
+//     if (childDoc?.templateId) {
+//       templateDocument = await Document.findByPk(childDoc?.templateId, {
+//         userId: user.id,
+//       });
+//       authorize(user, "read", templateDocument);
+//     }
+//     const obj = {
+//       title: `${childDoc?.title}`,
+//       text: `${childDoc?.text}`,
+//       publish: body.publish,
+//       collectionId: `${duplicateCollection.id}`,
+//       parentDocumentId,
+//       templateDocument,
+//       template: childDoc?.template,
+//       index: i,
+//       user,
+//       editorVersion: body.editorVersion,
+//       ip: request.ip,
+//     };
+
+//     // console.log("EHTI LOG: 2", obj);
+//     const childData = await createDoc({ doc: obj });
+//     // console.log("EHTI LOG: 3", childData);
+//     if (child.children.length > 0) {
+//       await createChildDuplicates({
+//         collection,
+//         duplicateCollection,
+//         user,
+//         request,
+//         body,
+//         parentDocumentId: childData?.id,
+//         childs: child.children,
+//       });
+//     }
+//     i += 1;
+//   }
+// }
 
 // Function creates a new document
-async function createDoc({
-  doc,
-}: {
-  doc: {
-    title: string;
-    text: string;
-    publish: boolean | undefined;
-    collectionId: string;
-    parentDocumentId: string | undefined;
-    templateDocument: Document | null | undefined;
-    template: boolean | undefined;
-    index: number | undefined;
-    user: User;
-    editorVersion: string | undefined;
-    ip: string | undefined;
-    id?: string | undefined;
-    publishedAt?: Date | undefined;
-    createdAt?: Date | undefined;
-    updatedAt?: Date | undefined;
-    source?: "import" | undefined;
-    transaction?: Transaction;
-  };
-}): Promise<Document | undefined> {
-  try {
-    const response = await documentCreator(doc);
-    return response;
-  } catch (err) {
-    console.log("createDoc ERROR:", err);
-    throw err; // You can rethrow the error to maintain the rejection behavior
-  }
-  // return new Promise(async (resolve, reject) => {
-  //   try {
-  //     let response = await documentCreator({
-  //       ...doc,
-  //     });
-  //     resolve(response);
-  //   } catch (err) {
-  //     console.log("createDoc ERROR:", err);
-  //     reject(err);
-  //   }
-  // });
-}
+// async function createDoc({
+//   doc,
+// }: {
+//   doc: {
+//     title: string;
+//     text: string;
+//     publish: boolean | undefined;
+//     collectionId: string;
+//     parentDocumentId: string | undefined;
+//     templateDocument: Document | null | undefined;
+//     template: boolean | undefined;
+//     index: number | undefined;
+//     user: User;
+//     editorVersion: string | undefined;
+//     ip: string | undefined;
+//     id?: string | undefined;
+//     publishedAt?: Date | undefined;
+//     createdAt?: Date | undefined;
+//     updatedAt?: Date | undefined;
+//     source?: "import" | undefined;
+//     transaction?: Transaction;
+//   };
+// }): Promise<Document | undefined> {
+//   try {
+//     const response = await documentCreator(doc);
+//     return response;
+//   } catch (err) {
+//     console.log("createDoc ERROR:", err);
+//     throw err; // You can rethrow the error to maintain the rejection behavior
+//   }
+//   // return new Promise(async (resolve, reject) => {
+//   //   try {
+//   //     let response = await documentCreator({
+//   //       ...doc,
+//   //     });
+//   //     resolve(response);
+//   //   } catch (err) {
+//   //     console.log("createDoc ERROR:", err);
+//   //     reject(err);
+//   //   }
+//   // });
+// }
 
 export default router;
