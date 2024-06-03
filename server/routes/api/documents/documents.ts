@@ -1095,12 +1095,18 @@ router.post(
     const { transaction } = ctx.state;
     const { id, title, publish, recursive, collectionId, parentDocumentId } =
       ctx.input.body;
+
     const { user } = ctx.state.auth;
 
     const document = await Document.findByPk(id, {
       userId: user.id,
       transaction,
     });
+
+    if (!document) {
+      throw InvalidRequestError("Document doesn't exist");
+    }
+
     authorize(user, "read", document);
 
     const collection = collectionId
@@ -1109,18 +1115,24 @@ router.post(
         }).findByPk(collectionId, { transaction })
       : document?.collection;
 
-    if (collection) {
-      authorize(user, "updateDocument", collection);
+    if (!collection) {
+      throw InvalidRequestError("Collection doesn't exist");
     }
+
+    authorize(user, "updateDocument", collection);
 
     if (parentDocumentId) {
       const parent = await Document.findByPk(parentDocumentId, {
         userId: user.id,
         transaction,
       });
+      if (!parent) {
+        throw InvalidRequestError("Parent document doesn't exist");
+      }
+
       authorize(user, "update", parent);
 
-      if (!parent.publishedAt) {
+      if (!parent?.publishedAt) {
         throw InvalidRequestError("Cannot duplicate document inside a draft");
       }
     }
