@@ -48,6 +48,7 @@
   ],
   "dependencies": {
     "@aws-sdk/client-s3": "3.616.0",
+    "@aws-sdk/credential-provider-ini": "^3.651.1",
     "@aws-sdk/lib-storage": "3.616.0",
     "@aws-sdk/s3-presigned-post": "3.616.0",
     "@aws-sdk/s3-request-presigner": "3.616.0",

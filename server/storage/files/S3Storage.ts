@@ -7,6 +7,7 @@ import {
   GetObjectCommand,
   ObjectCannedACL,
 } from "@aws-sdk/client-s3";
+import { fromIni } from "@aws-sdk/credential-provider-ini";
 import { Upload } from "@aws-sdk/lib-storage";
 import "@aws-sdk/signature-v4-crt"; // https://github.com/aws/aws-sdk-js-v3#functionality-requiring-aws-common-runtime-crt
 import {
@@ -25,20 +26,18 @@ import BaseStorage from "./BaseStorage";
 export default class S3Storage extends BaseStorage {
   constructor() {
     super();
-    // let credentials: AWS.Credentials | null | undefined = undefined;
-    // if (env.isDevelopment) {
-    //   credentials = new AWS.SharedIniFileCredentials({
-    //     profile: "c303-master-dev",
-    //   });
-    //   AWS.config.credentials = credentials;
-    // }
-
-    this.client = new S3Client({
-      bucketEndpoint: env.AWS_S3_ACCELERATE_URL ? true : false,
-      forcePathStyle: env.AWS_S3_FORCE_PATH_STYLE,
-      region: env.AWS_REGION,
-      endpoint: this.getEndpoint(),
-    });
+    let credentials = undefined;
+    if (env.isDevelopment) {
+      credentials = fromIni({ profile: "c303-master-dev" });
+      this.client = new S3Client({ credentials });
+    } else {
+      this.client = new S3Client({
+        bucketEndpoint: env.AWS_S3_ACCELERATE_URL ? true : false,
+        forcePathStyle: env.AWS_S3_FORCE_PATH_STYLE,
+        region: env.AWS_REGION,
+        endpoint: this.getEndpoint(),
+      });
+    }
   }
 
   public async getPresignedPost(

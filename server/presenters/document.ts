@@ -68,6 +68,9 @@ async function presentDocument(
     parentDocumentId: undefined,
     lastViewedAt: undefined,
     isCollectionDeleted: undefined,
+    coverImg: document.coverImg,
+    coverImgPositionX: document.coverImgPositionX,
+    coverImgPositionY: document.coverImgPositionY,
   };
 
   if (!!document.views && document.views.length > 0) {
