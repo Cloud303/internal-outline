@@ -3,9 +3,10 @@ import * as React from "react";
 import { useTranslation } from "react-i18next";
 import styled from "styled-components";
 import breakpoint from "styled-components-breakpoint";
-import { s } from "@shared/styles";
-import Text from "~/components/Text";
+import { EditorStyleHelper } from "@shared/editor/styles/EditorStyleHelper";
+import { depths, s } from "@shared/styles";
 import useWindowScrollPosition from "~/hooks/useWindowScrollPosition";
+import { decodeURIComponentSafe } from "~/utils/urls";
 
 const HEADING_OFFSET = 20;
 
@@ -22,28 +23,30 @@ type Props = {
 
 export default function Contents({ coverImg, headings, isFullWidth }: Props) {
   const [activeSlug, setActiveSlug] = React.useState<string>();
-  const position = useWindowScrollPosition({
+  const scrollPosition = useWindowScrollPosition({
     throttle: 100,
   });
 
   React.useEffect(() => {
+    let activeId = headings.length > 0 ? headings[0].id : undefined;
+
     for (let key = 0; key < headings.length; key++) {
       const heading = headings[key];
       const element = window.document.getElementById(
-        decodeURIComponent(heading.id)
+        decodeURIComponentSafe(heading.id)
       );
 
       if (element) {
         const bounding = element.getBoundingClientRect();
-
         if (bounding.top > HEADING_OFFSET) {
-          const last = headings[Math.max(0, key - 1)];
-          setActiveSlug(last.id);
-          return;
+          break;
         }
+        activeId = heading.id;
       }
     }
-  }, [position, headings]);
+
+    setActiveSlug(activeId);
+  }, [scrollPosition, headings]);
 
   // calculate the minimum heading level and adjust all the headings to make
   // that the top-most. This prevents the contents from being weirdly indented
@@ -55,52 +58,58 @@ export default function Contents({ coverImg, headings, isFullWidth }: Props) {
   const headingAdjustment = minHeading - 1;
   const { t } = useTranslation();
 
+  if (headings.length === 0) {
+    return <StickyWrapper isFullWidth={isFullWidth} coverImg={coverImg} />;
+  }
+
   return (
-    <Wrapper
-      isFullWidth={isFullWidth}
-      headings={headings.length}
-      coverImg={coverImg}
-    >
-      <Sticky>
-        <Container>
-          <Heading>{t("Contents")}</Heading>
-          {headings.length ? (
-            <List>
-              {headings
-                .filter((heading) => heading.level < 4)
-                .map((heading) => (
-                  <ListItem
-                    key={heading.id}
-                    level={heading.level - headingAdjustment}
-                    active={activeSlug === heading.id}
-                  >
-                    <Link href={`#${heading.id}`}>{heading.title}</Link>
-                  </ListItem>
-                ))}
-            </List>
-          ) : (
-            <Empty>
-              {t("Headings you add to the document will appear here")}
-            </Empty>
-          )}
-        </Container>
-      </Sticky>
-    </Wrapper>
+    <StickyWrapper isFullWidth={isFullWidth} coverImg={coverImg}>
+      <Heading>{t("Contents")}</Heading>
+      <List>
+        {headings
+          .filter((heading) => heading.level < 4)
+          .map((heading) => (
+            <ListItem
+              key={heading.id}
+              level={heading.level - headingAdjustment}
+              active={activeSlug === heading.id}
+            >
+              <Link href={`#${heading.id}`}>{heading.title}</Link>
+            </ListItem>
+          ))}
+      </List>
+    </StickyWrapper>
   );
 }
 
-const Wrapper = styled.div<{
-  isFullWidth: boolean;
-  headings: number;
+const StickyWrapper = styled.div<{
   coverImg: string | void | null | unknown;
+  isFullWidth: boolean;
 }>`
-  width: 256px;
   display: none;
   position: relative;
   top: 40vh;
 
+  position: sticky;
+  top: 90px;
+  max-height: calc(100vh - 90px);
+  width: ${EditorStyleHelper.tocWidth}px;
+
+  padding: 0 16px;
+  overflow-y: auto;
+  border-radius: 8px;
+
+  background: ${s("background")};
+  transition: ${s("backgroundTransition")};
+
+  @supports (backdrop-filter: blur(20px)) {
+    backdrop-filter: blur(20px);
+    background: ${(props) => transparentize(0.2, props.theme.background)};
+  }
+
   ${breakpoint("tablet")`
     display: block;
+    z-index: ${depths.toc};
   `};
 
   ${(props) =>
@@ -114,41 +123,6 @@ const Wrapper = styled.div<{
   ${(props) => !props.coverImg && ` top: 0vh;`}
 `;
 
-// ${(props) => props.headings >= 25 && `top: 12%;`}
-
-// ${(props) => props.headings <= 15 && ` top: 10%;`}
-
-// ${(props) => props.headings <= 10 && ` top: 15%;`}
-
-// ${(props) => props.headings <= 5 && ` top: 20%;`}
-
-// ${(props) => props.headings <= 1 && ` top: 35%;`}
-
-const Container = styled.div`
-  padding-top: 5vh;
-`;
-const Sticky = styled.div`
-  position: sticky;
-  top: 0;
-
-  background: ${s("background")};
-  transition: ${s("backgroundTransition")};
-
-  margin-top: 80px;
-  margin-right: 52px;
-  min-width: 204px;
-  width: 228px;
-  min-height: 40px;
-  overflow-y: auto;
-  padding: 0 16px;
-  border-radius: 8px;
-
-  @supports (backdrop-filter: blur(20px)) {
-    backdrop-filter: blur(20px);
-    background: ${(props) => transparentize(0.2, props.theme.background)};
-  }
-`;
-
 const Heading = styled.h3`
   font-size: 13px;
   font-weight: 600;
@@ -157,16 +131,9 @@ const Heading = styled.h3`
   margin-top: 10px;
 `;
 
-const Empty = styled(Text)`
-  margin: 1em 0 4em;
-  padding-right: 2em;
-  font-size: 14px;
-`;
-
 const ListItem = styled.li<{ level: number; active?: boolean }>`
   margin-left: ${(props) => (props.level - 1) * 10}px;
   margin-bottom: 8px;
-  padding-right: 2em;
   line-height: 1.3;
   word-break: break-word;
 

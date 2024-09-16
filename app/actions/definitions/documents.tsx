@@ -24,24 +24,23 @@ import {
   UnpublishIcon,
   PublishIcon,
   CommentIcon,
-  GlobeIcon,
   CopyIcon,
   EyeIcon,
+  PadlockIcon,
 } from "outline-icons";
 import * as React from "react";
 import { toast } from "sonner";
 import { ExportContentType, TeamPreference } from "@shared/types";
-import MarkdownHelper from "@shared/utils/MarkdownHelper";
 import { getEventFiles } from "@shared/utils/files";
 import DocumentDelete from "~/scenes/DocumentDelete";
 import DocumentMove from "~/scenes/DocumentMove";
 import DocumentPermanentDelete from "~/scenes/DocumentPermanentDelete";
 import DocumentPublish from "~/scenes/DocumentPublish";
 import DeleteDocumentsInTrash from "~/scenes/Trash/components/DeleteDocumentsInTrash";
-import DocumentTemplatizeDialog from "~/components/DocumentTemplatizeDialog";
 import DuplicateDialog from "~/components/DuplicateDialog";
-import SharePopover from "~/components/Sharing";
+import SharePopover from "~/components/Sharing/Document";
 import { getHeaderExpandedKey } from "~/components/Sidebar/components/Header";
+import DocumentTemplatizeDialog from "~/components/TemplatizeDialog";
 import { createAction } from "~/actions";
 import { DocumentSection, TrashSection } from "~/actions/sections";
 import env from "~/env";
@@ -52,6 +51,7 @@ import {
   documentHistoryPath,
   homePath,
   newDocumentPath,
+  newNestedDocumentPath,
   searchPath,
   documentPath,
   urlify,
@@ -104,9 +104,9 @@ export const createDocument = createAction({
       !!currentTeamId && stores.policies.abilities(currentTeamId).createDocument
     );
   },
-  perform: ({ activeCollectionId, inStarredSection }) =>
+  perform: ({ activeCollectionId, sidebarContext }) =>
     history.push(newDocumentPath(activeCollectionId), {
-      starred: inStarredSection,
+      sidebarContext,
     }),
 });
 
@@ -121,11 +121,11 @@ export const createDocumentFromTemplate = createAction({
     !!activeDocumentId &&
     !!stores.documents.get(activeDocumentId)?.template &&
     stores.policies.abilities(currentTeamId).createDocument,
-  perform: ({ activeCollectionId, activeDocumentId, inStarredSection }) =>
+  perform: ({ activeCollectionId, activeDocumentId, sidebarContext }) =>
     history.push(
       newDocumentPath(activeCollectionId, { templateId: activeDocumentId }),
       {
-        starred: inStarredSection,
+        sidebarContext,
       }
     ),
 });
@@ -141,15 +141,10 @@ export const createNestedDocument = createAction({
     !!activeDocumentId &&
     stores.policies.abilities(currentTeamId).createDocument &&
     stores.policies.abilities(activeDocumentId).createChildDocument,
-  perform: ({ activeCollectionId, activeDocumentId, inStarredSection }) =>
-    history.push(
-      newDocumentPath(activeCollectionId, {
-        parentDocumentId: activeDocumentId,
-      }),
-      {
-        starred: inStarredSection,
-      }
-    ),
+  perform: ({ activeDocumentId, sidebarContext }) =>
+    history.push(newNestedDocumentPath(activeDocumentId), {
+      sidebarContext,
+    }),
 });
 
 export const starDocument = createAction({
@@ -228,7 +223,7 @@ export const publishDocument = createAction({
       return;
     }
 
-    if (document?.collectionId) {
+    if (document?.collectionId || document?.template) {
       await document.save(undefined, {
         publish: true,
       });
@@ -336,10 +331,14 @@ export const unsubscribeDocument = createAction({
 });
 
 export const shareDocument = createAction({
-  name: ({ t }) => t("Share"),
+  name: ({ t }) => `${t("Permissions")}…`,
   analyticsName: "Share document",
   section: DocumentSection,
-  icon: <GlobeIcon />,
+  icon: <PadlockIcon />,
+  visible: ({ stores, activeDocumentId }) => {
+    const can = stores.policies.abilities(activeDocumentId!);
+    return can.manageUsers || can.share;
+  },
   perform: async ({ activeDocumentId, stores, currentUserId, t }) => {
     if (!activeDocumentId || !currentUserId) {
       return;
@@ -353,6 +352,7 @@ export const shareDocument = createAction({
     }
 
     stores.dialogs.openModal({
+      style: { marginBottom: -12 },
       title: t("Share this document"),
       content: (
         <SharePopover
@@ -454,7 +454,7 @@ export const copyDocumentAsMarkdown = createAction({
       ? stores.documents.get(activeDocumentId)
       : undefined;
     if (document) {
-      copy(MarkdownHelper.toMarkdown(document));
+      copy(document.toMarkdown());
       toast.success(t("Markdown copied to clipboard"));
     }
   },
@@ -662,37 +662,43 @@ export const importDocument = createAction({
       const files = getEventFiles(ev);
 
       const file = files[0];
-      const document = await documents.import(
-        file,
-        activeDocumentId,
-        activeCollectionId,
-        {
-          publish: true,
-        }
-      );
-      history.push(document.url);
+
+      try {
+        const document = await documents.import(
+          file,
+          activeDocumentId,
+          activeCollectionId,
+          {
+            publish: true,
+          }
+        );
+        history.push(document.url);
+      } catch (err) {
+        toast.error(err.message);
+        throw err;
+      }
     };
 
     input.click();
   },
 });
 
-export const createTemplate = createAction({
+export const createTemplateFromDocument = createAction({
   name: ({ t }) => t("Templatize"),
   analyticsName: "Templatize document",
   section: DocumentSection,
   icon: <ShapesIcon />,
   keywords: "new create template",
   visible: ({ activeCollectionId, activeDocumentId, stores }) => {
-    if (!activeDocumentId) {
+    const document = activeDocumentId
+      ? stores.documents.get(activeDocumentId)
+      : undefined;
+    if (document?.isTemplate || !document?.isActive) {
       return false;
     }
-    const document = stores.documents.get(activeDocumentId);
     return !!(
       !!activeCollectionId &&
-      stores.policies.abilities(activeCollectionId).update &&
-      !document?.isTemplate &&
-      !!document?.isActive
+      stores.policies.abilities(activeCollectionId).updateDocument
     );
   },
   perform: ({ activeDocumentId, stores, t, event }) => {
@@ -701,7 +707,6 @@ export const createTemplate = createAction({
     }
     event?.preventDefault();
     event?.stopPropagation();
-
     stores.dialogs.openModal({
       title: t("Create template"),
       content: <DocumentTemplatizeDialog documentId={activeDocumentId} />,
@@ -719,11 +724,11 @@ export const openRandomDocument = createAction({
     const documentPaths = stores.collections.pathsToDocuments.filter(
       (path) => path.type === "document" && path.id !== activeDocumentId
     );
-    const documentPath =
+    const randomPath =
       documentPaths[Math.round(Math.random() * documentPaths.length)];
 
-    if (documentPath) {
-      history.push(documentPath.url);
+    if (randomPath) {
+      history.push(randomPath.url);
     }
   },
 });
@@ -740,11 +745,50 @@ export const searchDocumentsForQuery = (searchQuery: string) =>
     visible: ({ location }) => location.pathname !== searchPath(),
   });
 
-export const moveDocument = createAction({
-  name: ({ t }) => t("Move"),
+export const moveTemplateToWorkspace = createAction({
+  name: ({ t }) => t("Move to workspace"),
+  analyticsName: "Move template to workspace",
+  section: DocumentSection,
+  icon: <MoveIcon />,
+  iconInContextMenu: false,
+  visible: ({ activeDocumentId, stores }) => {
+    if (!activeDocumentId) {
+      return false;
+    }
+    const document = stores.documents.get(activeDocumentId);
+    if (!document || !document.template || document.isWorkspaceTemplate) {
+      return false;
+    }
+    return !!stores.policies.abilities(activeDocumentId).move;
+  },
+  perform: async ({ activeDocumentId, stores }) => {
+    if (activeDocumentId) {
+      const document = stores.documents.get(activeDocumentId);
+      if (!document) {
+        return;
+      }
+
+      await document.move({
+        collectionId: null,
+      });
+    }
+  },
+});
+
+export const moveDocumentToCollection = createAction({
+  name: ({ activeDocumentId, stores, t }) => {
+    if (!activeDocumentId) {
+      return t("Move");
+    }
+    const document = stores.documents.get(activeDocumentId);
+    return document?.template && document?.collectionId
+      ? t("Move to collection")
+      : t("Move");
+  },
   analyticsName: "Move document",
   section: DocumentSection,
   icon: <MoveIcon />,
+  iconInContextMenu: false,
   visible: ({ activeDocumentId, stores }) => {
     if (!activeDocumentId) {
       return false;
@@ -766,6 +810,44 @@ export const moveDocument = createAction({
       });
     }
   },
+});
+
+export const moveDocument = createAction({
+  name: ({ t }) => t("Move"),
+  analyticsName: "Move document",
+  section: DocumentSection,
+  icon: <MoveIcon />,
+  visible: ({ activeDocumentId, stores }) => {
+    if (!activeDocumentId) {
+      return false;
+    }
+    const document = stores.documents.get(activeDocumentId);
+    // Don't show the button if this is a non-workspace template.
+    if (!document || (document.template && !document.isWorkspaceTemplate)) {
+      return false;
+    }
+    return !!stores.policies.abilities(activeDocumentId).move;
+  },
+  perform: moveDocumentToCollection.perform,
+});
+
+export const moveTemplate = createAction({
+  name: ({ t }) => t("Move"),
+  analyticsName: "Move document",
+  section: DocumentSection,
+  icon: <MoveIcon />,
+  visible: ({ activeDocumentId, stores }) => {
+    if (!activeDocumentId) {
+      return false;
+    }
+    const document = stores.documents.get(activeDocumentId);
+    // Don't show the menu if this is not a template (or) a workspace template.
+    if (!document || !document.template || document.isWorkspaceTemplate) {
+      return false;
+    }
+    return !!stores.policies.abilities(activeDocumentId).move;
+  },
+  children: [moveTemplateToWorkspace, moveDocumentToCollection],
 });
 
 export const archiveDocument = createAction({
@@ -989,7 +1071,7 @@ export const rootDocumentActions = [
   openDocument,
   archiveDocument,
   createDocument,
-  createTemplate,
+  createTemplateFromDocument,
   deleteDocument,
   importDocument,
   downloadDocument,
@@ -1002,7 +1084,8 @@ export const rootDocumentActions = [
   subscribeDocument,
   unsubscribeDocument,
   duplicateDocument,
-  moveDocument,
+  moveTemplateToWorkspace,
+  moveDocumentToCollection,
   openRandomDocument,
   permanentlyDeleteDocument,
   permanentlyDeleteDocumentsInTrash,

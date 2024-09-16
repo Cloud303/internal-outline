@@ -4,8 +4,8 @@ import { Day } from "@shared/utils/time";
 import { Collection, Comment, Document } from "@server/models";
 import HTMLHelper from "@server/models/helpers/HTMLHelper";
 import NotificationSettingsHelper from "@server/models/helpers/NotificationSettingsHelper";
-import ProsemirrorHelper from "@server/models/helpers/ProsemirrorHelper";
-import TextHelper from "@server/models/helpers/TextHelper";
+import { ProsemirrorHelper } from "@server/models/helpers/ProsemirrorHelper";
+import { TextHelper } from "@server/models/helpers/TextHelper";
 import BaseEmail, { EmailProps } from "./BaseEmail";
 import Body from "./components/Body";
 import Button from "./components/Button";
@@ -69,7 +69,7 @@ export default class CommentMentionedEmail extends BaseEmail<
     content = await TextHelper.attachmentsToSignedUrls(
       content,
       document.teamId,
-      (4 * Day) / 1000
+      4 * Day.seconds
     );
 
     if (content) {
@@ -92,8 +92,8 @@ export default class CommentMentionedEmail extends BaseEmail<
     );
   }
 
-  protected subject({ actorName, document }: Props) {
-    return `${actorName} mentioned you in “${document.title}”`;
+  protected subject({ document }: Props) {
+    return `Mentioned you in “${document.title}”`;
   }
 
   protected preview({ actorName }: Props): string {

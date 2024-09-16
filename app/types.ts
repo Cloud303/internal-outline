@@ -7,6 +7,7 @@ import {
   DocumentPermission,
 } from "@shared/types";
 import RootStore from "~/stores/RootStore";
+import { SidebarContextType } from "./components/Sidebar/components/SidebarContext";
 import Document from "./models/Document";
 import FileOperation from "./models/FileOperation";
 import Pin from "./models/Pin";
@@ -82,7 +83,7 @@ export type ActionContext = {
   isContextMenu: boolean;
   isCommandBar: boolean;
   isButton: boolean;
-  inStarredSection?: boolean;
+  sidebarContext?: SidebarContextType;
   activeCollectionId?: string | undefined;
   activeDocumentId: string | undefined;
   currentUserId: string | undefined;
@@ -171,21 +172,12 @@ export type WebsocketEntityDeletedEvent = {
 };
 
 export type WebsocketEntitiesEvent = {
+  fetchIfMissing?: boolean;
   documentIds: { id: string; updatedAt?: string }[];
   collectionIds: { id: string; updatedAt?: string }[];
   groupIds: { id: string; updatedAt?: string }[];
   teamIds: string[];
   event: string;
-};
-
-export type WebsocketCollectionUserEvent = {
-  collectionId: string;
-  userId: string;
-};
-
-export type WebsocketDocumentUserEvent = {
-  documentId: string;
-  userId: string;
 };
 
 export type WebsocketCollectionUpdateIndexEvent = {
@@ -207,7 +199,6 @@ export type WebsocketEvent =
   | PartialWithId<Star>
   | PartialWithId<FileOperation>
   | PartialWithId<UserMembership>
-  | WebsocketCollectionUserEvent
   | WebsocketCollectionUpdateIndexEvent
   | WebsocketEntityDeletedEvent
   | WebsocketEntitiesEvent;
@@ -221,6 +212,7 @@ export const EmptySelectValue = "__empty__";
 export type Permission = {
   label: string;
   value: CollectionPermission | DocumentPermission | typeof EmptySelectValue;
+  divider?: boolean;
 };
 
 // TODO: Can we make this type driven by the @Field decorator

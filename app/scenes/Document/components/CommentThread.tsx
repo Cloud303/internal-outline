@@ -2,7 +2,7 @@ import throttle from "lodash/throttle";
 import { observer } from "mobx-react";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
-import { useHistory } from "react-router-dom";
+import { useHistory, useLocation } from "react-router-dom";
 import scrollIntoView from "smooth-scroll-into-view-if-needed";
 import styled, { css } from "styled-components";
 import breakpoint from "styled-components-breakpoint";
@@ -10,7 +10,7 @@ import { s } from "@shared/styles";
 import { ProsemirrorData } from "@shared/types";
 import Comment from "~/models/Comment";
 import Document from "~/models/Document";
-import Avatar from "~/components/Avatar";
+import { Avatar } from "~/components/Avatar";
 import { useDocumentContext } from "~/components/DocumentContext";
 import Fade from "~/components/Fade";
 import Flex from "~/components/Flex";
@@ -67,9 +67,11 @@ function CommentThread({
   const { editor } = useDocumentContext();
   const { comments } = useStores();
   const topRef = React.useRef<HTMLDivElement>(null);
+  const replyRef = React.useRef<HTMLDivElement>(null);
   const user = useCurrentUser();
   const { t } = useTranslation();
   const history = useHistory();
+  const location = useLocation();
   const [autoFocus, setAutoFocus] = React.useState(thread.isNew);
   const [, setIsTyping] = useTypingIndicator({
     document,
@@ -82,9 +84,6 @@ function CommentThread({
     .filter((comment) => comment.id === thread.id);
   const highlightedText = highlightedCommentMarks?.map((c) => c.text).join("");
 
-  const resolved = thread?.resolvedById !== null;
-  const isNewThread = thread?.isNew;
-
   const commentsInThread = comments
     .inThread(thread.id)
     .filter((comment) => !comment.isNew);
@@ -95,7 +94,8 @@ function CommentThread({
       !(event.target as HTMLElement).classList.contains("comment")
     ) {
       history.replace({
-        pathname: window.location.pathname,
+        search: location.search,
+        pathname: location.pathname,
         state: { commentId: undefined },
       });
     }
@@ -103,7 +103,8 @@ function CommentThread({
 
   const handleClickThread = () => {
     history.replace({
-      pathname: window.location.pathname.replace(/\/history$/, ""),
+      search: location.search,
+      pathname: location.pathname.replace(/\/history$/, ""),
       state: { commentId: thread.id },
     });
   };
@@ -123,13 +124,13 @@ function CommentThread({
 
       setTimeout(
         () => {
-          if (!topRef.current) {
+          if (!replyRef.current) {
             return;
           }
-          return scrollIntoView(topRef.current, {
+          return scrollIntoView(replyRef.current, {
             scrollMode: "if-needed",
             behavior: "smooth",
-            block: "end",
+            block: "center",
             boundary: (parent) =>
               // Prevents body and other parent elements from being scrolled
               parent.id !== "comments",
@@ -180,6 +181,7 @@ function CommentThread({
             highlightedText={index === 0 ? highlightedText : undefined}
             comment={comment}
             onDelete={() => editor?.removeComment(comment.id)}
+            onUpdate={(attrs) => editor?.updateComment(comment.id, attrs)}
             key={comment.id}
             firstOfThread={index === 0}
             lastOfThread={index === commentsInThread.length - 1 && !draft}
@@ -201,31 +203,28 @@ function CommentThread({
           </Flex>
         ))}
 
-      <ResizingHeightContainer hideOverflow={false}>
-        {(focused || draft || commentsInThread.length === 0) &&
-          can.comment &&
-          (!resolved || isNewThread) && (
-            <Fade timing={100}>
-              <CommentForm
-                onSaveDraft={onSaveDraft}
-                draft={draft}
-                documentId={document.id}
-                thread={thread}
-                onTyping={setIsTyping}
-                standalone={commentsInThread.length === 0}
-                dir={document.dir}
-                autoFocus={autoFocus}
-              />
-            </Fade>
-          )}
-      </ResizingHeightContainer>
-      {!focused &&
-        !recessed &&
-        !draft &&
-        can.comment &&
-        (!resolved || isNewThread) && (
-          <Reply onClick={() => setAutoFocus(true)}>{t("Reply")}…</Reply>
+      <ResizingHeightContainer hideOverflow={false} ref={replyRef}>
+        {(focused || draft || commentsInThread.length === 0) && can.comment && (
+          <Fade timing={100}>
+            <CommentForm
+              onSaveDraft={onSaveDraft}
+              draft={draft}
+              documentId={document.id}
+              thread={thread}
+              onTyping={setIsTyping}
+              standalone={commentsInThread.length === 0}
+              dir={document.dir}
+              autoFocus={autoFocus}
+              highlightedText={
+                commentsInThread.length === 0 ? highlightedText : undefined
+              }
+            />
+          </Fade>
         )}
+      </ResizingHeightContainer>
+      {!focused && !recessed && !draft && can.comment && (
+        <Reply onClick={() => setAutoFocus(true)}>{t("Reply")}…</Reply>
+      )}
     </Thread>
   );
 }

@@ -1,5 +1,5 @@
 import { Command, TextSelection } from "prosemirror-state";
-import isInCode from "../queries/isInCode";
+import { isInCode } from "../queries/isInCode";
 
 /**
  * Moves the current selection to the previous newline, this is used inside
@@ -25,18 +25,13 @@ export const moveToPreviousNewline: Command = (state, dispatch) => {
     .reverse()
     .join("")
     .indexOf("\n", $pos.parent.nodeSize - $pos.parentOffset - 2);
-
-  if (startOfLine === -1) {
-    return false;
-  }
+  const pos =
+    startOfLine === -1
+      ? beginningOfNode
+      : beginningOfNode + ($pos.parent.nodeSize - startOfLine - 2);
 
   dispatch?.(
-    state.tr.setSelection(
-      TextSelection.create(
-        state.doc,
-        beginningOfNode + ($pos.parent.nodeSize - startOfLine - 2)
-      )
-    )
+    state.tr.setSelection(TextSelection.create(state.doc, pos)).scrollIntoView()
   );
 
   return true;
@@ -58,17 +53,16 @@ export const moveToNextNewline: Command = (state, dispatch) => {
     return false;
   }
 
-  // find next newline
+  // find next newline or end of node
   const beginningOfNode = $pos.pos - $pos.parentOffset;
   const endOfLine = $pos.parent.textContent.indexOf("\n", $pos.parentOffset);
-  if (endOfLine === -1) {
-    return false;
-  }
+  const pos =
+    endOfLine === -1
+      ? beginningOfNode + $pos.parent.nodeSize - 2
+      : beginningOfNode + endOfLine;
 
   dispatch?.(
-    state.tr.setSelection(
-      TextSelection.create(state.doc, beginningOfNode + endOfLine)
-    )
+    state.tr.setSelection(TextSelection.create(state.doc, pos)).scrollIntoView()
   );
 
   return true;

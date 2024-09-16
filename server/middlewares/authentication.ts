@@ -19,6 +19,8 @@ import {
 type AuthenticationOptions = {
   /** Role requuired to access the route. */
   role?: UserRole;
+  /** Type of authentication required to access the route. */
+  type?: AuthenticationType;
   /** Authentication is parsed, but optional. */
   optional?: boolean;
 };
@@ -81,6 +83,10 @@ export default function auth(options: AuthenticationOptions = {}) {
           throw AuthenticationError("Invalid API key");
         }
 
+        if (apiKey.expiresAt && apiKey.expiresAt < new Date()) {
+          throw AuthenticationError("Invalid API key");
+        }
+
         user = await User.findByPk(apiKey.userId, {
           include: [
             {
@@ -94,6 +100,8 @@ export default function auth(options: AuthenticationOptions = {}) {
         if (!user) {
           throw AuthenticationError("Invalid API key");
         }
+
+        await apiKey.updateActiveAt();
       } else {
         type = AuthenticationType.APP;
         user = await getUserForJWT(String(token));
@@ -113,6 +121,10 @@ export default function auth(options: AuthenticationOptions = {}) {
 
       if (options.role && UserRoleHelper.isRoleLower(user.role, options.role)) {
         throw AuthorizationError(`${capitalize(options.role)} role required`);
+      }
+
+      if (options.type && type !== options.type) {
+        throw AuthorizationError(`Invalid authentication type`);
       }
 
       // not awaiting the promises here so that the request is not blocked

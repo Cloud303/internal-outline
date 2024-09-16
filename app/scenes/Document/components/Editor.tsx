@@ -1,3 +1,4 @@
+import last from "lodash/last";
 import { observer } from "mobx-react";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
@@ -5,6 +6,7 @@ import { mergeRefs } from "react-merge-refs";
 import { useHistory, useRouteMatch } from "react-router-dom";
 import { richExtensions, withComments } from "@shared/editor/nodes";
 import { TeamPreference } from "@shared/types";
+import { colorPalette } from "@shared/utils/collections";
 import Comment from "~/models/Comment";
 import Document from "~/models/Document";
 import { RefHandle } from "~/components/ContentEditable";
@@ -31,6 +33,7 @@ import {
   documentPath,
   matchDocumentHistory,
 } from "~/utils/routeHelpers";
+import { decodeURIComponentSafe } from "~/utils/urls";
 import MultiplayerEditor from "./AsyncMultiplayerEditor";
 import DocumentMeta from "./DocumentMeta";
 import DocumentTitle from "./DocumentTitle";
@@ -52,14 +55,14 @@ const extensions = [
   Keys,
 ];
 
-type Props = Omit<EditorProps, "extensions" | "editorStyle"> & {
-  onChangeTitle: (text: string) => void;
+type Props = Omit<EditorProps, "editorStyle"> & {
   coverImg?: string | null | void | unknown;
   editCover: any;
   positionY: number;
   positionX: number;
   handleUpdatePostion: any;
-  onChangeEmoji: (emoji: string | null) => void;
+  onChangeTitle: (title: string) => void;
+  onChangeIcon: (icon: string | null, color: string | null) => void;
   id: string;
   document: Document;
   isDraft: boolean;
@@ -92,7 +95,7 @@ function DocumentEditor(props: Props, ref: React.RefObject<any>) {
     positionY,
     positionX,
     onChangeTitle,
-    onChangeEmoji,
+    onChangeIcon,
     isDraft,
     shareId,
     readOnly,
@@ -104,6 +107,7 @@ function DocumentEditor(props: Props, ref: React.RefObject<any>) {
   } = props;
   const can = usePolicy(document);
 
+  const iconColor = document.color ?? (last(colorPalette) as string);
   const childRef = React.useRef<HTMLDivElement>(null);
   const focusAtStart = React.useCallback(() => {
     if (ref.current) {
@@ -187,6 +191,17 @@ function DocumentEditor(props: Props, ref: React.RefObject<any>) {
   const { setEditor } = useDocumentContext();
   const handleRefChanged = React.useCallback(setEditor, [setEditor]);
   const EditorComponent = multiplayer ? MultiplayerEditor : Editor;
+
+  const childOffsetHeight = childRef.current?.offsetHeight || 0;
+  const editorStyle = React.useMemo(
+    () => ({
+      padding: "0 32px",
+      margin: "0 -32px",
+      paddingBottom: `calc(50vh - ${childOffsetHeight}px)`,
+    }),
+    [childOffsetHeight]
+  );
+
   return (
     <Flex auto column>
       <EditableImg
@@ -209,10 +224,10 @@ function DocumentEditor(props: Props, ref: React.RefObject<any>) {
             ? document.titleWithDefault
             : document.title
         }
-        emoji={document.emoji}
-        emojiPosition={document.fullWidth ? "top" : "side"}
+        icon={document.icon}
+        color={iconColor}
         onChangeTitle={onChangeTitle}
-        onChangeEmoji={onChangeEmoji}
+        onChangeIcon={onChangeIcon}
         onGoToNextInput={handleGoToNextInput}
         onBlur={handleBlur}
         placeholder={t("Untitled")}
@@ -234,7 +249,7 @@ function DocumentEditor(props: Props, ref: React.RefObject<any>) {
         ref={mergeRefs([ref, handleRefChanged])}
         autoFocus={!!document.title && !props.defaultValue}
         placeholder={t("Type '/' to insert, or start writing…")}
-        scrollTo={decodeURIComponent(window.location.hash)}
+        scrollTo={decodeURIComponentSafe(window.location.hash)}
         readOnly={readOnly}
         shareId={shareId}
         userId={user?.id}
@@ -251,13 +266,7 @@ function DocumentEditor(props: Props, ref: React.RefObject<any>) {
             : undefined
         }
         extensions={extensions}
-        editorStyle={{
-          padding: "0 32px",
-          margin: "0 -32px",
-          paddingBottom: `calc(50vh - ${
-            childRef.current?.offsetHeight || 0
-          }px)`,
-        }}
+        editorStyle={editorStyle}
         {...rest}
       />
       <div ref={childRef}>{children}</div>

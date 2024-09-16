@@ -6,8 +6,8 @@ import parseTitle from "@shared/utils/parseTitle";
 import { DocumentValidation } from "@shared/validations";
 import { traceFunction } from "@server/logging/tracing";
 import { User } from "@server/models";
-import ProsemirrorHelper from "@server/models/helpers/ProsemirrorHelper";
-import TextHelper from "@server/models/helpers/TextHelper";
+import { ProsemirrorHelper } from "@server/models/helpers/ProsemirrorHelper";
+import { TextHelper } from "@server/models/helpers/TextHelper";
 import { DocumentConverter } from "@server/utils/DocumentConverter";
 import { InvalidRequestError } from "../errors";
 
@@ -28,7 +28,7 @@ async function documentImporter({
   ip,
   transaction,
 }: Props): Promise<{
-  emoji?: string;
+  icon?: string;
   text: string;
   title: string;
   state: Buffer;
@@ -43,9 +43,9 @@ async function documentImporter({
   // find and extract emoji near the beginning of the document.
   const regex = emojiRegex();
   const matches = regex.exec(text.slice(0, 10));
-  const emoji = matches ? matches[0] : undefined;
-  if (emoji) {
-    text = text.replace(emoji, "");
+  const icon = matches ? matches[0] : undefined;
+  if (icon) {
+    text = text.replace(icon, "");
   }
 
   // If the first line of the imported text looks like a markdown heading
@@ -96,7 +96,7 @@ async function documentImporter({
     text,
     state,
     title,
-    emoji,
+    icon,
   };
 }
 

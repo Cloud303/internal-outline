@@ -24,13 +24,17 @@ import TeamLogo from "~/components/TeamLogo";
 import Text from "~/components/Text";
 import env from "~/env";
 import useCurrentUser from "~/hooks/useCurrentUser";
-import useLastVisitedPath from "~/hooks/useLastVisitedPath";
+import {
+  useLastVisitedPath,
+  usePostLoginPath,
+} from "~/hooks/useLastVisitedPath";
 import useQuery from "~/hooks/useQuery";
 import useStores from "~/hooks/useStores";
 import { draggableOnDesktop } from "~/styles";
 import Desktop from "~/utils/Desktop";
 import isCloudHosted from "~/utils/isCloudHosted";
 import { detectLanguage } from "~/utils/language";
+import { homePath } from "~/utils/routeHelpers";
 import AuthenticationProvider from "./components/AuthenticationProvider";
 import BackButton from "./components/BackButton";
 import Notices from "./components/Notices";
@@ -56,6 +60,7 @@ function Login({ children }: Props) {
     UserPreference.RememberLastPath
   );
   const [lastVisitedPath] = useLastVisitedPath();
+  const [spendPostLoginPath] = usePostLoginPath();
 
   const handleReset = React.useCallback(() => {
     setEmailLinkSentTo("");
@@ -101,20 +106,21 @@ function Login({ children }: Props) {
     }
   }, [query]);
 
-  if (
-    auth.authenticated &&
-    rememberLastPath &&
-    lastVisitedPath !== location.pathname
-  ) {
-    return <Redirect to={lastVisitedPath} />;
-  }
-
-  if (auth.authenticated && auth.team?.defaultCollectionId) {
-    return <Redirect to={`/collection/${auth.team?.defaultCollectionId}`} />;
-  }
-
   if (auth.authenticated) {
-    return <Redirect to="/home" />;
+    const postLoginPath = spendPostLoginPath();
+    if (postLoginPath) {
+      return <Redirect to={postLoginPath} />;
+    }
+
+    if (rememberLastPath && lastVisitedPath !== location.pathname) {
+      return <Redirect to={lastVisitedPath} />;
+    }
+
+    if (auth.team?.defaultCollectionId) {
+      return <Redirect to={`/collection/${auth.team?.defaultCollectionId}`} />;
+    }
+
+    return <Redirect to={homePath()} />;
   }
 
   if (error) {
@@ -324,10 +330,12 @@ function Login({ children }: Props) {
                   key={provider.id}
                   isCreate={isCreate}
                   onEmailSuccess={handleEmailSuccess}
+                  neutral={defaultProvider && hasMultipleProviders}
                   {...provider}
                 />
               );
             })}
+
             {isCreate && (
               <Note>
                 <Trans>
@@ -389,6 +397,8 @@ const Or = styled.hr`
   margin: 1em 0;
   position: relative;
   width: 100%;
+  border: 0;
+  border-top: 1px solid ${s("divider")};
 
   &:after {
     content: attr(data-text);
@@ -398,7 +408,8 @@ const Or = styled.hr`
     transform: translate3d(-50%, -50%, 0);
     text-transform: uppercase;
     font-size: 11px;
-    color: ${s("textSecondary")};
+    font-weight: 500;
+    color: ${s("textTertiary")};
     background: ${s("background")};
     border-radius: 2px;
     padding: 0 4px;

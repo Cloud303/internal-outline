@@ -4,8 +4,8 @@ import { Day } from "@shared/utils/time";
 import { Collection, Comment, Document } from "@server/models";
 import HTMLHelper from "@server/models/helpers/HTMLHelper";
 import NotificationSettingsHelper from "@server/models/helpers/NotificationSettingsHelper";
-import ProsemirrorHelper from "@server/models/helpers/ProsemirrorHelper";
-import TextHelper from "@server/models/helpers/TextHelper";
+import { ProsemirrorHelper } from "@server/models/helpers/ProsemirrorHelper";
+import { TextHelper } from "@server/models/helpers/TextHelper";
 import BaseEmail, { EmailProps } from "./BaseEmail";
 import Body from "./components/Body";
 import Button from "./components/Button";
@@ -77,7 +77,7 @@ export default class CommentCreatedEmail extends BaseEmail<
     content = await TextHelper.attachmentsToSignedUrls(
       content,
       document.teamId,
-      (4 * Day) / 1000
+      4 * Day.seconds
     );
 
     if (content) {

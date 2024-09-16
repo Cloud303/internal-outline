@@ -21,16 +21,19 @@ type Props = PopoverProps & {
   hide: () => void;
 };
 
-const Popover: React.FC<Props> = ({
-  children,
-  shrink,
-  width = 380,
-  scrollable = true,
-  flex,
-  mobilePosition,
-  sticky = false,
-  ...rest
-}: Props) => {
+const Popover = (
+  {
+    children,
+    shrink,
+    width = 380,
+    scrollable = true,
+    flex,
+    mobilePosition,
+    sticky = false,
+    ...rest
+  }: Props,
+  ref: React.Ref<HTMLDivElement>
+) => {
   const isMobile = useMobile();
   let style = {};
 
@@ -53,6 +56,7 @@ const Popover: React.FC<Props> = ({
     return (
       <Dialog {...rest} modal>
         <Contents
+          ref={ref}
           $shrink={shrink}
           $scrollable={scrollable}
           $flex={flex}
@@ -71,6 +75,7 @@ const Popover: React.FC<Props> = ({
   return (
     <StyledPopover {...rest} hideOnEsc={false} hideOnClickOutside>
       <Contents
+        ref={ref}
         $shrink={shrink}
         $width={width}
         $scrollable={scrollable}
@@ -131,4 +136,4 @@ const Contents = styled.div<ContentsProps>`
   `};
 `;
 
-export default Popover;
+export default React.forwardRef(Popover);

@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import styled from "styled-components";
 import { UserRole } from "@shared/types";
+import { parseEmail } from "@shared/utils/email";
 import { UserValidation } from "@shared/validations";
 import Button from "~/components/Button";
 import Flex from "~/components/Flex";
@@ -41,7 +42,7 @@ function Invite({ onSubmit }: Props) {
   const user = useCurrentUser();
   const team = useCurrentTeam();
   const { t } = useTranslation();
-  const predictedDomain = user.email.split("@")[1];
+  const predictedDomain = parseEmail(user.email).domain;
   const can = usePolicy(team);
   const [role, setRole] = React.useState<UserRole>(UserRole.Member);
 
@@ -51,12 +52,12 @@ function Invite({ onSubmit }: Props) {
       setIsSaving(true);
 
       try {
-        const data = await users.invite(
+        const response = await users.invite(
           invites.filter((i) => i.email).map((memo) => ({ ...memo, role }))
         );
         onSubmit();
 
-        if (data.sent.length > 0) {
+        if (response.length > 0) {
           toast.success(t("We sent out your invites!"));
         } else {
           toast.message(t("Those email addresses are already invited"));

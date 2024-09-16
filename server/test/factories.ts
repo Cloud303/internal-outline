@@ -13,6 +13,7 @@ import {
   NotificationEventType,
   UserRole,
 } from "@shared/types";
+import { parser } from "@server/editor";
 import {
   Share,
   Team,
@@ -371,10 +372,12 @@ export async function buildDocument(
     overrides.collectionId = collection.id;
   }
 
+  const text = overrides.text ?? "This is the text in an example document";
   const document = await Document.create(
     {
       title: faker.lorem.words(4),
-      text: "This is the text in an example document",
+      content: overrides.content ?? parser.parse(text)?.toJSON(),
+      text,
       publishedAt: isNull(overrides.collectionId) ? null : new Date(),
       lastModifiedById: overrides.userId,
       createdById: overrides.userId,
@@ -400,8 +403,12 @@ export async function buildDocument(
 export async function buildComment(overrides: {
   userId: string;
   documentId: string;
+  parentCommentId?: string;
+  resolvedById?: string;
 }) {
   const comment = await Comment.create({
+    resolvedById: overrides.resolvedById,
+    parentCommentId: overrides.parentCommentId,
     documentId: overrides.documentId,
     data: {
       type: "doc",
@@ -410,6 +417,7 @@ export async function buildComment(overrides: {
           type: "paragraph",
           content: [
             {
+              content: [],
               type: "text",
               text: "test",
             },
@@ -420,6 +428,16 @@ export async function buildComment(overrides: {
     createdById: overrides.userId,
   });
 
+  return comment;
+}
+
+export async function buildResolvedComment(
+  user: User,
+  overrides: Parameters<typeof buildComment>[0]
+) {
+  const comment = await buildComment(overrides);
+  comment.resolve(user);
+  await comment.save();
   return comment;
 }
 
@@ -477,10 +495,12 @@ export async function buildAttachment(
   const acl = overrides.acl || "public-read";
   const name = fileName || faker.system.fileName();
   return Attachment.create({
+    id,
     key: AttachmentHelper.getKey({ acl, id, name, userId: overrides.userId }),
     contentType: "image/png",
     size: 100,
     acl,
+    name,
     createdAt: new Date("2018-01-02T00:00:00.000Z"),
     updatedAt: new Date("2018-01-02T00:00:00.000Z"),
     ...overrides,

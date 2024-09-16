@@ -111,7 +111,7 @@ export default class SlackProcessor extends BaseProcessor {
     if (
       event.name === "revisions.create" &&
       differenceInMilliseconds(document.updatedAt, document.publishedAt) <
-        Minute
+        Minute.ms
     ) {
       return;
     }

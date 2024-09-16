@@ -1,6 +1,6 @@
 import { Transaction } from "sequelize";
 import { Event, Document, User } from "@server/models";
-import DocumentHelper from "@server/models/helpers/DocumentHelper";
+import { DocumentHelper } from "@server/models/helpers/DocumentHelper";
 
 type Props = {
   /** The user updating the document */
@@ -13,8 +13,10 @@ type Props = {
   coverImgPositionY?: number;
   /** The new title */
   title?: string;
-  /** The document emoji */
-  emoji?: string | null;
+  /** The document icon */
+  icon?: string | null;
+  /** The document icon's color */
+  color?: string | null;
   /** The new text content */
   text?: string;
   /** Whether the editing session is complete */
@@ -50,7 +52,8 @@ export default async function documentUpdater({
   user,
   document,
   title,
-  emoji,
+  icon,
+  color,
   text,
   editorVersion,
   templateId,
@@ -81,8 +84,12 @@ export default async function documentUpdater({
   if (coverImgPositionY || coverImgPositionY === "") {
     document.coverImgPositionY = Number(coverImgPositionY);
   }
-  if (emoji !== undefined) {
-    document.emoji = emoji;
+
+  if (icon !== undefined) {
+    document.icon = icon;
+  }
+  if (color !== undefined) {
+    document.color = color;
   }
   if (editorVersion) {
     document.editorVersion = editorVersion;
@@ -115,11 +122,11 @@ export default async function documentUpdater({
     ip,
   };
 
-  if (publish && cId) {
+  if (publish && (document.template || cId)) {
     if (!document.collectionId) {
       document.collectionId = cId;
     }
-    await document.publish(user.id, cId, { transaction });
+    await document.publish(user, cId, { transaction });
 
     await Event.create(
       {
@@ -130,6 +137,7 @@ export default async function documentUpdater({
     );
   } else if (changed) {
     document.lastModifiedById = user.id;
+    document.updatedBy = user;
     await document.save({ transaction });
 
     await Event.create(event, { transaction });
@@ -152,5 +160,9 @@ export default async function documentUpdater({
     });
   }
 
-  return document;
+  return await Document.findByPk(document.id, {
+    userId: user.id,
+    rejectOnEmpty: true,
+    transaction,
+  });
 }

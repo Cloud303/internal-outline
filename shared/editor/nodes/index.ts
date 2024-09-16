@@ -40,7 +40,7 @@ import Paragraph from "./Paragraph";
 import SimpleImage from "./SimpleImage";
 import Table from "./Table";
 import TableCell from "./TableCell";
-import TableHeadCell from "./TableHeadCell";
+import TableHeader from "./TableHeader";
 import TableOfContents from "./TableOfContents";
 import TableRow from "./TableRow";
 import Text from "./Text";
@@ -82,10 +82,12 @@ export const listExtensions: Nodes = [
 ];
 
 export const tableExtensions: Nodes = [
-  Table,
   TableCell,
-  TableHeadCell,
+  TableHeader,
   TableRow,
+  // Note: Table nodes comes last to ensure the table selection plugin is registered after the
+  // plugins for table grips in TableCell and TableHeader.
+  Table,
 ];
 
 /**
@@ -94,8 +96,6 @@ export const tableExtensions: Nodes = [
  */
 export const richExtensions: Nodes = [
   ...basicExtensions.filter((n) => n !== SimpleImage),
-  ...listExtensions,
-  ...tableExtensions,
   Image,
   HardBreak,
   CodeBlock,
@@ -113,6 +113,10 @@ export const richExtensions: Nodes = [
   TemplatePlaceholder,
   Math,
   MathBlock,
+  // Container type nodes should be last so that key handlers are registered for content inside
+  // the container nodes first.
+  ...listExtensions,
+  ...tableExtensions,
 ];
 
 /**

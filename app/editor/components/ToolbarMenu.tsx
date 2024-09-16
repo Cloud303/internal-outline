@@ -2,6 +2,7 @@ import * as React from "react";
 import { useMenuState } from "reakit";
 import { MenuButton } from "reakit/Menu";
 import styled from "styled-components";
+import breakpoint from "styled-components-breakpoint";
 import { MenuItem } from "@shared/editor/types";
 import { s } from "@shared/styles";
 import ContextMenu from "~/components/ContextMenu";
@@ -19,7 +20,7 @@ type Props = {
 /*
  * Renders a dropdown menu in the floating toolbar.
  */
-function ToolbarDropdown(props: { item: MenuItem }) {
+function ToolbarDropdown(props: { active: boolean; item: MenuItem }) {
   const menu = useMenuState();
   const { commands, view } = useEditor();
   const { item } = props;
@@ -39,16 +40,21 @@ function ToolbarDropdown(props: { item: MenuItem }) {
     };
 
     return item.children
-      ? item.children.map((child) => ({
-          type: "button",
-          title: child.label,
-          icon: child.icon,
-          dangerous: child.dangerous,
-          visible: child.visible,
-          selected:
-            child.active !== undefined ? child.active(state) : undefined,
-          onClick: handleClick(child),
-        }))
+      ? item.children.map((child) => {
+          if (child.name === "separator") {
+            return { type: "separator", visible: child.visible };
+          }
+          return {
+            type: "button",
+            title: child.label,
+            icon: child.icon,
+            dangerous: child.dangerous,
+            visible: child.visible,
+            selected:
+              child.active !== undefined ? child.active(state) : undefined,
+            onClick: handleClick(child),
+          };
+        })
       : [];
   }, [item.children, commands, state]);
 
@@ -101,7 +107,7 @@ function ToolbarMenu(props: Props) {
             key={index}
           >
             {item.children ? (
-              <ToolbarDropdown item={item} />
+              <ToolbarDropdown active={isActive && !item.label} item={item} />
             ) : (
               <ToolbarButton
                 onClick={handleClick(item)}
@@ -123,6 +129,11 @@ const FlexibleWrapper = styled.div`
   overflow: hidden;
   display: flex;
   gap: 6px;
+
+  ${breakpoint("mobile", "tablet")`
+    justify-content: space-evenly;
+    align-items: baseline;
+  `}
 `;
 
 const Label = styled.span`

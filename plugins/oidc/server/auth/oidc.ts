@@ -4,6 +4,7 @@ import Router from "koa-router";
 import get from "lodash/get";
 import { Strategy } from "passport-oauth2";
 import { slugifyDomain } from "@shared/utils/domains";
+import { parseEmail } from "@shared/utils/email";
 import accountProvisioner from "@server/commands/accountProvisioner";
 import {
   OIDCMalformedUserInfoError,
@@ -14,24 +15,15 @@ import { User } from "@server/models";
 import { AuthenticationResult } from "@server/types";
 import {
   StateStore,
-  request,
   getTeamFromContext,
   getClientFromContext,
+  request,
 } from "@server/utils/passport";
 import config from "../../plugin.json";
 import env from "../env";
 
 const router = new Router();
 const scopes = env.OIDC_SCOPES.split(" ");
-
-Strategy.prototype.userProfile = async function (accessToken, done) {
-  try {
-    const response = await request(env.OIDC_USERINFO_URI ?? "", accessToken);
-    return done(null, response);
-  } catch (err) {
-    return done(err);
-  }
-};
 
 const authorizationParams = Strategy.prototype.authorizationParams;
 Strategy.prototype.authorizationParams = function (options) {
@@ -81,7 +73,7 @@ if (
         accessToken: string,
         refreshToken: string,
         params: { expires_in: number },
-        profile: Record<string, string>,
+        _profile: unknown,
         done: (
           err: Error | null,
           user: User | null,
@@ -89,6 +81,11 @@ if (
         ) => void
       ) {
         try {
+          const profile = await request(
+            env.OIDC_USERINFO_URI ?? "",
+            accessToken
+          );
+
           if (!profile.email) {
             throw AuthenticationError(
               `An email field was not returned in the profile parameter, but is required.`
@@ -96,9 +93,7 @@ if (
           }
           const team = await getTeamFromContext(ctx);
           const client = getClientFromContext(ctx);
-
-          const parts = profile.email.toLowerCase().split("@");
-          const domain = parts.length && parts[1];
+          const { domain } = parseEmail(profile.email);
 
           if (!domain) {
             throw OIDCMalformedUserInfoError();
@@ -155,6 +150,7 @@ if (
 
   router.get(config.id, passport.authenticate(config.id));
   router.get(`${config.id}.callback`, passportMiddleware(config.id));
+  router.post(`${config.id}.callback`, passportMiddleware(config.id));
 }
 
 export default router;

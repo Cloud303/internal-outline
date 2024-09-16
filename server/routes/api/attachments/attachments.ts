@@ -86,17 +86,14 @@ router.post(
       },
       { transaction }
     );
-
-    await Event.create(
+    await Event.createFromContext(
+      ctx,
       {
         name: "attachments.create",
         data: {
           name,
         },
         modelId,
-        teamId: user.teamId,
-        actorId: user.id,
-        ip: ctx.request.ip,
       },
       { transaction }
     );
@@ -151,11 +148,8 @@ router.post(
 
     authorize(user, "delete", attachment);
     await attachment.destroy();
-    await Event.create({
+    await Event.createFromContext(ctx, {
       name: "attachments.delete",
-      teamId: user.teamId,
-      actorId: user.id,
-      ip: ctx.request.ip,
     });
 
     ctx.body = {
@@ -178,9 +172,14 @@ const handleAttachmentsRedirect = async (
     throw AuthorizationError();
   }
 
-  await attachment.update({
-    lastAccessedAt: new Date(),
-  });
+  await attachment.update(
+    {
+      lastAccessedAt: new Date(),
+    },
+    {
+      silent: true,
+    }
+  );
 
   if (attachment.isPrivate) {
     ctx.set(

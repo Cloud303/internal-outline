@@ -24,19 +24,8 @@ import auth from "../routes/auth";
 
 // Construct scripts CSP based on services in use by this installation
 const defaultSrc = ["'self'"];
-const scriptSrc = [
-  "'self'",
-  "gist.github.com",
-  "www.googletagmanager.com",
-  "gitlab.com",
-];
-
-const styleSrc = [
-  "'self'",
-  "'unsafe-inline'",
-  "github.githubassets.com",
-  "gitlab.com",
-];
+const scriptSrc = ["'self'", "www.googletagmanager.com"];
+const styleSrc = ["'self'", "'unsafe-inline'"];
 
 if (env.isCloudHosted) {
   scriptSrc.push("cdn.zapier.com");
@@ -99,7 +88,7 @@ export default function init(app: Koa = new Koa(), server?: Server) {
         }
         Metrics.gaugePerInstance("connections.count", count);
       });
-    }, 5 * Second);
+    }, 5 * Second.ms);
   }
 
   ShutdownHelper.add("connections", ShutdownOrder.normal, async () => {

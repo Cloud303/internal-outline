@@ -79,7 +79,10 @@ class Event extends IdModel<
   }
 
   @AfterSave
-  static async enqueue(model: Event, options: SaveOptions<Event>) {
+  static async enqueue(
+    model: Event,
+    options: SaveOptions<InferAttributes<Event>>
+  ) {
     if (options.transaction) {
       options.transaction.afterCommit(() => void globalEventQueue.add(model));
       return;

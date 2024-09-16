@@ -1,6 +1,7 @@
 import { Schema, NodeType, NodeSpec } from "prosemirror-model";
 import React from "react";
 import ReactDOM from "react-dom";
+// eslint-disable-next-line @typescript-eslint/no-restricted-imports
 import { Editor } from "~/editor";
 import toggleList from "../commands/toggleList";
 import TableOfContents from "../components/TableOfContents";
