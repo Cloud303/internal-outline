@@ -91,6 +91,7 @@ declare module "styled-components" {
       purple: string;
       blue: string;
       marine: string;
+      dusk: string;
       green: string;
       yellow: string;
     };
@@ -120,10 +121,11 @@ declare module "styled-components" {
       Breakpoints,
       EditorTheme {
     background: string;
-    backgroundTransition: string;
+    backgroundSecondary: string;
+    backgroundTertiary: string;
+    backgroundQuaternary: string;
     accent: string;
     accentText: string;
-    secondaryBackground: string;
     link: string;
     text: string;
     cursor: string;
@@ -135,7 +137,6 @@ declare module "styled-components" {
     textDiffDeletedBackground: string;
     placeholder: string;
     commentMarkBackground: string;
-    commentBackground: string;
     sidebarBackground: string;
     sidebarActiveBackground: string;
     sidebarControlHoverBackground: string;

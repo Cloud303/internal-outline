@@ -1,6 +1,5 @@
 import copy from "copy-to-clipboard";
-import Token from "markdown-it/lib/token";
-import { exitCode } from "prosemirror-commands";
+import { Token } from "markdown-it";
 import { textblockTypeInputRule } from "prosemirror-inputrules";
 import {
   NodeSpec,
@@ -33,6 +32,8 @@ import kotlin from "refractor/lang/kotlin";
 import lisp from "refractor/lang/lisp";
 import lua from "refractor/lang/lua";
 import markup from "refractor/lang/markup";
+// @ts-expect-error type definition is missing, but package exists
+import mermaid from "refractor/lang/mermaid";
 import nginx from "refractor/lang/nginx";
 import nix from "refractor/lang/nix";
 import objectivec from "refractor/lang/objectivec";
@@ -67,9 +68,11 @@ import { isMac } from "../../utils/browser";
 import backspaceToParagraph from "../commands/backspaceToParagraph";
 import {
   newlineInCode,
-  insertSpaceTab,
+  indentInCode,
   moveToNextNewline,
   moveToPreviousNewline,
+  outdentInCode,
+  enterInCode,
 } from "../commands/codeFence";
 import { selectAll } from "../commands/selectAll";
 import toggleBlockType from "../commands/toggleBlockType";
@@ -78,6 +81,7 @@ import Prism from "../extensions/Prism";
 import { getRecentCodeLanguage, setRecentCodeLanguage } from "../lib/code";
 import { isCode } from "../lib/isCode";
 import { MarkdownSerializerState } from "../lib/markdown/serializer";
+import { findNextNewline, findPreviousNewline } from "../queries/findNewlines";
 import { findParentNode } from "../queries/findParentNode";
 import { getMarkRange } from "../queries/getMarkRange";
 import { isInCode } from "../queries/isInCode";
@@ -108,6 +112,7 @@ const DEFAULT_LANGUAGE = "javascript";
   lisp,
   lua,
   markup,
+  mermaid,
   nginx,
   nix,
   objectivec,
@@ -156,6 +161,7 @@ export default class CodeFence extends Node {
       attrs: {
         language: {
           default: DEFAULT_LANGUAGE,
+          validate: "string",
         },
       },
       content: "text*",
@@ -245,27 +251,14 @@ export default class CodeFence extends Node {
       // Both shortcuts work, but Shift-Ctrl-c matches the one in the menu
       "Shift-Ctrl-c": toggleBlockType(type, schema.nodes.paragraph),
       "Shift-Ctrl-\\": toggleBlockType(type, schema.nodes.paragraph),
-      Tab: insertSpaceTab,
-      Enter: (state, dispatch) => {
-        if (!isInCode(state)) {
-          return false;
-        }
-        const { selection } = state;
-        const text = selection.$anchor.nodeBefore?.text;
-        const selectionAtEnd =
-          selection.$anchor.parentOffset ===
-          selection.$anchor.parent.nodeSize - 2;
-
-        if (selectionAtEnd && text?.endsWith("\n")) {
-          exitCode(state, dispatch);
-          return true;
-        }
-
-        return newlineInCode(state, dispatch);
-      },
+      "Shift-Tab": outdentInCode,
+      Tab: indentInCode,
+      Enter: enterInCode,
       Backspace: backspaceToParagraph(type),
       "Shift-Enter": newlineInCode,
       "Mod-a": selectAll(type),
+      "Mod-]": indentInCode,
+      "Mod-[": outdentInCode,
     };
 
     if (isMac()) {
@@ -294,13 +287,32 @@ export default class CodeFence extends Node {
         props: {
           handleDOMEvents: {
             mousedown(view, event) {
+              const { dispatch, state } = view;
               const {
                 selection: { $from, $to },
-              } = view.state;
-              if (!isInCode(view.state)) {
-                return false;
+              } = state;
+              if (
+                $from.sameParent($to) &&
+                event.detail === 3 &&
+                isInCode(view.state)
+              ) {
+                dispatch?.(
+                  state.tr
+                    .setSelection(
+                      TextSelection.create(
+                        state.doc,
+                        findPreviousNewline($from),
+                        findNextNewline($from)
+                      )
+                    )
+                    .scrollIntoView()
+                );
+
+                event.preventDefault();
+                return true;
               }
-              return $from.sameParent($to) && event.detail === 3;
+
+              return false;
             },
           },
         },

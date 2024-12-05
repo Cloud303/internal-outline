@@ -71,10 +71,11 @@ function Invite({ onSubmit }: Props) {
     [onSubmit, invites, role, t, users]
   );
 
-  const handleChange = React.useCallback((ev, index) => {
+  const handleChange = React.useCallback((ev, index: number) => {
     setInvites((prevInvites) => {
       const newInvites = [...prevInvites];
-      newInvites[index][ev.target.name] = ev.target.value;
+      newInvites[index][ev.target.name as keyof InviteRequest] =
+        ev.target.value;
       return newInvites;
     });
   }, []);
@@ -126,7 +127,7 @@ function Invite({ onSubmit }: Props) {
           <Trans>{{ collectionCount }} collections</Trans>
         </strong>
       </Tooltip>
-      .
+      .{" "}
     </span>
   ) : undefined;
 

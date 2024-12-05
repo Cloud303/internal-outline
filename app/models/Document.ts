@@ -14,6 +14,7 @@ import type {
 import {
   ExportContentType,
   FileOperationFormat,
+  NavigationNodeType,
   NotificationEventType,
 } from "@shared/types";
 import Storage from "@shared/utils/Storage";
@@ -27,7 +28,7 @@ import { settingsPath } from "~/utils/routeHelpers";
 import Collection from "./Collection";
 import Notification from "./Notification";
 import View from "./View";
-import ParanoidModel from "./base/ParanoidModel";
+import ArchivableModel from "./base/ArchivableModel";
 import Field from "./decorators/Field";
 import Relation from "./decorators/Relation";
 
@@ -37,7 +38,7 @@ type SaveOptions = JSONObject & {
   autosave?: boolean;
 };
 
-export default class Document extends ParanoidModel {
+export default class Document extends ArchivableModel {
   static modelName = "Document";
 
   constructor(fields: Record<string, any>, store: DocumentsStore) {
@@ -63,10 +64,6 @@ export default class Document extends ParanoidModel {
   lastViewedAt: string | undefined;
 
   store: DocumentsStore;
-
-  @Field
-  @observable
-  id: string;
 
   @observable.shallow
   data: ProsemirrorData;
@@ -187,7 +184,10 @@ export default class Document extends ParanoidModel {
   @observable
   parentDocumentId: string | undefined;
 
-  @Relation(() => Document)
+  /**
+   * Parent document that this is a child of, if any.
+   */
+  @Relation(() => Document, { onArchive: "cascade" })
   parentDocument?: Document;
 
   @observable
@@ -201,9 +201,6 @@ export default class Document extends ParanoidModel {
 
   @observable
   publishedAt: string | undefined;
-
-  @observable
-  archivedAt: string;
 
   /**
    * @deprecated Use path instead
@@ -265,7 +262,8 @@ export default class Document extends ParanoidModel {
 
   @computed
   get path(): string {
-    const prefix = this.template ? settingsPath("templates") : "/doc";
+    const prefix =
+      this.template && !this.isDeleted ? settingsPath("templates") : "/doc";
 
     if (!this.title) {
       return `${prefix}/untitled-${this.urlId}`;
@@ -587,6 +585,8 @@ export default class Document extends ParanoidModel {
     title?: string;
     publish?: boolean;
     recursive?: boolean;
+    collectionId?: string | null;
+    parentDocumentId?: string;
   }) => this.store.duplicate(this, options);
 
   /**
@@ -631,6 +631,7 @@ export default class Document extends ParanoidModel {
   @computed
   get asNavigationNode(): NavigationNode {
     return {
+      type: NavigationNodeType.Document,
       id: this.id,
       title: this.title,
       color: this.color ?? undefined,
@@ -653,7 +654,9 @@ export default class Document extends ParanoidModel {
       nodes: extensionManager.nodes,
       marks: extensionManager.marks,
     });
-    const markdown = serializer.serialize(Node.fromJSON(schema, this.data));
+    const markdown = serializer.serialize(Node.fromJSON(schema, this.data), {
+      softBreak: true,
+    });
     return markdown;
   };
 

@@ -26,7 +26,8 @@ import {
   TeamPreference,
   AttachmentPreset,
 } from "@shared/types";
-import { ProsemirrorHelper, Heading } from "@shared/utils/ProsemirrorHelper";
+import { ProsemirrorHelper } from "@shared/utils/ProsemirrorHelper";
+import { TextHelper } from "@shared/utils/TextHelper";
 import { parseDomain } from "@shared/utils/domains";
 import { determineIconType } from "@shared/utils/icon";
 import RootStore from "~/stores/RootStore";
@@ -45,7 +46,6 @@ import withStores from "~/components/withStores";
 import type { Editor as TEditor } from "~/editor";
 import { SearchResult } from "~/editor/components/LinkEditor";
 import { client } from "~/utils/ApiClient";
-import { replaceTitleVariables } from "~/utils/date";
 import { emojiToUrl } from "~/utils/emoji";
 import { uploadFile } from "~/utils/files";
 import { isModKey } from "~/utils/keyboard";
@@ -130,9 +130,6 @@ class DocumentScene extends React.Component<Props> {
   @observable
   title: string = this.props.document.title;
 
-  @observable
-  headings: Heading[] = [];
-
   componentDidMount() {
     this.updateIsDirty();
   }
@@ -168,7 +165,13 @@ class DocumentScene extends React.Component<Props> {
     }
 
     const { view, schema } = editorRef;
-    const doc = Node.fromJSON(schema, template.data);
+    const doc = Node.fromJSON(
+      schema,
+      ProsemirrorHelper.replaceTemplateVariables(
+        template.data,
+        this.props.auth.user!
+      )
+    );
 
     if (doc) {
       view.dispatch(
@@ -185,9 +188,9 @@ class DocumentScene extends React.Component<Props> {
     }
 
     if (!this.title) {
-      const title = replaceTitleVariables(
+      const title = TextHelper.replaceTemplateVariables(
         template.title,
-        this.props.auth.user || undefined
+        this.props.auth.user!
       );
       this.title = title;
       this.props.document.title = title;
@@ -232,13 +235,15 @@ class DocumentScene extends React.Component<Props> {
 
   onUndoRedo = (event: KeyboardEvent) => {
     if (isModKey(event)) {
+      event.preventDefault();
+
       if (event.shiftKey) {
-        if (this.editor.current?.redo()) {
-          event.preventDefault();
+        if (!this.props.readOnly) {
+          this.editor.current?.commands.redo();
         }
       } else {
-        if (this.editor.current?.undo()) {
-          event.preventDefault();
+        if (!this.props.readOnly) {
+          this.editor.current?.commands.undo();
         }
       }
     }
@@ -392,20 +397,6 @@ class DocumentScene extends React.Component<Props> {
     this.isUploading = false;
   };
 
-  handleChange = () => {
-    const { document } = this.props;
-
-    // Keep derived task list in sync
-    const tasks = this.editor.current?.getTasks();
-    const total = tasks?.length ?? 0;
-    const completed = tasks?.filter((t) => t.completed).length ?? 0;
-    document.updateTasks(total, completed);
-  };
-
-  onHeadingsChange = (headings: Heading[]) => {
-    this.headings = headings;
-  };
-
   handleChangeTitle = action((value: string) => {
     this.title = value;
     this.props.document.title = value;
@@ -480,9 +471,9 @@ class DocumentScene extends React.Component<Props> {
     const embedsDisabled =
       (team && team.documentEmbeds === false) || document.embedsDisabled;
 
-    const hasHeadings = this.headings.length > 0;
     const showContents =
-      ui.tocVisible === true || (isShare && ui.tocVisible !== false);
+      (ui.tocVisible === true && !document.isTemplate) ||
+      (isShare && ui.tocVisible !== false);
     const tocPos =
       tocPosition ??
       ((team?.getPreference(TeamPreference.TocPosition) as TOCPosition) ||
@@ -603,7 +594,6 @@ class DocumentScene extends React.Component<Props> {
             )}
             <Header
               document={document}
-              documentHasHeadings={hasHeadings}
               revision={revision}
               shareId={shareId}
               isDraft={document.isDraft}
@@ -617,7 +607,6 @@ class DocumentScene extends React.Component<Props> {
               sharedTree={this.props.sharedTree}
               onSelectTemplate={this.replaceDocument}
               onSave={this.onSave}
-              headings={this.headings}
               handleCoverImg={handleFileUpload}
               editCover={this.editCover}
               handleEditCover={handleEditCover}
@@ -654,7 +643,6 @@ class DocumentScene extends React.Component<Props> {
                         position={tocPos}
                       >
                         <Contents
-                          headings={this.headings}
                           isFullWidth={document.fullWidth}
                           coverImg={
                             this.coverImg ? this.coverImg : document.coverImg
@@ -697,8 +685,6 @@ class DocumentScene extends React.Component<Props> {
                         onCreateLink={this.props.onCreateLink}
                         onChangeTitle={this.handleChangeTitle}
                         onChangeIcon={this.handleChangeIcon}
-                        onChange={this.handleChange}
-                        onHeadingsChange={this.onHeadingsChange}
                         onSave={this.onSave}
                         onPublish={this.onPublish}
                         onCancel={this.goBack}
@@ -762,7 +748,7 @@ const Main = styled.div<MainProps>`
         ? tocPosition === TOCPosition.Left
           ? `${EditorStyleHelper.tocWidth}px minmax(0, 1fr)`
           : `minmax(0, 1fr) ${EditorStyleHelper.tocWidth}px`
-        : `1fr minmax(0, ${`calc(46em + 76px)`}) 1fr`};
+        : `1fr minmax(0, ${`calc(46em + 88px)`}) 1fr`};
   `};
 
   ${breakpoint("desktopLarge")`
@@ -771,7 +757,7 @@ const Main = styled.div<MainProps>`
         ? tocPosition === TOCPosition.Left
           ? `${EditorStyleHelper.tocWidth}px minmax(0, 1fr)`
           : `minmax(0, 1fr) ${EditorStyleHelper.tocWidth}px`
-        : `1fr minmax(0, ${`calc(52em + 76px)`}) 1fr`};
+        : `1fr minmax(0, ${`calc(52em + 88px)`}) 1fr`};
   `};
 `;
 
@@ -800,7 +786,7 @@ type EditorContainerProps = {
 
 const EditorContainer = styled.div<EditorContainerProps>`
   // Adds space to the gutter to make room for icon & heading annotations
-  padding: 0 40px;
+  padding: 0 44px;
 
   ${breakpoint("tablet")`
     grid-row: 1;
@@ -847,7 +833,6 @@ const Footer = styled.div`
 const Background = styled(Container)`
   position: relative;
   background: ${s("background")};
-  transition: ${s("backgroundTransition")};
 `;
 
 const ReferencesWrapper = styled.div`

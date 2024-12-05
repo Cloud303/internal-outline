@@ -39,6 +39,7 @@ export default class Heading extends Node {
       attrs: {
         level: {
           default: 1,
+          validate: "number",
         },
         collapsed: {
           default: undefined,
@@ -78,6 +79,9 @@ export default class Heading extends Node {
 
         return [
           `h${node.attrs.level + (this.options.offset || 0)}`,
+          {
+            dir: "auto",
+          },
           [
             "span",
             {
@@ -218,7 +222,7 @@ export default class Heading extends Node {
   get plugins() {
     const getAnchors = (doc: ProsemirrorNode) => {
       const decorations: Decoration[] = [];
-      const previouslySeen = {};
+      const previouslySeen: Record<string, number> = {};
 
       doc.descendants((node, pos) => {
         if (node.type.name !== this.name) {

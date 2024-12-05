@@ -1,7 +1,11 @@
 import isUndefined from "lodash/isUndefined";
 import { z } from "zod";
 import { randomElement } from "@shared/random";
-import { CollectionPermission, FileOperationFormat } from "@shared/types";
+import {
+  CollectionPermission,
+  CollectionStatusFilter,
+  FileOperationFormat,
+} from "@shared/types";
 import { IconLibrary } from "@shared/utils/IconLibrary";
 import { colorPalette } from "@shared/utils/collections";
 import { Collection } from "@server/models";
@@ -212,6 +216,8 @@ export type CollectionsUpdateReq = z.infer<typeof CollectionsUpdateSchema>;
 export const CollectionsListSchema = BaseSchema.extend({
   body: z.object({
     includeListOnly: z.boolean().default(false),
+    /** Collection statuses to include in results */
+    statusFilter: z.nativeEnum(CollectionStatusFilter).array().optional(),
   }),
 });
 
@@ -222,6 +228,22 @@ export const CollectionsDeleteSchema = BaseSchema.extend({
 });
 
 export type CollectionsDeleteReq = z.infer<typeof CollectionsDeleteSchema>;
+
+export const CollectionsArchiveSchema = BaseSchema.extend({
+  body: BaseIdSchema,
+});
+
+export type CollectionsArchiveReq = z.infer<typeof CollectionsArchiveSchema>;
+
+export const CollectionsRestoreSchema = BaseSchema.extend({
+  body: BaseIdSchema,
+});
+
+export type CollectionsRestoreReq = z.infer<typeof CollectionsRestoreSchema>;
+
+export const CollectionsArchivedSchema = BaseSchema;
+
+export type CollectionsArchivedReq = z.infer<typeof CollectionsArchivedSchema>;
 
 export const CollectionsMoveSchema = BaseSchema.extend({
   body: BaseIdSchema.extend({

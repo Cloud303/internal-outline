@@ -7,31 +7,19 @@ import { CustomTheme } from "@shared/types";
 import Storage from "@shared/utils/Storage";
 import { getCookieDomain, parseDomain } from "@shared/utils/domains";
 import RootStore from "~/stores/RootStore";
-import Policy from "~/models/Policy";
 import Team from "~/models/Team";
-import User from "~/models/User";
 import env from "~/env";
 import { setPostLoginPath } from "~/hooks/useLastVisitedPath";
-import { PartialWithId } from "~/types";
 import { client } from "~/utils/ApiClient";
 import Desktop from "~/utils/Desktop";
 import Logger from "~/utils/Logger";
 import isCloudHosted from "~/utils/isCloudHosted";
 import Store from "./base/Store";
 
-type PersistedData = {
-  user?: PartialWithId<User>;
-  team?: PartialWithId<Team>;
-  collaborationToken?: string;
-  availableTeams?: {
-    id: string;
-    name: string;
-    avatarUrl: string;
-    url: string;
-    isSignedIn: boolean;
-  }[];
-  policies?: Policy[];
-};
+type PersistedData = Pick<
+  AuthStore,
+  "user" | "team" | "collaborationToken" | "availableTeams" | "policies"
+>;
 
 type Provider = {
   id: string;
@@ -177,9 +165,10 @@ export default class AuthStore extends Store<Team> {
   /** The current team's policies */
   @computed
   get policies() {
-    return this.currentTeamId
-      ? [this.rootStore.policies.get(this.currentTeamId)]
-      : [];
+    const policy = this.currentTeamId
+      ? this.rootStore.policies.get(this.currentTeamId)
+      : undefined;
+    return policy ? [policy] : [];
   }
 
   /** Whether the user is signed in */
@@ -189,7 +178,7 @@ export default class AuthStore extends Store<Team> {
   }
 
   @computed
-  get asJson() {
+  get asJson(): PersistedData {
     return {
       user: this.user,
       team: this.team,
@@ -230,10 +219,10 @@ export default class AuthStore extends Store<Team> {
         this.collaborationToken = res.data.collaborationToken;
 
         if (env.SENTRY_DSN) {
-          Sentry.configureScope(function (scope) {
-            scope.setUser({ id: this.currentUserId });
-            scope.setExtra("team", this.team.name);
-            scope.setExtra("teamId", this.team.id);
+          Sentry.configureScope((scope) => {
+            scope.setUser({ id: this.currentUserId! });
+            scope.setExtra("team", this.team?.name);
+            scope.setExtra("teamId", this.currentTeamId);
           });
         }
 
@@ -253,6 +242,13 @@ export default class AuthStore extends Store<Team> {
           window.location.href = `${data.team.url}${pathname}`;
           return;
         }
+
+        // Update the user's timezone if it has changed
+        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        if (data.user.timezone !== timezone) {
+          const user = this.rootStore.users.get(data.user.id)!;
+          void user.save({ timezone });
+        }
       });
     } catch (err) {
       if (err.error === "user_suspended") {
@@ -260,6 +256,7 @@ export default class AuthStore extends Store<Team> {
         this.suspendedContactEmail = err.data.adminEmail;
         return;
       }
+      throw err;
     } finally {
       this.isFetching = false;
     }

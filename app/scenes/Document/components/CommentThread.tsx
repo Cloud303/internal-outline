@@ -1,23 +1,20 @@
-import throttle from "lodash/throttle";
 import { observer } from "mobx-react";
+import { darken } from "polished";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { useHistory, useLocation } from "react-router-dom";
-import scrollIntoView from "smooth-scroll-into-view-if-needed";
+import scrollIntoView from "scroll-into-view-if-needed";
 import styled, { css } from "styled-components";
 import breakpoint from "styled-components-breakpoint";
 import { s } from "@shared/styles";
 import { ProsemirrorData } from "@shared/types";
 import Comment from "~/models/Comment";
 import Document from "~/models/Document";
-import { Avatar } from "~/components/Avatar";
+import { Avatar, AvatarSize } from "~/components/Avatar";
 import { useDocumentContext } from "~/components/DocumentContext";
+import Facepile from "~/components/Facepile";
 import Fade from "~/components/Fade";
-import Flex from "~/components/Flex";
 import { ResizingHeightContainer } from "~/components/ResizingHeightContainer";
-import Typing from "~/components/Typing";
-import { WebsocketContext } from "~/components/WebsocketProvider";
-import useCurrentUser from "~/hooks/useCurrentUser";
 import useOnClickOutside from "~/hooks/useOnClickOutside";
 import usePersistedState from "~/hooks/usePersistedState";
 import usePolicy from "~/hooks/usePolicy";
@@ -36,48 +33,44 @@ type Props = {
   focused: boolean;
   /** Whether the thread is displayed in a recessed/backgrounded state */
   recessed: boolean;
+  /** Enable scroll for the comments container */
+  enableScroll: () => void;
+  /** Disable scroll for the comments container */
+  disableScroll: () => void;
+  /** Number of replies before collapsing */
+  collapseThreshold?: number;
+  /** Number of replies to display when collapsed */
+  collapseNumDisplayed?: number;
 };
-
-function useTypingIndicator({
-  document,
-  comment,
-}: Omit<Props, "focused" | "recessed">): [undefined, () => void] {
-  const socket = React.useContext(WebsocketContext);
-
-  const setIsTyping = React.useMemo(
-    () =>
-      throttle(() => {
-        socket?.emit("typing", {
-          documentId: document.id,
-          commentId: comment.id,
-        });
-      }, 500),
-    [socket, document.id, comment.id]
-  );
-
-  return [undefined, setIsTyping];
-}
 
 function CommentThread({
   comment: thread,
   document,
   recessed,
   focused,
+  enableScroll,
+  disableScroll,
+  collapseThreshold = 5,
+  collapseNumDisplayed = 3,
 }: Props) {
+  const [focusedOnMount] = React.useState(focused);
   const { editor } = useDocumentContext();
   const { comments } = useStores();
   const topRef = React.useRef<HTMLDivElement>(null);
   const replyRef = React.useRef<HTMLDivElement>(null);
-  const user = useCurrentUser();
   const { t } = useTranslation();
   const history = useHistory();
   const location = useLocation();
   const [autoFocus, setAutoFocus] = React.useState(thread.isNew);
-  const [, setIsTyping] = useTypingIndicator({
-    document,
-    comment: thread,
-  });
+
   const can = usePolicy(document);
+
+  const [draft, onSaveDraft] = usePersistedState<ProsemirrorData | undefined>(
+    `draft-${document.id}-${thread.id}`,
+    undefined
+  );
+
+  const canReply = can.comment && !thread.isResolved;
 
   const highlightedCommentMarks = editor
     ?.getComments()
@@ -88,10 +81,22 @@ function CommentThread({
     .inThread(thread.id)
     .filter((comment) => !comment.isNew);
 
+  const [collapse, setCollapse] = React.useState(() => {
+    const numReplies = commentsInThread.length - 1;
+    if (numReplies >= collapseThreshold) {
+      return {
+        begin: 1,
+        final: commentsInThread.length - collapseNumDisplayed - 1,
+      };
+    }
+    return null;
+  });
+
   useOnClickOutside(topRef, (event) => {
     if (
       focused &&
-      !(event.target as HTMLElement).classList.contains("comment")
+      !(event.target as HTMLElement).classList.contains("comment") &&
+      event.defaultPrevented === false
     ) {
       history.replace({
         search: location.search,
@@ -101,12 +106,47 @@ function CommentThread({
     }
   });
 
+  const handleSubmit = React.useCallback(() => {
+    editor?.updateComment(thread.id, { draft: false });
+  }, [editor, thread.id]);
+
   const handleClickThread = () => {
     history.replace({
-      search: location.search,
+      // Clear any commentId from the URL when explicitly focusing a thread
+      search: thread.isResolved ? "resolved=" : "",
       pathname: location.pathname.replace(/\/history$/, ""),
       state: { commentId: thread.id },
     });
+  };
+
+  const handleClickExpand = (ev: React.SyntheticEvent) => {
+    ev.stopPropagation();
+    setCollapse(null);
+  };
+
+  const renderShowMore = (collapse: { begin: number; final: number }) => {
+    const count = collapse.final - collapse.begin + 1;
+    const createdBy = commentsInThread
+      .slice(collapse.begin, collapse.final + 1)
+      .map((c) => c.createdBy);
+    const users = Array.from(new Set(createdBy));
+    const limit = 3;
+    const overflow = users.length - limit;
+
+    return (
+      <ShowMore onClick={handleClickExpand} key="show-more">
+        {t("Show {{ count }} reply", { count })}
+        <Facepile
+          users={users}
+          limit={limit}
+          overflow={overflow}
+          size={AvatarSize.Medium}
+          renderAvatar={(item) => (
+            <Avatar size={AvatarSize.Medium} model={item} />
+          )}
+        />
+      </ShowMore>
+    );
   };
 
   React.useEffect(() => {
@@ -117,17 +157,26 @@ function CommentThread({
 
   React.useEffect(() => {
     if (focused) {
-      // If the thread is already visible, scroll it into view immediately,
-      // otherwise wait for the sidebar to appear.
-      const isThreadVisible =
-        (topRef.current?.getBoundingClientRect().left ?? 0) < window.innerWidth;
-
-      setTimeout(
-        () => {
+      if (focusedOnMount) {
+        setTimeout(() => {
+          if (!topRef.current) {
+            return;
+          }
+          scrollIntoView(topRef.current, {
+            scrollMode: "if-needed",
+            behavior: "auto",
+            block: "nearest",
+            boundary: (parent) =>
+              // Prevents body and other parent elements from being scrolled
+              parent.id !== "comments",
+          });
+        }, sidebarAppearDuration);
+      } else {
+        setTimeout(() => {
           if (!replyRef.current) {
             return;
           }
-          return scrollIntoView(replyRef.current, {
+          scrollIntoView(replyRef.current, {
             scrollMode: "if-needed",
             behavior: "smooth",
             block: "center",
@@ -135,9 +184,8 @@ function CommentThread({
               // Prevents body and other parent elements from being scrolled
               parent.id !== "comments",
           });
-        },
-        isThreadVisible ? 0 : sidebarAppearDuration
-      );
+        }, 0);
+      }
 
       const getCommentMarkElement = () =>
         window.document?.getElementById(`comment-${thread.id}`);
@@ -153,12 +201,7 @@ function CommentThread({
         isMarkVisible ? 0 : sidebarAppearDuration
       );
     }
-  }, [focused, thread.id]);
-
-  const [draft, onSaveDraft] = usePersistedState<ProsemirrorData | undefined>(
-    `draft-${document.id}-${thread.id}`,
-    undefined
-  );
+  }, [focused, focusedOnMount, thread.id]);
 
   return (
     <Thread
@@ -169,8 +212,17 @@ function CommentThread({
       onClick={handleClickThread}
     >
       {commentsInThread.map((comment, index) => {
+        if (collapse !== null) {
+          if (index === collapse.begin) {
+            return renderShowMore(collapse);
+          } else if (index > collapse.begin && index <= collapse.final) {
+            return null;
+          }
+        }
+
         const firstOfAuthor =
           index === 0 ||
+          (collapse && index === collapse.final + 1) ||
           comment.createdById !== commentsInThread[index - 1].createdById;
         const lastOfAuthor =
           index === commentsInThread.length - 1 ||
@@ -180,8 +232,8 @@ function CommentThread({
           <CommentThreadItem
             highlightedText={index === 0 ? highlightedText : undefined}
             comment={comment}
-            onDelete={() => editor?.removeComment(comment.id)}
-            onUpdate={(attrs) => editor?.updateComment(comment.id, attrs)}
+            onDelete={editor?.removeComment}
+            onUpdate={editor?.updateComment}
             key={comment.id}
             firstOfThread={index === 0}
             lastOfThread={index === commentsInThread.length - 1 && !draft}
@@ -190,28 +242,21 @@ function CommentThread({
             lastOfAuthor={lastOfAuthor}
             previousCommentCreatedAt={commentsInThread[index - 1]?.createdAt}
             dir={document.dir}
+            enableScroll={enableScroll}
+            disableScroll={disableScroll}
           />
         );
       })}
 
-      {thread.currentlyTypingUsers
-        .filter((typing) => typing.id !== user.id)
-        .map((typing) => (
-          <Flex gap={8} key={typing.id}>
-            <Avatar model={typing} size={24} />
-            <Typing />
-          </Flex>
-        ))}
-
       <ResizingHeightContainer hideOverflow={false} ref={replyRef}>
-        {(focused || draft || commentsInThread.length === 0) && can.comment && (
+        {(focused || draft || commentsInThread.length === 0) && canReply && (
           <Fade timing={100}>
             <CommentForm
+              onSubmit={handleSubmit}
               onSaveDraft={onSaveDraft}
               draft={draft}
               documentId={document.id}
               thread={thread}
-              onTyping={setIsTyping}
               standalone={commentsInThread.length === 0}
               dir={document.dir}
               autoFocus={autoFocus}
@@ -222,7 +267,7 @@ function CommentThread({
           </Fade>
         )}
       </ResizingHeightContainer>
-      {!focused && !recessed && !draft && can.comment && (
+      {!focused && !recessed && !draft && canReply && (
         <Reply onClick={() => setAutoFocus(true)}>{t("Reply")}…</Reply>
       )}
     </Thread>
@@ -248,6 +293,29 @@ const Reply = styled.button`
   ${breakpoint("tablet")`
     opacity: 0;
   `}
+`;
+
+const ShowMore = styled.div<{ $dir?: "rtl" | "ltr" }>`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1px;
+  margin-left: ${(props) => (props.$dir === "rtl" ? 0 : 32)}px;
+  margin-right: ${(props) => (props.$dir !== "rtl" ? 0 : 32)}px;
+  padding: 8px 12px;
+  color: ${s("textTertiary")};
+  background: ${(props) => darken(0.015, props.theme.backgroundSecondary)};
+  cursor: var(--pointer);
+  font-size: 13px;
+
+  &: ${hover} {
+    color: ${s("textSecondary")};
+    background: ${s("backgroundTertiary")};
+  }
+
+  * {
+    border-color: ${(props) => darken(0.015, props.theme.backgroundSecondary)};
+  }
 `;
 
 const Thread = styled.div<{

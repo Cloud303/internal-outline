@@ -1,10 +1,11 @@
+import deburr from "lodash/deburr";
 import escapeRegExp from "lodash/escapeRegExp";
 import { observable } from "mobx";
 import { Node } from "prosemirror-model";
 import { Command, Plugin, PluginKey } from "prosemirror-state";
 import { Decoration, DecorationSet } from "prosemirror-view";
 import * as React from "react";
-import scrollIntoView from "smooth-scroll-into-view-if-needed";
+import scrollIntoView from "scroll-into-view-if-needed";
 import Extension, { WidgetProps } from "@shared/editor/lib/Extension";
 import FindAndReplace from "../components/FindAndReplace";
 
@@ -91,6 +92,10 @@ export default class FindAndReplaceExtension extends Extension {
 
   public replace(replace: string): Command {
     return (state, dispatch) => {
+      // Redo the search to ensure we have the latest results, the document may
+      // have changed underneath us since the last search.
+      this.search(state.doc);
+
       const result = this.results[this.currentResultIndex];
 
       if (!result) {
@@ -105,7 +110,12 @@ export default class FindAndReplaceExtension extends Extension {
   }
 
   public replaceAll(replace: string): Command {
-    return ({ tr }, dispatch) => {
+    return (state, dispatch) => {
+      // Redo the search to ensure we have the latest results, the document may
+      // have changed underneath us since the last search.
+      this.search(state.doc);
+
+      const tr = state.tr;
       let offset: number | undefined;
 
       if (!this.results.length) {
@@ -184,7 +194,7 @@ export default class FindAndReplaceExtension extends Extension {
         `.${this.options.resultCurrentClassName}`
       );
       if (element) {
-        void scrollIntoView(element, {
+        scrollIntoView(element, {
           scrollMode: "if-needed",
           block: "center",
         });
@@ -243,19 +253,29 @@ export default class FindAndReplaceExtension extends Extension {
     });
 
     mergedTextNodes.forEach(({ text = "", pos }) => {
-      const search = this.findRegExp;
-      let m;
-
       try {
-        while ((m = search.exec(text))) {
+        let m;
+        const search = this.findRegExp;
+
+        // We construct a string with the text stripped of diacritics plus the original text for
+        // search  allowing to search for diacritics-insensitive matches easily.
+        while ((m = search.exec(deburr(text) + text))) {
           if (m[0] === "") {
             break;
           }
 
-          this.results.push({
-            from: pos + m.index,
-            to: pos + m.index + m[0].length,
-          });
+          // Reconstruct the correct match position
+          const i = m.index >= text.length ? m.index - text.length : m.index;
+          const from = pos + i;
+          const to = from + m[0].length;
+
+          // Check if already exists in results, possible due to duplicated
+          // search string on L257
+          if (this.results.some((r) => r.from === from && r.to === to)) {
+            continue;
+          }
+
+          this.results.push({ from, to });
         }
       } catch (e) {
         // Invalid RegExp

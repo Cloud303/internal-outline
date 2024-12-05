@@ -27,6 +27,8 @@ import { Bubble } from "./CommentThreadItem";
 import { HighlightedText } from "./HighlightText";
 
 type Props = {
+  /** Callback when the form is submitted. */
+  onSubmit?: () => void;
   /** Callback when the draft should be saved. */
   onSaveDraft: (data: ProsemirrorData | undefined) => void;
   /** A draft comment for this thread. */
@@ -47,8 +49,6 @@ type Props = {
   highlightedText?: string;
   /** The text direction of the editor */
   dir?: "rtl" | "ltr";
-  /** Callback when the user is typing in the editor */
-  onTyping?: () => void;
   /** Callback when the editor is focused */
   onFocus?: () => void;
   /** Callback when the editor is blurred */
@@ -59,8 +59,8 @@ function CommentForm({
   documentId,
   thread,
   draft,
+  onSubmit,
   onSaveDraft,
-  onTyping,
   onFocus,
   onBlur,
   autoFocus,
@@ -109,6 +109,7 @@ function CommentForm({
           createdAt: new Date().toISOString(),
           documentId,
           data: draft,
+          reactions: [],
         },
         comments
       );
@@ -118,6 +119,7 @@ function CommentForm({
         documentId,
         data: draft,
       })
+      .then(() => onSubmit?.())
       .catch(() => {
         comment.isNew = true;
         toast.error(t("Error creating comment"));
@@ -144,6 +146,7 @@ function CommentForm({
         parentCommentId: thread?.id,
         documentId,
         data: draft,
+        reactions: [],
       },
       comments
     );
@@ -151,11 +154,14 @@ function CommentForm({
     comment.id = uuidv4();
     comments.add(comment);
 
-    comment.save().catch(() => {
-      comments.remove(comment.id);
-      comment.isNew = true;
-      toast.error(t("Error creating comment"));
-    });
+    comment
+      .save()
+      .then(() => onSubmit?.())
+      .catch(() => {
+        comments.remove(comment.id);
+        comment.isNew = true;
+        toast.error(t("Error creating comment"));
+      });
 
     // optimistically update the comment model
     comment.isNew = false;
@@ -173,7 +179,6 @@ function CommentForm({
   ) => {
     const text = value(true, true);
     onSaveDraft(text ? value(false, true) : undefined);
-    onTyping?.();
   };
 
   const handleSave = () => {

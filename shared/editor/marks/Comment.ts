@@ -21,6 +21,11 @@ export default class Comment extends Mark {
         userId: {},
         resolved: {
           default: false,
+          validate: "boolean",
+        },
+        draft: {
+          default: false,
+          validate: "boolean",
         },
       },
       inclusive: false,
@@ -38,6 +43,7 @@ export default class Comment extends Mark {
               id: dom.getAttribute("id")?.replace("comment-", ""),
               userId: dom.getAttribute("data-user-id"),
               resolved: !!dom.getAttribute("data-resolved"),
+              draft: !!dom.getAttribute("data-draft"),
             };
           },
         },
@@ -48,6 +54,7 @@ export default class Comment extends Mark {
           class: EditorStyleHelper.comment,
           id: `comment-${node.attrs.id}`,
           "data-resolved": node.attrs.resolved ? "true" : undefined,
+          "data-draft": node.attrs.draft ? "true" : undefined,
           "data-user-id": node.attrs.userId,
           "data-document-id": this.editor?.props.id,
         },
@@ -64,9 +71,9 @@ export default class Comment extends Mark {
       ? {
           "Mod-Alt-m": (state, dispatch) => {
             if (
-              isMarkActive(state.schema.marks.comment, { resolved: false })(
-                state
-              )
+              isMarkActive(state.schema.marks.comment, {
+                resolved: false,
+              })(state)
             ) {
               return false;
             }
@@ -75,6 +82,7 @@ export default class Comment extends Mark {
               toggleMark(type, {
                 id: uuidv4(),
                 userId: this.options.userId,
+                draft: true,
               }),
               collapseSelection()
             )(state, dispatch);
@@ -89,7 +97,9 @@ export default class Comment extends Mark {
     return this.options.onCreateCommentMark
       ? (): Command => (state, dispatch) => {
           if (
-            isMarkActive(state.schema.marks.comment, { resolved: false })(state)
+            isMarkActive(state.schema.marks.comment, {
+              resolved: false,
+            })(state)
           ) {
             return false;
           }
@@ -98,6 +108,7 @@ export default class Comment extends Mark {
             addMark(type, {
               id: uuidv4(),
               userId: this.options.userId,
+              draft: true,
             }),
             collapseSelection()
           )(state, dispatch);
@@ -174,7 +185,11 @@ export default class Comment extends Mark {
 
               const commentId = comment.id.replace("comment-", "");
               const resolved = comment.getAttribute("data-resolved");
-              if (commentId && !resolved) {
+              const draftByUser =
+                comment.getAttribute("data-draft") &&
+                comment.getAttribute("data-user-id") === this.options.userId;
+
+              if ((commentId && !resolved) || draftByUser) {
                 this.options?.onClickCommentMark?.(commentId);
               }
 

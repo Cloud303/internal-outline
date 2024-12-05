@@ -201,7 +201,6 @@ const Input = styled.div`
   margin: -8px;
   padding: 8px;
   border-radius: 8px;
-  transition: ${s("backgroundTransition")};
 
   &:after {
     content: "";
@@ -226,7 +225,7 @@ const Input = styled.div`
   }
 
   &[data-editing="true"] {
-    background: ${s("secondaryBackground")};
+    background: ${s("backgroundSecondary")};
   }
 
   .block-menu-trigger,

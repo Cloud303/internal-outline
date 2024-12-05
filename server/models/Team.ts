@@ -25,6 +25,7 @@ import {
   AfterUpdate,
   BeforeUpdate,
   BeforeCreate,
+  IsNumeric,
 } from "sequelize-typescript";
 import { TeamPreferenceDefaults } from "@shared/constants";
 import { TeamPreference, TeamPreferences, UserRole } from "@shared/types";
@@ -67,7 +68,7 @@ class Team extends ParanoidModel<
   Partial<InferCreationAttributes<Team>>
 > {
   @NotContainsUrl
-  @Length({ min: 2, max: 255, msg: "name must be between 2 to 255 characters" })
+  @Length({ min: 1, max: 255, msg: "name must be between 1 to 255 characters" })
   @Column
   name: string;
 
@@ -150,6 +151,11 @@ class Team extends ParanoidModel<
   @IsIn([[UserRole.Viewer, UserRole.Member]])
   @Column(DataType.STRING)
   defaultUserRole: UserRole;
+
+  /** Approximate size in bytes of all attachments in the team. */
+  @IsNumeric
+  @Column(DataType.BIGINT)
+  approximateTotalAttachmentsSize: number;
 
   @AllowNull
   @Column(DataType.JSONB)

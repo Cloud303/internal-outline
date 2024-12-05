@@ -97,7 +97,7 @@ router.use(compress());
 router.get("/locales/:lng.json", async (ctx) => {
   const { lng } = ctx.params;
 
-  if (!languages.includes(lng)) {
+  if (!languages.includes(lng as (typeof languages)[number])) {
     ctx.status = 404;
     return;
   }
@@ -132,6 +132,7 @@ router.get("/s/:shareId/*", shareDomains(), renderShare);
 router.get("/embeds/gitlab", renderEmbed);
 router.get("/embeds/github", renderEmbed);
 router.get("/embeds/dropbox", renderEmbed);
+router.get("/embeds/pinterest", renderEmbed);
 
 // catch all for application
 router.get("*", shareDomains(), async (ctx, next) => {

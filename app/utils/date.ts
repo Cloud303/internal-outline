@@ -10,20 +10,12 @@ import {
   isPast,
 } from "date-fns";
 import { TFunction } from "i18next";
-import startCase from "lodash/startCase";
-import {
-  getCurrentDateAsString,
-  getCurrentDateTimeAsString,
-  getCurrentTimeAsString,
-  unicodeCLDRtoBCP47,
-  dateLocale,
-} from "@shared/utils/date";
-import User from "~/models/User";
+import { dateLocale, locales } from "@shared/utils/date";
 
 export function dateToHeading(
   dateTime: string,
   t: TFunction,
-  userLocale: string | null | undefined
+  userLocale: keyof typeof locales | undefined
 ) {
   const date = Date.parse(dateTime);
   const now = new Date();
@@ -84,7 +76,7 @@ export function dateToHeading(
 export function dateToExpiry(
   dateTime: string,
   t: TFunction,
-  userLocale: string | null | undefined
+  userLocale: keyof typeof locales | null | undefined
 ) {
   const date = Date.parse(dateTime);
   const now = new Date();
@@ -119,22 +111,4 @@ export function dateToExpiry(
   return t("Expires {{ date }}", {
     date: formatDate(date, "MMM dd, yyyy", { locale }),
   });
-}
-
-/**
- * Replaces template variables in the given text with the current date and time.
- *
- * @param text The text to replace the variables in
- * @param user The user to get the language/locale from
- * @returns The text with the variables replaced
- */
-export function replaceTitleVariables(text: string, user?: User) {
-  const locales = user?.language
-    ? unicodeCLDRtoBCP47(user.language)
-    : undefined;
-
-  return text
-    .replace("{date}", startCase(getCurrentDateAsString(locales)))
-    .replace("{time}", startCase(getCurrentTimeAsString(locales)))
-    .replace("{datetime}", startCase(getCurrentDateTimeAsString(locales)));
 }

@@ -11,6 +11,7 @@ import {
   UserRole,
 } from "@shared/types";
 import type { NotificationSettings } from "@shared/types";
+import { locales } from "@shared/utils/date";
 import { client } from "~/utils/ApiClient";
 import Document from "./Document";
 import Group from "./Group";
@@ -20,10 +21,6 @@ import Field from "./decorators/Field";
 
 class User extends ParanoidModel {
   static modelName = "User";
-
-  @Field
-  @observable
-  id: string;
 
   @Field
   @observable
@@ -39,7 +36,7 @@ class User extends ParanoidModel {
 
   @Field
   @observable
-  language: string;
+  language: keyof typeof locales;
 
   @Field
   @observable
@@ -48,6 +45,10 @@ class User extends ParanoidModel {
   @Field
   @observable
   notificationSettings: NotificationSettings;
+
+  @Field
+  @observable
+  timezone?: string;
 
   @observable
   email: string;

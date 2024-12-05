@@ -54,6 +54,7 @@ export const renderApp = async (
     rootShareId?: string;
     isShare?: boolean;
     analytics?: Integration<IntegrationType.Analytics>[];
+    allowIndexing?: boolean;
   } = {}
 ) => {
   const {
@@ -61,6 +62,7 @@ export const renderApp = async (
     description = "A modern team knowledge base for your internal documentation, product specs, support answers, meeting notes, onboarding, &amp; more…",
     canonical = "",
     shortcutIcon = `${env.CDN_URL || ""}/images/favicon-32.png`,
+    allowIndexing = true,
   } = options;
 
   if (ctx.request.path === "/realtime/") {
@@ -84,9 +86,16 @@ export const renderApp = async (
   const page = await readIndexFile();
   const environment = `
     <script nonce="${ctx.state.cspNonce}">
-      window.env = ${JSON.stringify(presentEnv(env, options))};
+      window.env = ${JSON.stringify(presentEnv(env, options)).replace(
+        /</g,
+        "\\u003c"
+      )};
     </script>
   `;
+
+  const noIndexTag = allowIndexing
+    ? ""
+    : '<meta name="robots" content="noindex, nofollow">';
 
   const scriptTags = env.isProduction
     ? `<script type="module" nonce="${ctx.state.cspNonce}" src="${
@@ -109,6 +118,7 @@ export const renderApp = async (
     .replace(/\{lang\}/g, unicodeCLDRtoISO639(env.DEFAULT_LANGUAGE))
     .replace(/\{title\}/g, escape(title))
     .replace(/\{description\}/g, escape(description))
+    .replace(/\{noindex\}/g, noIndexTag)
     .replace(
       /\{manifest-url\}/g,
       options.isShare ? "" : "/static/manifest.webmanifest"
@@ -128,8 +138,8 @@ export const renderShare = async (ctx: Context, next: Next) => {
   const documentSlug = ctx.params.documentSlug;
 
   // Find the share record if publicly published so that the document title
-  // can be be returned in the server-rendered HTML. This allows it to appear in
-  // unfurls with more reliablity
+  // can be returned in the server-rendered HTML. This allows it to appear in
+  // unfurls with more reliability
   let share, document, team;
   let analytics: Integration<IntegrationType.Analytics>[] = [];
 
@@ -185,5 +195,6 @@ export const renderShare = async (ctx: Context, next: Next) => {
     canonical: share
       ? `${share.canonicalUrl}${documentSlug && document ? document.url : ""}`
       : undefined,
+    allowIndexing: share?.allowIndexing,
   });
 };

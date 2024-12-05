@@ -120,30 +120,33 @@ function Table({
       <Anchor ref={topRef} />
       <InnerTable {...getTableProps()}>
         <thead>
-          {headerGroups.map((headerGroup) => (
-            <tr {...headerGroup.getHeaderGroupProps()} key={headerGroup.id}>
-              {headerGroup.headers.map((column) => (
-                <Head
-                  {...column.getHeaderProps(column.getSortByToggleProps())}
-                  key={column.id}
-                >
-                  <SortWrapper
-                    align="center"
-                    $sortable={!column.disableSortBy}
-                    gap={4}
+          {headerGroups.map((headerGroup) => {
+            const groupProps = headerGroup.getHeaderGroupProps();
+            return (
+              <tr {...groupProps} key={groupProps.key}>
+                {headerGroup.headers.map((column) => (
+                  <Head
+                    {...column.getHeaderProps(column.getSortByToggleProps())}
+                    key={column.id}
                   >
-                    {column.render("Header")}
-                    {column.isSorted &&
-                      (column.isSortedDesc ? (
-                        <DescSortIcon />
-                      ) : (
-                        <AscSortIcon />
-                      ))}
-                  </SortWrapper>
-                </Head>
-              ))}
-            </tr>
-          ))}
+                    <SortWrapper
+                      align="center"
+                      $sortable={!column.disableSortBy}
+                      gap={4}
+                    >
+                      {column.render("Header")}
+                      {column.isSorted &&
+                        (column.isSortedDesc ? (
+                          <DescSortIcon />
+                        ) : (
+                          <AscSortIcon />
+                        ))}
+                    </SortWrapper>
+                  </Head>
+                ))}
+              </tr>
+            );
+          })}
         </thead>
         <tbody {...getTableBodyProps()}>
           {rows.map((row) => {
@@ -250,10 +253,11 @@ const SortWrapper = styled(Flex)<{ $sortable: boolean }>`
   white-space: nowrap;
   margin: 0 -4px;
   padding: 0 4px;
+  cursor: ${(props) => (props.$sortable ? `var(--pointer)` : "")};
 
   &:hover {
     background: ${(props) =>
-      props.$sortable ? props.theme.secondaryBackground : "none"};
+      props.$sortable ? props.theme.backgroundSecondary : "none"};
   }
 `;
 
@@ -306,15 +310,13 @@ const Row = styled.tr`
 
 const Head = styled.th`
   text-align: left;
-  padding: 6px 6px 0;
+  padding: 6px 6px 2px;
   border-bottom: 1px solid ${s("divider")};
   background: ${s("background")};
-  transition: ${s("backgroundTransition")};
   font-size: 14px;
   color: ${s("textSecondary")};
   font-weight: 500;
   z-index: 1;
-  cursor: var(--pointer) !important;
 
   :first-child {
     padding-left: 0;

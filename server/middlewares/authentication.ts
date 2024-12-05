@@ -70,11 +70,7 @@ export default function auth(options: AuthenticationOptions = {}) {
         let apiKey;
 
         try {
-          apiKey = await ApiKey.findOne({
-            where: {
-              secret: token,
-            },
-          });
+          apiKey = await ApiKey.findByToken(token);
         } catch (err) {
           throw AuthenticationError("Invalid API key");
         }
@@ -158,6 +154,16 @@ export default function auth(options: AuthenticationOptions = {}) {
         throw err;
       }
     }
+
+    Object.defineProperty(ctx, "context", {
+      get() {
+        return {
+          auth: ctx.state.auth,
+          transaction: ctx.state.transaction,
+          ip: ctx.request.ip,
+        };
+      },
+    });
 
     return next();
   };

@@ -3,6 +3,7 @@ import { observer } from "mobx-react";
 import { MenuIcon } from "outline-icons";
 import { transparentize } from "polished";
 import * as React from "react";
+import { mergeRefs } from "react-merge-refs";
 import styled from "styled-components";
 import breakpoint from "styled-components-breakpoint";
 import { depths, s } from "@shared/styles";
@@ -10,25 +11,34 @@ import { supportsPassiveListener } from "@shared/utils/browser";
 import Button from "~/components/Button";
 import Fade from "~/components/Fade";
 import Flex from "~/components/Flex";
+import useComponentSize from "~/hooks/useComponentSize";
 import useEventListener from "~/hooks/useEventListener";
 import useMobile from "~/hooks/useMobile";
 import useStores from "~/hooks/useStores";
 import { draggableOnDesktop, fadeOnDesktopBackgrounded } from "~/styles";
 import Desktop from "~/utils/Desktop";
 
+export const HEADER_HEIGHT = 64;
+
 type Props = {
   left?: React.ReactNode;
   title: React.ReactNode;
-  actions?: React.ReactNode;
+  actions?:
+    | ((props: { isCompact: boolean }) => React.ReactNode)
+    | React.ReactNode;
   hasSidebar?: boolean;
   className?: string;
 };
 
-function Header({ left, title, actions, hasSidebar, className }: Props) {
+function Header(
+  { left, title, actions, hasSidebar, className }: Props,
+  ref: React.RefObject<HTMLDivElement> | null
+) {
   const { ui } = useStores();
   const isMobile = useMobile();
   const hasMobileSidebar = hasSidebar && isMobile;
-
+  const internalRef = React.useRef<HTMLDivElement | null>(null);
+  const breadcrumbsRef = React.useRef<HTMLDivElement | null>(null);
   const passThrough = !actions && !left && !title;
 
   const [isScrolled, setScrolled] = React.useState(false);
@@ -51,8 +61,18 @@ function Header({ left, title, actions, hasSidebar, className }: Props) {
     });
   }, []);
 
+  const setBreadcrumbRef = React.useCallback((node: HTMLDivElement | null) => {
+    breadcrumbsRef.current = node?.firstElementChild as HTMLDivElement;
+  }, []);
+
+  const size = useComponentSize(internalRef);
+  const breadcrumbsSize = useComponentSize(breadcrumbsRef);
+  const breadcrumbMakesCompact = breadcrumbsSize.width > size.width / 3;
+  const isCompact = size.width < 1000 || breadcrumbMakesCompact;
+
   return (
     <Wrapper
+      ref={mergeRefs([ref, internalRef])}
       align="center"
       shrink={false}
       className={className}
@@ -60,7 +80,7 @@ function Header({ left, title, actions, hasSidebar, className }: Props) {
       $insetTitleAdjust={ui.sidebarIsClosed && Desktop.hasInsetTitlebar()}
     >
       {left || hasMobileSidebar ? (
-        <Breadcrumbs>
+        <Breadcrumbs ref={setBreadcrumbRef}>
           {hasMobileSidebar && (
             <MobileMenuButton
               onClick={ui.toggleMobileSidebar}
@@ -72,7 +92,7 @@ function Header({ left, title, actions, hasSidebar, className }: Props) {
         </Breadcrumbs>
       ) : null}
 
-      {isScrolled ? (
+      {isScrolled && !isCompact ? (
         <Title onClick={handleClickTitle}>
           <Fade>{title}</Fade>
         </Title>
@@ -80,7 +100,7 @@ function Header({ left, title, actions, hasSidebar, className }: Props) {
         <div />
       )}
       <Actions align="center" justify="flex-end">
-        {actions}
+        {typeof actions === "function" ? actions({ isCompact }) : actions}
       </Actions>
     </Wrapper>
   );
@@ -128,9 +148,8 @@ const Wrapper = styled(Flex)<WrapperProps>`
       `};
 
   padding: 12px;
-  transition: all 100ms ease-out;
   transform: translate3d(0, 0, 0);
-  min-height: 64px;
+  min-height: ${HEADER_HEIGHT}px;
   justify-content: flex-start;
   ${draggableOnDesktop()}
 
@@ -150,7 +169,6 @@ const Wrapper = styled(Flex)<WrapperProps>`
 
   ${breakpoint("tablet")`
     padding: 16px;
-    justify-content: center;
     ${(props: WrapperProps) => props.$insetTitleAdjust && `padding-left: 64px;`}
     `};
 `;
@@ -189,4 +207,4 @@ const MobileMenuButton = styled(Button)`
   }
 `;
 
-export default observer(Header);
+export default observer(React.forwardRef(Header));

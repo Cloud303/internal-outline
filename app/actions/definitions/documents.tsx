@@ -27,22 +27,36 @@ import {
   CopyIcon,
   EyeIcon,
   PadlockIcon,
+  GlobeIcon,
+  LogoutIcon,
 } from "outline-icons";
 import * as React from "react";
 import { toast } from "sonner";
-import { ExportContentType, TeamPreference } from "@shared/types";
+import {
+  ExportContentType,
+  TeamPreference,
+  NavigationNode,
+} from "@shared/types";
 import { getEventFiles } from "@shared/utils/files";
+import UserMembership from "~/models/UserMembership";
 import DocumentDelete from "~/scenes/DocumentDelete";
 import DocumentMove from "~/scenes/DocumentMove";
 import DocumentPermanentDelete from "~/scenes/DocumentPermanentDelete";
 import DocumentPublish from "~/scenes/DocumentPublish";
 import DeleteDocumentsInTrash from "~/scenes/Trash/components/DeleteDocumentsInTrash";
-import DuplicateDialog from "~/components/DuplicateDialog";
+import ConfirmationDialog from "~/components/ConfirmationDialog";
+import DocumentCopy from "~/components/DocumentCopy";
+import Icon from "~/components/Icon";
+import MarkdownIcon from "~/components/Icons/MarkdownIcon";
 import SharePopover from "~/components/Sharing/Document";
 import { getHeaderExpandedKey } from "~/components/Sidebar/components/Header";
 import DocumentTemplatizeDialog from "~/components/TemplatizeDialog";
 import { createAction } from "~/actions";
-import { DocumentSection, TrashSection } from "~/actions/sections";
+import {
+  ActiveDocumentSection,
+  DocumentSection,
+  TrashSection,
+} from "~/actions/sections";
 import env from "~/env";
 import { setPersistedState } from "~/hooks/usePersistedState";
 import history from "~/utils/history";
@@ -66,23 +80,24 @@ export const openDocument = createAction({
   keywords: "go to",
   icon: <DocumentIcon />,
   children: ({ stores }) => {
-    const paths = stores.collections.pathsToDocuments;
+    const nodes = stores.collections.navigationNodes.reduce(
+      (acc, node) => [...acc, ...node.children],
+      [] as NavigationNode[]
+    );
 
-    return paths
-      .filter((path) => path.type === "document")
-      .map((path) => ({
-        // Note: using url which includes the slug rather than id here to bust
-        // cache if the document is renamed
-        id: path.url,
-        name: path.title,
-        icon: function _Icon() {
-          return stores.documents.get(path.id)?.isStarred ? (
-            <StarredIcon />
-          ) : null;
-        },
-        section: DocumentSection,
-        perform: () => history.push(path.url),
-      }));
+    return nodes.map((item) => ({
+      // Note: using url which includes the slug rather than id here to bust
+      // cache if the document is renamed
+      id: item.url,
+      name: item.title,
+      icon: item.icon ? (
+        <Icon value={item.icon} color={item.color ?? undefined} />
+      ) : (
+        <DocumentIcon />
+      ),
+      section: DocumentSection,
+      perform: () => history.push(item.url),
+    }));
   },
 });
 
@@ -116,11 +131,30 @@ export const createDocumentFromTemplate = createAction({
   section: DocumentSection,
   icon: <NewDocumentIcon />,
   keywords: "create",
-  visible: ({ currentTeamId, activeDocumentId, stores }) =>
-    !!currentTeamId &&
-    !!activeDocumentId &&
-    !!stores.documents.get(activeDocumentId)?.template &&
-    stores.policies.abilities(currentTeamId).createDocument,
+  visible: ({
+    currentTeamId,
+    activeCollectionId,
+    activeDocumentId,
+    stores,
+  }) => {
+    const document = activeDocumentId
+      ? stores.documents.get(activeDocumentId)
+      : undefined;
+
+    if (
+      !currentTeamId ||
+      !document?.isTemplate ||
+      !!document?.isDraft ||
+      !!document?.isDeleted
+    ) {
+      return false;
+    }
+
+    if (activeCollectionId) {
+      return stores.policies.abilities(activeCollectionId).createDocument;
+    }
+    return stores.policies.abilities(currentTeamId).createDocument;
+  },
   perform: ({ activeCollectionId, activeDocumentId, sidebarContext }) =>
     history.push(
       newDocumentPath(activeCollectionId, { templateId: activeDocumentId }),
@@ -133,7 +167,7 @@ export const createDocumentFromTemplate = createAction({
 export const createNestedDocument = createAction({
   name: ({ t }) => t("New nested document"),
   analyticsName: "New document",
-  section: DocumentSection,
+  section: ActiveDocumentSection,
   icon: <NewDocumentIcon />,
   keywords: "create",
   visible: ({ currentTeamId, activeDocumentId, stores }) =>
@@ -150,7 +184,7 @@ export const createNestedDocument = createAction({
 export const starDocument = createAction({
   name: ({ t }) => t("Star"),
   analyticsName: "Star document",
-  section: DocumentSection,
+  section: ActiveDocumentSection,
   icon: <StarredIcon />,
   keywords: "favorite bookmark",
   visible: ({ activeDocumentId, stores }) => {
@@ -176,7 +210,7 @@ export const starDocument = createAction({
 export const unstarDocument = createAction({
   name: ({ t }) => t("Unstar"),
   analyticsName: "Unstar document",
-  section: DocumentSection,
+  section: ActiveDocumentSection,
   icon: <UnstarredIcon />,
   keywords: "unfavorite unbookmark",
   visible: ({ activeDocumentId, stores }) => {
@@ -202,7 +236,7 @@ export const unstarDocument = createAction({
 export const publishDocument = createAction({
   name: ({ t }) => t("Publish"),
   analyticsName: "Publish document",
-  section: DocumentSection,
+  section: ActiveDocumentSection,
   icon: <PublishIcon />,
   visible: ({ activeDocumentId, stores }) => {
     if (!activeDocumentId) {
@@ -244,7 +278,7 @@ export const publishDocument = createAction({
 export const unpublishDocument = createAction({
   name: ({ t }) => t("Unpublish"),
   analyticsName: "Unpublish document",
-  section: DocumentSection,
+  section: ActiveDocumentSection,
   icon: <UnpublishIcon />,
   visible: ({ activeDocumentId, stores }) => {
     if (!activeDocumentId) {
@@ -275,7 +309,7 @@ export const unpublishDocument = createAction({
 export const subscribeDocument = createAction({
   name: ({ t }) => t("Subscribe"),
   analyticsName: "Subscribe to document",
-  section: DocumentSection,
+  section: ActiveDocumentSection,
   icon: <SubscribeIcon />,
   visible: ({ activeDocumentId, stores }) => {
     if (!activeDocumentId) {
@@ -303,7 +337,7 @@ export const subscribeDocument = createAction({
 export const unsubscribeDocument = createAction({
   name: ({ t }) => t("Unsubscribe"),
   analyticsName: "Unsubscribe from document",
-  section: DocumentSection,
+  section: ActiveDocumentSection,
   icon: <UnsubscribeIcon />,
   visible: ({ activeDocumentId, stores }) => {
     if (!activeDocumentId) {
@@ -333,7 +367,7 @@ export const unsubscribeDocument = createAction({
 export const shareDocument = createAction({
   name: ({ t }) => `${t("Permissions")}…`,
   analyticsName: "Share document",
-  section: DocumentSection,
+  section: ActiveDocumentSection,
   icon: <PadlockIcon />,
   visible: ({ stores, activeDocumentId }) => {
     const can = stores.policies.abilities(activeDocumentId!);
@@ -345,8 +379,6 @@ export const shareDocument = createAction({
     }
 
     const document = stores.documents.get(activeDocumentId);
-    const share = stores.shares.getByDocumentId(activeDocumentId);
-    const sharedParent = stores.shares.getByDocumentParents(activeDocumentId);
     if (!document) {
       return;
     }
@@ -357,8 +389,6 @@ export const shareDocument = createAction({
       content: (
         <SharePopover
           document={document}
-          share={share}
-          sharedParent={sharedParent}
           onRequestClose={stores.dialogs.closeAllModals}
           visible
         />
@@ -370,7 +400,7 @@ export const shareDocument = createAction({
 export const downloadDocumentAsHTML = createAction({
   name: ({ t }) => t("HTML"),
   analyticsName: "Download document as HTML",
-  section: DocumentSection,
+  section: ActiveDocumentSection,
   keywords: "html export",
   icon: <DownloadIcon />,
   iconInContextMenu: false,
@@ -389,7 +419,7 @@ export const downloadDocumentAsHTML = createAction({
 export const downloadDocumentAsPDF = createAction({
   name: ({ t }) => t("PDF"),
   analyticsName: "Download document as PDF",
-  section: DocumentSection,
+  section: ActiveDocumentSection,
   keywords: "export",
   icon: <DownloadIcon />,
   iconInContextMenu: false,
@@ -413,7 +443,7 @@ export const downloadDocumentAsPDF = createAction({
 export const downloadDocumentAsMarkdown = createAction({
   name: ({ t }) => t("Markdown"),
   analyticsName: "Download document as Markdown",
-  section: DocumentSection,
+  section: ActiveDocumentSection,
   keywords: "md markdown export",
   icon: <DownloadIcon />,
   iconInContextMenu: false,
@@ -433,9 +463,11 @@ export const downloadDocument = createAction({
   name: ({ t, isContextMenu }) =>
     isContextMenu ? t("Download") : t("Download document"),
   analyticsName: "Download document",
-  section: DocumentSection,
+  section: ActiveDocumentSection,
   icon: <DownloadIcon />,
   keywords: "export",
+  visible: ({ activeDocumentId, stores }) =>
+    !!activeDocumentId && stores.policies.abilities(activeDocumentId).download,
   children: [
     downloadDocumentAsHTML,
     downloadDocumentAsPDF,
@@ -445,8 +477,10 @@ export const downloadDocument = createAction({
 
 export const copyDocumentAsMarkdown = createAction({
   name: ({ t }) => t("Copy as Markdown"),
-  section: DocumentSection,
+  section: ActiveDocumentSection,
   keywords: "clipboard",
+  icon: <MarkdownIcon />,
+  iconInContextMenu: false,
   visible: ({ activeDocumentId, stores }) =>
     !!activeDocumentId && stores.policies.abilities(activeDocumentId).download,
   perform: ({ stores, activeDocumentId, t }) => {
@@ -460,10 +494,33 @@ export const copyDocumentAsMarkdown = createAction({
   },
 });
 
+export const copyDocumentShareLink = createAction({
+  name: ({ t }) => t("Copy public link"),
+  section: ActiveDocumentSection,
+  keywords: "clipboard share",
+  icon: <GlobeIcon />,
+  iconInContextMenu: false,
+  visible: ({ activeDocumentId, stores }) =>
+    !!activeDocumentId &&
+    !!stores.shares.getByDocumentId(activeDocumentId)?.published,
+  perform: ({ stores, activeDocumentId, t }) => {
+    if (!activeDocumentId) {
+      return;
+    }
+    const share = stores.shares.getByDocumentId(activeDocumentId);
+    if (share) {
+      copy(share.url);
+      toast.success(t("Link copied to clipboard"));
+    }
+  },
+});
+
 export const copyDocumentLink = createAction({
   name: ({ t }) => t("Copy link"),
-  section: DocumentSection,
+  section: ActiveDocumentSection,
   keywords: "clipboard",
+  icon: <CopyIcon />,
+  iconInContextMenu: false,
   visible: ({ activeDocumentId }) => !!activeDocumentId,
   perform: ({ stores, activeDocumentId, t }) => {
     const document = activeDocumentId
@@ -479,17 +536,17 @@ export const copyDocumentLink = createAction({
 export const copyDocument = createAction({
   name: ({ t }) => t("Copy"),
   analyticsName: "Copy document",
-  section: DocumentSection,
+  section: ActiveDocumentSection,
   icon: <CopyIcon />,
   keywords: "clipboard",
-  children: [copyDocumentLink, copyDocumentAsMarkdown],
+  children: [copyDocumentLink, copyDocumentShareLink, copyDocumentAsMarkdown],
 });
 
 export const duplicateDocument = createAction({
   name: ({ t, isContextMenu }) =>
     isContextMenu ? t("Duplicate") : t("Duplicate document"),
   analyticsName: "Duplicate document",
-  section: DocumentSection,
+  section: ActiveDocumentSection,
   icon: <DuplicateIcon />,
   keywords: "copy",
   visible: ({ activeDocumentId, stores }) =>
@@ -505,7 +562,7 @@ export const duplicateDocument = createAction({
     stores.dialogs.openModal({
       title: t("Copy document"),
       content: (
-        <DuplicateDialog
+        <DocumentCopy
           document={document}
           onSubmit={(response) => {
             stores.dialogs.closeAllModals();
@@ -533,7 +590,7 @@ export const pinDocumentToCollection = createAction({
     });
   },
   analyticsName: "Pin document to collection",
-  section: DocumentSection,
+  section: ActiveDocumentSection,
   icon: <PinIcon />,
   iconInContextMenu: false,
   visible: ({ activeCollectionId, activeDocumentId, stores }) => {
@@ -569,7 +626,7 @@ export const pinDocumentToCollection = createAction({
 export const pinDocumentToHome = createAction({
   name: ({ t }) => t("Pin to home"),
   analyticsName: "Pin document to home",
-  section: DocumentSection,
+  section: ActiveDocumentSection,
   icon: <PinIcon />,
   iconInContextMenu: false,
   visible: ({ activeDocumentId, currentTeamId, stores }) => {
@@ -601,7 +658,7 @@ export const pinDocumentToHome = createAction({
 export const pinDocument = createAction({
   name: ({ t }) => t("Pin"),
   analyticsName: "Pin document",
-  section: DocumentSection,
+  section: ActiveDocumentSection,
   icon: <PinIcon />,
   children: [pinDocumentToCollection, pinDocumentToHome],
 });
@@ -609,7 +666,7 @@ export const pinDocument = createAction({
 export const searchInDocument = createAction({
   name: ({ t }) => t("Search in document"),
   analyticsName: "Search document",
-  section: DocumentSection,
+  section: ActiveDocumentSection,
   icon: <SearchIcon />,
   visible: ({ stores, activeDocumentId }) => {
     if (!activeDocumentId) {
@@ -627,7 +684,7 @@ export const printDocument = createAction({
   name: ({ t, isContextMenu }) =>
     isContextMenu ? t("Print") : t("Print document"),
   analyticsName: "Print document",
-  section: DocumentSection,
+  section: ActiveDocumentSection,
   icon: <PrintIcon />,
   visible: ({ activeDocumentId }) => !!(activeDocumentId && window.print),
   perform: () => {
@@ -686,7 +743,7 @@ export const importDocument = createAction({
 export const createTemplateFromDocument = createAction({
   name: ({ t }) => t("Templatize"),
   analyticsName: "Templatize document",
-  section: DocumentSection,
+  section: ActiveDocumentSection,
   icon: <ShapesIcon />,
   keywords: "new create template",
   visible: ({ activeCollectionId, activeDocumentId, stores }) => {
@@ -721,14 +778,14 @@ export const openRandomDocument = createAction({
   section: DocumentSection,
   icon: <ShuffleIcon />,
   perform: ({ stores, activeDocumentId }) => {
-    const documentPaths = stores.collections.pathsToDocuments.filter(
-      (path) => path.type === "document" && path.id !== activeDocumentId
-    );
-    const randomPath =
-      documentPaths[Math.round(Math.random() * documentPaths.length)];
+    const nodes = stores.collections.navigationNodes
+      .reduce((acc, node) => [...acc, ...node.children], [] as NavigationNode[])
+      .filter((node) => node.id !== activeDocumentId);
 
-    if (randomPath) {
-      history.push(randomPath.url);
+    const random = nodes[Math.round(Math.random() * nodes.length)];
+
+    if (random) {
+      history.push(random.url);
     }
   },
 });
@@ -786,7 +843,7 @@ export const moveDocumentToCollection = createAction({
       : t("Move");
   },
   analyticsName: "Move document",
-  section: DocumentSection,
+  section: ActiveDocumentSection,
   icon: <MoveIcon />,
   iconInContextMenu: false,
   visible: ({ activeDocumentId, stores }) => {
@@ -815,7 +872,7 @@ export const moveDocumentToCollection = createAction({
 export const moveDocument = createAction({
   name: ({ t }) => t("Move"),
   analyticsName: "Move document",
-  section: DocumentSection,
+  section: ActiveDocumentSection,
   icon: <MoveIcon />,
   visible: ({ activeDocumentId, stores }) => {
     if (!activeDocumentId) {
@@ -834,7 +891,7 @@ export const moveDocument = createAction({
 export const moveTemplate = createAction({
   name: ({ t }) => t("Move"),
   analyticsName: "Move document",
-  section: DocumentSection,
+  section: ActiveDocumentSection,
   icon: <MoveIcon />,
   visible: ({ activeDocumentId, stores }) => {
     if (!activeDocumentId) {
@@ -851,9 +908,9 @@ export const moveTemplate = createAction({
 });
 
 export const archiveDocument = createAction({
-  name: ({ t }) => t("Archive"),
+  name: ({ t }) => `${t("Archive")}…`,
   analyticsName: "Archive document",
-  section: DocumentSection,
+  section: ActiveDocumentSection,
   icon: <ArchiveIcon />,
   visible: ({ activeDocumentId, stores }) => {
     if (!activeDocumentId) {
@@ -862,14 +919,30 @@ export const archiveDocument = createAction({
     return !!stores.policies.abilities(activeDocumentId).archive;
   },
   perform: async ({ activeDocumentId, stores, t }) => {
+    const { dialogs, documents } = stores;
+
     if (activeDocumentId) {
-      const document = stores.documents.get(activeDocumentId);
+      const document = documents.get(activeDocumentId);
       if (!document) {
         return;
       }
 
-      await document.archive();
-      toast.success(t("Document archived"));
+      dialogs.openModal({
+        title: t("Are you sure you want to archive this document?"),
+        content: (
+          <ConfirmationDialog
+            onSubmit={async () => {
+              await document.archive();
+              toast.success(t("Document archived"));
+            }}
+            savingText={`${t("Archiving")}…`}
+          >
+            {t(
+              "Archiving this document will remove it from the collection and search results."
+            )}
+          </ConfirmationDialog>
+        ),
+      });
     }
   },
 });
@@ -877,7 +950,7 @@ export const archiveDocument = createAction({
 export const deleteDocument = createAction({
   name: ({ t }) => `${t("Delete")}…`,
   analyticsName: "Delete document",
-  section: DocumentSection,
+  section: ActiveDocumentSection,
   icon: <TrashIcon />,
   dangerous: true,
   visible: ({ activeDocumentId, stores }) => {
@@ -911,7 +984,7 @@ export const deleteDocument = createAction({
 export const permanentlyDeleteDocument = createAction({
   name: ({ t }) => t("Permanently delete"),
   analyticsName: "Permanently delete document",
-  section: DocumentSection,
+  section: ActiveDocumentSection,
   icon: <CrossIcon />,
   dangerous: true,
   visible: ({ activeDocumentId, stores }) => {
@@ -966,7 +1039,7 @@ export const permanentlyDeleteDocumentsInTrash = createAction({
 export const openDocumentComments = createAction({
   name: ({ t }) => t("Comments"),
   analyticsName: "Open comments",
-  section: DocumentSection,
+  section: ActiveDocumentSection,
   icon: <CommentIcon />,
   visible: ({ activeDocumentId, stores }) => {
     const can = stores.policies.abilities(activeDocumentId ?? "");
@@ -981,14 +1054,14 @@ export const openDocumentComments = createAction({
       return;
     }
 
-    stores.ui.toggleComments(activeDocumentId);
+    stores.ui.toggleComments();
   },
 });
 
 export const openDocumentHistory = createAction({
   name: ({ t }) => t("History"),
   analyticsName: "Open document history",
-  section: DocumentSection,
+  section: ActiveDocumentSection,
   icon: <HistoryIcon />,
   visible: ({ activeDocumentId, stores }) => {
     const can = stores.policies.abilities(activeDocumentId ?? "");
@@ -1009,7 +1082,7 @@ export const openDocumentHistory = createAction({
 export const openDocumentInsights = createAction({
   name: ({ t }) => t("Insights"),
   analyticsName: "Open document insights",
-  section: DocumentSection,
+  section: ActiveDocumentSection,
   icon: <GraphIcon />,
   visible: ({ activeDocumentId, stores }) => {
     const can = stores.policies.abilities(activeDocumentId ?? "");
@@ -1046,7 +1119,7 @@ export const toggleViewerInsights = createAction({
       : t("Enable viewer insights");
   },
   analyticsName: "Toggle viewer insights",
-  section: DocumentSection,
+  section: ActiveDocumentSection,
   icon: <EyeIcon />,
   visible: ({ activeDocumentId, stores }) => {
     const can = stores.policies.abilities(activeDocumentId ?? "");
@@ -1067,6 +1140,42 @@ export const toggleViewerInsights = createAction({
   },
 });
 
+export const leaveDocument = createAction({
+  name: ({ t }) => t("Leave document"),
+  analyticsName: "Leave document",
+  section: ActiveDocumentSection,
+  icon: <LogoutIcon />,
+  visible: ({ currentUserId, activeDocumentId, stores }) => {
+    const membership = stores.userMemberships.orderedData.find(
+      (m) => m.documentId === activeDocumentId && m.userId === currentUserId
+    );
+
+    return !!membership;
+  },
+  perform: async ({ t, location, currentUserId, activeDocumentId, stores }) => {
+    if (!activeDocumentId) {
+      return;
+    }
+
+    const document = stores.documents.get(activeDocumentId);
+
+    try {
+      if (document && location.pathname.startsWith(document.path)) {
+        history.push(homePath());
+      }
+
+      await stores.userMemberships.delete({
+        documentId: activeDocumentId,
+        userId: currentUserId,
+      } as UserMembership);
+
+      toast.success(t("You have left the shared document"));
+    } catch (err) {
+      toast.error(t("Could not leave document"));
+    }
+  },
+});
+
 export const rootDocumentActions = [
   openDocument,
   archiveDocument,
@@ -1076,6 +1185,7 @@ export const rootDocumentActions = [
   importDocument,
   downloadDocument,
   copyDocumentLink,
+  copyDocumentShareLink,
   copyDocumentAsMarkdown,
   starDocument,
   unstarDocument,
@@ -1084,6 +1194,7 @@ export const rootDocumentActions = [
   subscribeDocument,
   unsubscribeDocument,
   duplicateDocument,
+  leaveDocument,
   moveTemplateToWorkspace,
   moveDocumentToCollection,
   openRandomDocument,

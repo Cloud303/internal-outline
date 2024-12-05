@@ -1,12 +1,14 @@
 import * as React from "react";
-import { NotificationEventType } from "@shared/types";
+import { NotificationEventType, TeamPreference } from "@shared/types";
 import { Day } from "@shared/utils/time";
 import { Document, Collection, Revision } from "@server/models";
 import { DocumentHelper } from "@server/models/helpers/DocumentHelper";
 import HTMLHelper from "@server/models/helpers/HTMLHelper";
 import NotificationSettingsHelper from "@server/models/helpers/NotificationSettingsHelper";
 import SubscriptionHelper from "@server/models/helpers/SubscriptionHelper";
-import BaseEmail, { EmailProps } from "./BaseEmail";
+import { can } from "@server/policies";
+import { CacheHelper } from "@server/utils/CacheHelper";
+import BaseEmail, { EmailMessageCategory, EmailProps } from "./BaseEmail";
 import Body from "./components/Body";
 import Button from "./components/Button";
 import Diff from "./components/Diff";
@@ -44,6 +46,10 @@ export default class DocumentPublishedOrUpdatedEmail extends BaseEmail<
   InputProps,
   BeforeSend
 > {
+  protected get category() {
+    return EmailMessageCategory.Notification;
+  }
+
   protected async beforeSend(props: InputProps) {
     const { documentId, revisionId } = props;
     const document = await Document.unscoped().findByPk(documentId, {
@@ -53,28 +59,38 @@ export default class DocumentPublishedOrUpdatedEmail extends BaseEmail<
       return false;
     }
 
-    const collection = await document.$get("collection");
+    const [collection, team] = await Promise.all([
+      document.$get("collection"),
+      document.$get("team"),
+    ]);
     if (!collection) {
       return false;
     }
 
     let body;
-    if (revisionId) {
-      // generate the diff html for the email
-      const revision = await Revision.findByPk(revisionId);
+    if (revisionId && team?.getPreference(TeamPreference.PreviewsInEmails)) {
+      body = await CacheHelper.getDataOrSet<string>(
+        `diff:${revisionId}`,
+        async () => {
+          // generate the diff html for the email
+          const revision = await Revision.findByPk(revisionId);
 
-      if (revision) {
-        const before = await revision.before();
-        const content = await DocumentHelper.toEmailDiff(before, revision, {
-          includeTitle: false,
-          centered: false,
-          signedUrls: 4 * Day.seconds,
-          baseUrl: props.teamUrl,
-        });
+          if (revision) {
+            const before = await revision.before();
+            const content = await DocumentHelper.toEmailDiff(before, revision, {
+              includeTitle: false,
+              centered: false,
+              signedUrls: 4 * Day.seconds,
+              baseUrl: props.teamUrl,
+            });
 
-        // inline all css so that it works in as many email providers as possible.
-        body = content ? await HTMLHelper.inlineCSS(content) : undefined;
-      }
+            // inline all css so that it works in as many email providers as possible.
+            return content ? await HTMLHelper.inlineCSS(content) : undefined;
+          }
+          return;
+        },
+        30
+      );
     }
 
     return {
@@ -110,6 +126,15 @@ export default class DocumentPublishedOrUpdatedEmail extends BaseEmail<
 
   protected fromName({ actorName }: Props) {
     return actorName;
+  }
+
+  protected replyTo({ notification }: Props) {
+    if (notification?.user && notification.actor?.email) {
+      if (can(notification.user, "readEmail", notification.actor)) {
+        return notification.actor.email;
+      }
+    }
+    return;
   }
 
   protected renderAsText({
